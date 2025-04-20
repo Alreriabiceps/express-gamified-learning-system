@@ -1,0 +1,42 @@
+# Node modules
+/node_modules/
+
+# Environment files
+.env
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependencies
+/package-lock.json
+/yarn.lock
+
+# Build directories
+/dist
+/build
+
+# IDE and editor configurations
+.vscode/
+.idea/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Coverage directories (e.g., from testing frameworks)
+/coverage
+
+# npm or yarn debug files
+.npm/
+.yarn/
+
+# dotenv environment variable files
+.env.local
+.env.*.local
+
+# Optional: Ignore any other generated folders/files
+*.swp
