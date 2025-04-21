@@ -5,6 +5,7 @@ const cors = require('cors');
 
 const studentRoutes = require('./users/admin/student/routes/studentRoutes');
 const questionRoutes = require('./users/admin/question/routes/questionRoutes');
+const authRoutes = require('./auth/authRoutes'); // Import the auth routes
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -28,6 +29,8 @@ mongoose.connect(MONGO_URI, {
     process.exit(1);
   });
 
+// Add auth routes
+app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/weekquestions', questionRoutes);
 
