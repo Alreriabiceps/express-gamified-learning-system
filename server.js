@@ -6,6 +6,7 @@ const cors = require('cors');
 const studentRoutes = require('./users/admin/student/routes/studentRoutes');
 const questionRoutes = require('./users/admin/question/routes/questionRoutes');
 const authRoutes = require('./auth/authRoutes'); // Import the auth routes
+const weeklyTestRoutes = require('./users/students/weeklytest/routes/weeklyTestRoute'); // Import the weekly test routes
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -35,7 +36,9 @@ mongoose.connect(MONGO_URI, {
 // Add auth routes
 app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
-app.use('/api/weekquestions', questionRoutes);
+app.use('/api/weekquestions', weeklyTestRoutes); // Correctly mount weeklyTestRoutes
+app.use('/api/questions', questionRoutes); // Mount questionRoutes to a different path
+ // ✅ Mount the route
 
 app.get('/', (req, res) => {
   res.send('Hello from Express server!');

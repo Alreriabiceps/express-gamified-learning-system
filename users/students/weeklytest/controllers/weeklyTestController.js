@@ -1,7 +1,6 @@
 // weeklytestController.js
-const WeeklyTest = require('../models/weeklyTestModel'); // adjust path accordingly
+const WeeklyTest = require('../models/weeklyTestModel'); // Adjust the path as needed
 
-// Fetch questions based on subject and week
 exports.getQuestionsByWeek = async (req, res) => {
   try {
     const { subject, week } = req.params;
@@ -12,18 +11,22 @@ exports.getQuestionsByWeek = async (req, res) => {
       filter.strand = subject;
     }
 
-    // If a week is provided, filter by week
+    // If a week is provided, filter by week, and make sure it's a number
     if (week && week !== "All Weeks") {
-      filter.week = week;
+      const weekNumber = parseInt(week, 10); // Convert to a number
+      if (isNaN(weekNumber)) {
+        return res.status(400).json({ error: 'Invalid week parameter' });
+      }
+      filter.week = weekNumber;
     }
 
-    const questions = await WeeklyTest.find(filter);
+    const test = await WeeklyTest.findOne(filter);
 
-    if (questions.length === 0) {
+    if (!test) {
       return res.status(404).json({ error: 'No questions found for this subject and week' });
     }
 
-    res.status(200).json({ questions });
+    res.status(200).json({ test });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server Error' });
