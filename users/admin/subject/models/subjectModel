@@ -1,0 +1,10 @@
+const mongoose = require("mongoose");
+
+const subjectSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true }, // Field name remains consistent with controller
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("Subject", subjectSchema);

@@ -1,0 +1,46 @@
+const WeekSchedule = require("../models/weekModel"); // Assuming you have a model for WeekSchedule
+
+// Controller to create a new week schedule
+const createWeekSchedule = async (req, res) => {
+  try {
+    const { date, subject, questions } = req.body; // Assuming these fields are in your request body
+
+    const newSchedule = new WeekSchedule({
+      date,
+      subject,
+      questions,
+    });
+
+    await newSchedule.save();
+    res.status(201).json(newSchedule);
+  } catch (error) {
+    console.error("Error creating week schedule:", error);
+    res.status(500).json({ message: "Error creating schedule" });
+  }
+};
+
+// Controller to get a week schedule by date
+const getWeekScheduleByDate = async (req, res) => {
+  try {
+    const { date } = req.params;
+
+    // Query the database for the schedule by the given date
+    const schedule = await WeekSchedule.findOne({ date });
+
+    if (!schedule) {
+      return res
+        .status(404)
+        .json({ message: "No schedule found for this date" });
+    }
+
+    res.json(schedule); // Return the found schedule
+  } catch (error) {
+    console.error("Error fetching schedule:", error);
+    res.status(500).json({ message: "Error fetching schedule" });
+  }
+};
+
+module.exports = {
+  createWeekSchedule,
+  getWeekScheduleByDate,
+};

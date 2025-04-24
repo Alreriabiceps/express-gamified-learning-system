@@ -1,56 +1,106 @@
-const WeekQuestion = require('../models/questionModels');
+const Question = require("../models/questionModels");
+const Subject = require("../../subject/models/subjectModel"); // Correct import path for Subject model
 
+// Function to create questions
 const createQuestions = async (req, res) => {
   try {
-    const { subject, week, questions } = req.body;
+    const { subjectId, questions } = req.body;
 
-    // Log the incoming request to inspect the data
-    console.log('Request body:', req.body);
-
-    // Validation for missing fields
-    if (!subject || !week || !questions || questions.length === 0) {
-      return res.status(400).json({ error: 'Subject, week, and questions are required.' });
+    // Validate subject exists
+    const subject = await Subject.findById(subjectId);
+    if (!subject) {
+      return res.status(404).json({ message: "Subject not found" });
     }
 
-    // Check if the same set of questions already exists for the given subject and week
-    const existing = await WeekQuestion.findOne({ subject, week });
-    if (existing) {
-      return res.status(400).json({ error: `Questions for ${subject} in week ${week} already exist.` });
-    }
+    // Create questions and save them
+    const createdQuestions = await Question.insertMany(
+      questions.map((question) => ({
+        subject: subjectId, // Make sure 'subject' field is being populated
+        questionText: question.questionText,
+        choices: question.choices,
+      }))
+    );
 
-    // Save new questions set
-    const newSet = new WeekQuestion({ subject, week, questions });
-    await newSet.save();
-
-    // Return success message with the created data
-    res.status(201).json({ message: 'Questions saved successfully.', data: newSet });
-  } catch (err) {
-    console.error('Error creating questions:', err); // Log the entire error
-    res.status(500).json({ error: 'Internal Server Error. Could not save questions.' });
+    res.status(201).json({
+      message: "Questions created successfully",
+      data: createdQuestions,
+    });
+  } catch (error) {
+    console.error("Error creating questions:", error);
+    res.status(500).json({ message: "Error creating questions", error });
   }
 };
 
-const getQuestionsBySubjectAndWeek = async (req, res) => {
+// Function to get questions by subject
+const getQuestionsBySubject = async (req, res) => {
   try {
-    const { subject, week } = req.params;
+    const { subjectId } = req.params;
 
-    // Find the questions for the specific subject and week
-    const found = await WeekQuestion.findOne({ subject, week }).select('questions');
+    // Find questions based on subjectId
+    const questions = await Question.find({ subject: subjectId }) // `subject` matches the field name in your Question schema
+      .populate("subject", "name"); // Populate subject field (optional)
 
-    // If no questions found, return a 404 error
-    if (!found) {
-      return res.status(404).json({ error: `No questions found for ${subject} in week ${week}.` });
+    if (!questions.length) {
+      return res
+        .status(404)
+        .json({ message: "No questions found for this subject" });
     }
 
-    // Return the questions data
-    res.status(200).json({ questions: found.questions });
-  } catch (err) {
-    console.error('Error fetching questions:', err); // Log the entire error
-    res.status(500).json({ error: 'Internal Server Error. Could not fetch questions.' });
+    res.status(200).json(questions);
+  } catch (error) {
+    console.error("Error fetching questions by subject:", error);
+    res.status(500).json({ message: "Error fetching questions", error });
+  }
+};
+
+// Function to edit a question
+// Function to edit a question
+const editQuestion = async (req, res) => {
+  try {
+    const { questionId } = req.params;
+    const { questionText, choices } = req.body;
+
+    const updatedQuestion = await Question.findByIdAndUpdate(
+      questionId,
+      { questionText, choices },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedQuestion) {
+      return res.status(404).json({ message: "Question not found" });
+    }
+
+    res.status(200).json({
+      message: "Question updated successfully",
+      data: updatedQuestion,
+    });
+  } catch (error) {
+    console.error("Error updating question:", error);
+    res.status(500).json({ message: "Error updating question", error });
+  }
+};
+
+// Function to delete a question
+const deleteQuestion = async (req, res) => {
+  try {
+    const { questionId } = req.params;
+
+    const deletedQuestion = await Question.findByIdAndDelete(questionId);
+
+    if (!deletedQuestion) {
+      return res.status(404).json({ message: "Question not found" });
+    }
+
+    res.status(200).json({ message: "Question deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting question:", error);
+    res.status(500).json({ message: "Error deleting question", error });
   }
 };
 
 module.exports = {
   createQuestions,
-  getQuestionsBySubjectAndWeek
+  getQuestionsBySubject,
+  editQuestion,
+  deleteQuestion,
 };
