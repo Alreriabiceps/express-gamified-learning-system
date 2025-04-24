@@ -1,6 +1,9 @@
+// routes/subjectRoutes.js
 const express = require("express");
 const router = express.Router();
 const subjectController = require("../controllers/subjectController");
+// Make sure the path to the controller is correct relative to this file
+// const subjectController = require("../controllers/subjectController");
 
 // Routes
 router.get("/", subjectController.getSubjects);
