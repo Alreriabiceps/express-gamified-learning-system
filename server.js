@@ -43,11 +43,20 @@ mongoose
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
-  .then(() => console.log("Connected to MongoDB"))
+  .then(() => {
+    console.log("Connected to MongoDB successfully");
+    console.log("MongoDB URI:", MONGO_URI);
+  })
   .catch((err) => {
-    console.error("MongoDB connection error:", err);
+    console.error("MongoDB connection error details:", err);
     process.exit(1); // Exit the process if DB connection fails
   });
+
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
 
 // Define API routes
 app.use("/api/auth", authRoutes); // Authentication routes

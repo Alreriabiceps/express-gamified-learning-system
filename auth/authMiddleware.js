@@ -1,18 +1,41 @@
 const jwt = require('jsonwebtoken');
 
-// Middleware to check if the request has a valid token
+// Middleware to verify JWT token
 exports.verifyToken = (req, res, next) => {
-  const token = req.headers['authorization'];
+  try {
+    // Get token from header
+    const token = req.headers.authorization?.split(' ')[1];
 
-  if (!token) {
-    return res.status(403).json({ message: 'No token provided' });
-  }
-
-  jwt.verify(token, 'yourSecretKey', (err, decoded) => {
-    if (err) {
-      return res.status(500).json({ message: 'Failed to authenticate token' });
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
     }
-    req.userId = decoded.id;  // Attach user info to request
+
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    
+    // Add user info to request
+    req.user = decoded;
     next();
-  });
+  } catch (error) {
+    console.error('Token verification error:', error);
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+};
+
+// Middleware to check if user is admin
+exports.isAdmin = (req, res, next) => {
+  if (req.user && req.user.role === 'admin') {
+    next();
+  } else {
+    res.status(403).json({ error: 'Access denied. Admin only.' });
+  }
+};
+
+// Middleware to check if user is student
+exports.isStudent = (req, res, next) => {
+  if (req.user && req.user.role === 'student') {
+    next();
+  } else {
+    res.status(403).json({ error: 'Access denied. Students only.' });
+  }
 };

@@ -15,9 +15,10 @@ const createQuestions = async (req, res) => {
     // Create questions and save them
     const createdQuestions = await Question.insertMany(
       questions.map((question) => ({
-        subject: subjectId, // Make sure 'subject' field is being populated
+        subject: subjectId,
         questionText: question.questionText,
         choices: question.choices,
+        correctAnswer: question.correctAnswer
       }))
     );
 
@@ -27,7 +28,7 @@ const createQuestions = async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating questions:", error);
-    res.status(500).json({ message: "Error creating questions", error });
+    res.status(500).json({ message: "Error creating questions", error: error.message });
   }
 };
 
@@ -36,33 +37,33 @@ const getQuestionsBySubject = async (req, res) => {
   try {
     const { subjectId } = req.params;
 
-    // Find questions based on subjectId
-    const questions = await Question.find({ subject: subjectId }) // `subject` matches the field name in your Question schema
-      .populate("subject", "name"); // Populate subject field (optional)
-
-    if (!questions.length) {
-      return res
-        .status(404)
-        .json({ message: "No questions found for this subject" });
+    // Validate subject exists
+    const subject = await Subject.findById(subjectId);
+    if (!subject) {
+      return res.status(404).json({ message: "Subject not found" });
     }
 
-    res.status(200).json(questions);
+    const questions = await Question.find({ subject: subjectId })
+      .populate("subject", "subject")
+      .sort({ createdAt: -1 });
+
+    // Always return an array, even if empty
+    res.status(200).json(questions || []);
   } catch (error) {
     console.error("Error fetching questions by subject:", error);
-    res.status(500).json({ message: "Error fetching questions", error });
+    res.status(500).json({ message: "Error fetching questions", error: error.message });
   }
 };
 
 // Function to edit a question
-// Function to edit a question
 const editQuestion = async (req, res) => {
   try {
     const { questionId } = req.params;
-    const { questionText, choices } = req.body;
+    const { questionText, choices, correctAnswer } = req.body;
 
     const updatedQuestion = await Question.findByIdAndUpdate(
       questionId,
-      { questionText, choices },
+      { questionText, choices, correctAnswer },
       { new: true, runValidators: true }
     );
 
@@ -76,7 +77,7 @@ const editQuestion = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating question:", error);
-    res.status(500).json({ message: "Error updating question", error });
+    res.status(500).json({ message: "Error updating question", error: error.message });
   }
 };
 
@@ -94,7 +95,7 @@ const deleteQuestion = async (req, res) => {
     res.status(200).json({ message: "Question deleted successfully" });
   } catch (error) {
     console.error("Error deleting question:", error);
-    res.status(500).json({ message: "Error deleting question", error });
+    res.status(500).json({ message: "Error deleting question", error: error.message });
   }
 };
 
