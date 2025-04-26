@@ -34,23 +34,31 @@ const getActiveWeekSchedules = async (req, res) => {
 const createWeekSchedule = async (req, res) => {
   try {
     const { subject, questions, weekNumber, year } = req.body;
+    console.log('Creating schedule with data:', { subject, questions, weekNumber, year });
 
     // Validate subject exists
     const subjectDoc = await Subject.findById(subject);
     if (!subjectDoc) {
+      console.log('Subject not found:', subject);
       return res.status(404).json({ message: "Subject not found" });
     }
 
     // Validate questions exist
     const questionDocs = await Question.find({ _id: { $in: questions } });
     if (questionDocs.length !== questions.length) {
+      console.log('Questions not found:', { requested: questions.length, found: questionDocs.length });
       return res.status(404).json({ message: "One or more questions not found" });
     }
 
     // Check if a schedule already exists for this week and year
-    const existingSchedule = await WeekSchedule.findOne({ weekNumber, year });
+    const existingSchedule = await WeekSchedule.findOne({ 
+      weekNumber, 
+      year,
+      subjectId: subjectDoc._id 
+    });
     if (existingSchedule) {
-      return res.status(409).json({ message: "A schedule already exists for this week" });
+      console.log('Schedule already exists:', existingSchedule);
+      return res.status(409).json({ message: "A schedule already exists for this subject in this week" });
     }
 
     const newSchedule = new WeekSchedule({
@@ -60,17 +68,47 @@ const createWeekSchedule = async (req, res) => {
       year: year || new Date().getFullYear()
     });
 
-    await newSchedule.save();
+    console.log('Saving new schedule:', newSchedule);
+    try {
+      await newSchedule.save();
+      console.log('Schedule saved successfully');
+    } catch (saveError) {
+      console.error('Error saving schedule:', saveError);
+      console.error('Save error details:', {
+        name: saveError.name,
+        code: saveError.code,
+        keyPattern: saveError.keyPattern,
+        keyValue: saveError.keyValue
+      });
+      throw saveError;
+    }
     
     // Populate the response
     const populatedSchedule = await WeekSchedule.findById(newSchedule._id)
       .populate('subjectId', 'subject')
       .populate('questionIds', 'questionText choices correctAnswer');
 
+    console.log('Schedule created successfully:', populatedSchedule);
     res.status(201).json(populatedSchedule);
   } catch (error) {
     console.error("Error creating week schedule:", error);
-    res.status(500).json({ message: "Error creating schedule", error: error.message });
+    console.error("Error stack:", error.stack);
+    console.error("Error details:", {
+      name: error.name,
+      code: error.code,
+      keyPattern: error.keyPattern,
+      keyValue: error.keyValue
+    });
+    res.status(500).json({ 
+      message: "Error creating schedule", 
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? {
+        name: error.name,
+        code: error.code,
+        keyPattern: error.keyPattern,
+        keyValue: error.keyValue
+      } : undefined
+    });
   }
 };
 
@@ -115,10 +153,11 @@ const updateWeekSchedule = async (req, res) => {
     const existingSchedule = await WeekSchedule.findOne({
       weekNumber,
       year,
+      subjectId: subjectDoc._id,
       _id: { $ne: id }
     });
     if (existingSchedule) {
-      return res.status(409).json({ message: "Another schedule already exists for this week" });
+      return res.status(409).json({ message: "Another schedule already exists for this subject in this week" });
     }
 
     const updatedSchedule = await WeekSchedule.findByIdAndUpdate(

@@ -1,34 +1,114 @@
-// weeklytestController.js
-const WeeklyTest = require('../models/weeklyTestModel'); // Adjust the path as needed
+const WeeklyTest = require('../models/weeklyTestModel');
 
-exports.getQuestionsByWeek = async (req, res) => {
-  try {
-    const { subject, week } = req.params;
-    const filter = {};
+// Create a new weekly test
+exports.createWeeklyTest = async (req, res) => {
+    try {
+        const {
+            title,
+            subject,
+            questions,
+            startDate,
+            endDate,
+            duration,
+            totalPoints
+        } = req.body;
 
-    // If a subject is provided, filter by subject
-    if (subject && subject !== "All Subjects") {
-      filter.strand = subject;
+        const adminId = req.user.id;
+
+        const weeklyTest = new WeeklyTest({
+            title,
+            subject,
+            questions,
+            startDate,
+            endDate,
+            duration,
+            totalPoints,
+            createdBy: adminId
+        });
+
+        await weeklyTest.save();
+        await weeklyTest.populate('subject', 'name');
+        await weeklyTest.populate('createdBy', 'firstName lastName');
+
+        res.status(201).json({
+            success: true,
+            data: weeklyTest
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
     }
-
-    // If a week is provided, filter by week, and make sure it's a number
-    if (week && week !== "All Weeks") {
-      const weekNumber = parseInt(week, 10); // Convert to a number
-      if (isNaN(weekNumber)) {
-        return res.status(400).json({ error: 'Invalid week parameter' });
-      }
-      filter.week = weekNumber;
-    }
-
-    const test = await WeeklyTest.findOne(filter);
-
-    if (!test) {
-      return res.status(404).json({ error: 'No questions found for this subject and week' });
-    }
-
-    res.status(200).json({ test });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server Error' });
-  }
 };
+
+// Get all weekly tests
+exports.getAllWeeklyTests = async (req, res) => {
+    try {
+        const weeklyTests = await WeeklyTest.find()
+            .populate('subject', 'name')
+            .populate('createdBy', 'firstName lastName')
+            .sort({ startDate: -1 });
+
+        res.json({
+            success: true,
+            data: weeklyTests
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// Get weekly tests by subject
+exports.getWeeklyTestsBySubject = async (req, res) => {
+    try {
+        const { subjectId } = req.params;
+
+        const weeklyTests = await WeeklyTest.find({ subject: subjectId })
+            .populate('subject', 'name')
+            .populate('createdBy', 'firstName lastName')
+            .sort({ startDate: -1 });
+
+        res.json({
+            success: true,
+            data: weeklyTests
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// Update weekly test status
+exports.updateWeeklyTestStatus = async (req, res) => {
+    try {
+        const { testId } = req.params;
+        const { status } = req.body;
+
+        const weeklyTest = await WeeklyTest.findById(testId);
+        if (!weeklyTest) {
+            return res.status(404).json({
+                success: false,
+                message: 'Weekly test not found'
+            });
+        }
+
+        weeklyTest.status = status;
+        await weeklyTest.save();
+
+        res.json({
+            success: true,
+            data: weeklyTest
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+}; 

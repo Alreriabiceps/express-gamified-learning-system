@@ -104,3 +104,44 @@ exports.deleteStudent = async (req, res) => {
     res.status(500).json({ success: false, message: 'Error deleting student', error: error.message });
   }
 };
+
+// Get student by ID
+exports.getStudentById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const student = await Student.findById(id);
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: "Student not found"
+      });
+    }
+
+    // Get student's current rank based on total points
+    const getRank = (totalPoints) => {
+      if (totalPoints >= 850) return 'Valedictorian';
+      if (totalPoints >= 700) return "Dean's Lister";
+      if (totalPoints >= 550) return 'High Honors';
+      if (totalPoints >= 400) return 'Honor Student';
+      if (totalPoints >= 250) return 'Scholar';
+      return 'Apprentice';
+    };
+
+    // Get student's public profile and add rank
+    const studentProfile = student.getPublicProfile();
+    studentProfile.currentRank = getRank(student.totalPoints || 0);
+
+    res.status(200).json({
+      success: true,
+      data: studentProfile
+    });
+  } catch (error) {
+    console.error("Error fetching student:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching student data",
+      error: error.message
+    });
+  }
+};

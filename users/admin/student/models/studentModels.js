@@ -36,6 +36,11 @@ const studentSchema = new mongoose.Schema({
   lastLogin: {
     type: Date,
     default: null
+  },
+  totalPoints: {
+    type: Number,
+    default: 0,
+    min: 0
   }
 }, {
   timestamps: true
@@ -91,6 +96,7 @@ studentSchema.methods.getPublicProfile = function() {
     yearLevel: studentObject.yearLevel,
     isActive: studentObject.isActive,
     lastLogin: studentObject.lastLogin,
+    totalPoints: studentObject.totalPoints,
     createdAt: studentObject.createdAt,
     updatedAt: studentObject.updatedAt,
     role: "student"
