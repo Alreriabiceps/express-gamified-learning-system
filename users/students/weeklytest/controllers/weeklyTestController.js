@@ -1,7 +1,7 @@
 const WeeklyTest = require('../models/weeklyTestModel');
 
 // Create a new weekly test
-exports.createWeeklyTest = async (req, res) => {
+const createWeeklyTest = async (req, res) => {
     try {
         const {
             title,
@@ -43,7 +43,7 @@ exports.createWeeklyTest = async (req, res) => {
 };
 
 // Get all weekly tests
-exports.getAllWeeklyTests = async (req, res) => {
+const getAllWeeklyTests = async (req, res) => {
     try {
         const weeklyTests = await WeeklyTest.find()
             .populate('subject', 'name')
@@ -63,7 +63,7 @@ exports.getAllWeeklyTests = async (req, res) => {
 };
 
 // Get weekly tests by subject
-exports.getWeeklyTestsBySubject = async (req, res) => {
+const getWeeklyTestsBySubject = async (req, res) => {
     try {
         const { subjectId } = req.params;
 
@@ -85,7 +85,7 @@ exports.getWeeklyTestsBySubject = async (req, res) => {
 };
 
 // Update weekly test status
-exports.updateWeeklyTestStatus = async (req, res) => {
+const updateWeeklyTestStatus = async (req, res) => {
     try {
         const { testId } = req.params;
         const { status } = req.body;
@@ -111,4 +111,46 @@ exports.updateWeeklyTestStatus = async (req, res) => {
             message: error.message
         });
     }
+};
+
+// Get test results by student ID
+const getTestResultsByStudent = async (req, res) => {
+    try {
+        const { studentId } = req.params;
+
+        // Find all test results for the student
+        const results = await WeeklyTest.find({ studentId })
+            .populate('subjectId', 'subject')
+            .populate('weekScheduleId', 'weekNumber year')
+            .sort({ completedAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            data: {
+                results: results.map(result => ({
+                    id: result._id,
+                    subject: result.subjectId.subject,
+                    weekNumber: result.weekScheduleId.weekNumber,
+                    year: result.weekScheduleId.year,
+                    score: result.score,
+                    totalQuestions: result.totalQuestions,
+                    completedAt: result.completedAt
+                }))
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching test results:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch test results'
+        });
+    }
+};
+
+module.exports = {
+    createWeeklyTest,
+    getAllWeeklyTests,
+    getWeeklyTestsBySubject,
+    updateWeeklyTestStatus,
+    getTestResultsByStudent
 }; 
