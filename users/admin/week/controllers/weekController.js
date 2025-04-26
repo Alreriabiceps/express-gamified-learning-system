@@ -51,10 +51,10 @@ const createWeekSchedule = async (req, res) => {
     }
 
     // Check if a schedule already exists for this week and year
-    const existingSchedule = await WeekSchedule.findOne({ 
-      weekNumber, 
+    const existingSchedule = await WeekSchedule.findOne({
+      weekNumber,
       year,
-      subjectId: subjectDoc._id 
+      subjectId: subjectDoc._id
     });
     if (existingSchedule) {
       console.log('Schedule already exists:', existingSchedule);
@@ -82,7 +82,7 @@ const createWeekSchedule = async (req, res) => {
       });
       throw saveError;
     }
-    
+
     // Populate the response
     const populatedSchedule = await WeekSchedule.findById(newSchedule._id)
       .populate('subjectId', 'subject')
@@ -99,8 +99,8 @@ const createWeekSchedule = async (req, res) => {
       keyPattern: error.keyPattern,
       keyValue: error.keyValue
     });
-    res.status(500).json({ 
-      message: "Error creating schedule", 
+    res.status(500).json({
+      message: "Error creating schedule",
       error: error.message,
       details: process.env.NODE_ENV === 'development' ? {
         name: error.name,
@@ -170,7 +170,7 @@ const updateWeekSchedule = async (req, res) => {
       },
       { new: true, runValidators: true }
     ).populate('subjectId', 'subject')
-     .populate('questionIds', 'questionText choices correctAnswer');
+      .populate('questionIds', 'questionText choices correctAnswer');
 
     if (!updatedSchedule) {
       return res.status(404).json({ message: "Schedule not found" });
@@ -193,10 +193,15 @@ const toggleActiveStatus = async (req, res) => {
       return res.status(404).json({ message: "Schedule not found" });
     }
 
-    // If activating, deactivate all other schedules
+    // If activating, only deactivate schedules with the same subject
     if (!schedule.isActive) {
       await WeekSchedule.updateMany(
-        { _id: { $ne: id } },
+        {
+          _id: { $ne: id },
+          subjectId: schedule.subjectId,
+          weekNumber: schedule.weekNumber,
+          year: schedule.year
+        },
         { isActive: false }
       );
     }

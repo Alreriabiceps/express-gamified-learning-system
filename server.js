@@ -50,7 +50,7 @@ app.use(
       'https://vite-gamified-learning-system.vercel.app'
     ],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
   })
 );

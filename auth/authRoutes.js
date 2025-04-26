@@ -14,6 +14,9 @@ router.get('/verify', verifyToken, (req, res) => {
     res.status(200).json({ success: true });
 });
 
+// Refresh token
+router.post('/refresh', verifyToken, authController.refreshToken);
+
 // Get current user profile (protected route)
 router.get('/profile', verifyToken, authController.getProfile);
 

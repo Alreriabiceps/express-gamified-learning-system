@@ -4,7 +4,7 @@ const Admin = require('../models/adminModel');
 const bcryptjs = require('bcryptjs');
 
 // Admin login logic
-exports.adminLogin = async (req, res) => {
+const adminLogin = async (req, res) => {
   try {
     const { username, password } = req.body;
     console.log('Login attempt for username:', username);
@@ -68,7 +68,7 @@ exports.adminLogin = async (req, res) => {
 };
 
 // Student login logic
-exports.studentLogin = async (req, res) => {
+const studentLogin = async (req, res) => {
   try {
     const { studentId, password } = req.body;
 
@@ -136,7 +136,7 @@ exports.studentLogin = async (req, res) => {
 };
 
 // Get current user profile
-exports.getProfile = async (req, res) => {
+const getProfile = async (req, res) => {
   try {
     const student = await Student.findById(req.user.id);
     if (!student) {
@@ -150,7 +150,7 @@ exports.getProfile = async (req, res) => {
 };
 
 // Change password for admin
-exports.changePassword = async (req, res) => {
+const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     const adminId = req.user.id;
@@ -181,7 +181,7 @@ exports.changePassword = async (req, res) => {
 };
 
 // Change username for admin
-exports.changeUsername = async (req, res) => {
+const changeUsername = async (req, res) => {
   try {
     const { currentPassword, newUsername } = req.body;
     const adminId = req.user.id;
@@ -213,4 +213,29 @@ exports.changeUsername = async (req, res) => {
     console.error('Change username error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
+};
+
+// Refresh token
+const refreshToken = async (req, res) => {
+  try {
+    const user = req.user;
+    const newToken = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+    res.status(200).json({ token: newToken });
+  } catch (error) {
+    console.error('Error refreshing token:', error);
+    res.status(500).json({ error: 'Failed to refresh token' });
+  }
+};
+
+module.exports = {
+  studentLogin,
+  adminLogin,
+  getProfile,
+  changePassword,
+  changeUsername,
+  refreshToken
 };
