@@ -18,21 +18,17 @@ const leaderboardRoutes = require('../users/students/leaderboard/routes/leaderbo
 // Admin routes
 const adminRoutes = require('../users/admin/routes/adminRoutes');
 
-// Core routes
+// Mount routes
 router.use('/auth', authRoutes);
 router.use('/questions', questionRoutes);
 router.use('/subjects', subjectRoutes);
 router.use('/weeks', weekRoutes);
 router.use('/admin/dashboard', dashboardRoutes);
-
-// Student routes
 router.use('/students', studentRoutes);
 router.use('/lobby', lobbyRoutes);
 router.use('/duel', duelRoutes);
-router.use('/weeklytest', weeklyTestRoutes);
+router.use('/weekly-test', weeklyTestRoutes);
 router.use('/leaderboard', leaderboardRoutes);
-
-// Admin routes
 router.use('/admin', adminRoutes);
 
 module.exports = router; 

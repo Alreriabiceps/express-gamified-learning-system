@@ -3,6 +3,16 @@ const router = express.Router();
 const authController = require('./authController');
 const { verifyToken } = require('./authMiddleware');
 
+// Add logging middleware for auth routes
+router.use((req, res, next) => {
+    console.log('\n=== Auth Route Accessed ===');
+    console.log('Method:', req.method);
+    console.log('Path:', req.path);
+    console.log('Body:', req.body);
+    console.log('=======================\n');
+    next();
+});
+
 // Student login route
 router.post('/student-login', authController.studentLogin);
 
@@ -25,5 +35,11 @@ router.post('/change-password', verifyToken, authController.changePassword);
 
 // Change username route (protected route)
 router.post('/change-username', verifyToken, authController.changeUsername);
+
+// Add error handling middleware
+router.use((err, req, res, next) => {
+    console.error('Auth route error:', err);
+    res.status(500).json({ error: 'Internal server error in auth routes' });
+});
 
 module.exports = router;

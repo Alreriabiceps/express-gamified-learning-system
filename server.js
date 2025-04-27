@@ -38,14 +38,31 @@ connectDB();
 app.use(cors(corsConfig));
 app.use(express.json()); // Parse JSON request bodies
 
-// Add request logging middleware
+// Add detailed request logging middleware
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  console.log('\n=== New Request ===');
+  console.log('Time:', new Date().toISOString());
+  console.log('Method:', req.method);
+  console.log('URL:', req.url);
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  console.log('Query:', req.query);
+  console.log('Params:', req.params);
+  console.log('==================\n');
   next();
 });
 
-// Define API routes
-app.use(config.api.prefix, mainRoutes);
+// Define API routes with logging
+app.use(config.api.prefix, (req, res, next) => {
+  console.log(`API Route accessed: ${req.method} ${req.url}`);
+  next();
+}, mainRoutes);
+
+// Add route logging middleware after routes are defined
+app.use((req, res, next) => {
+  console.log('Route not found:', req.method, req.url);
+  next();
+});
 
 // Root route for testing if the server is running
 app.get("/", (req, res) => {
@@ -54,6 +71,7 @@ app.get("/", (req, res) => {
 
 // Catch-all route handler for undefined routes (404 error)
 app.use((req, res) => {
+  console.log('404 - Route not found:', req.method, req.url);
   res.status(404).json({ error: "Route not found" });
 });
 
@@ -121,7 +139,11 @@ io.on('connection', (socket) => {
   });
 });
 
-// Start the server and listen on the specified port
+// Start the server
 server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT} in ${config.server.env} mode`);
+  console.log(`\n=== Server Started ===`);
+  console.log(`Server is running on port ${PORT}`);
+  console.log(`API base URL: http://localhost:${PORT}${config.api.prefix}`);
+  console.log('Allowed CORS origins:', config.clientUrls);
+  console.log('=====================\n');
 });

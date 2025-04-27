@@ -6,36 +6,39 @@ const bcryptjs = require('bcryptjs');
 // Admin login logic
 const adminLogin = async (req, res) => {
   try {
+    console.log('Admin login request received');
+    console.log('Request body:', req.body);
+
     const { username, password } = req.body;
+
+    if (!username || !password) {
+      console.log('Missing credentials:', { username: !!username, password: !!password });
+      return res.status(400).json({ error: 'Username and password are required' });
+    }
+
     console.log('Login attempt for username:', username);
 
     // Check if admin exists
     const admin = await Admin.findOne({ username });
     console.log('Found admin:', admin ? 'Yes' : 'No');
-    if (admin) {
-      console.log('Admin details:', {
-        id: admin._id,
-        username: admin.username,
-        isActive: admin.isActive,
-        passwordHash: admin.password
-      });
-    }
 
     if (!admin) {
+      console.log('Admin not found for username:', username);
       return res.status(404).json({ error: 'Admin not found' });
     }
 
     // Check if admin is active
     if (!admin.isActive) {
+      console.log('Admin account is deactivated:', username);
       return res.status(403).json({ error: 'Account is deactivated' });
     }
 
     // Check if password matches
     const isMatch = await admin.comparePassword(password);
     console.log('Password match:', isMatch ? 'Yes' : 'No');
-    console.log('Attempted password:', password);
 
     if (!isMatch) {
+      console.log('Incorrect password for admin:', username);
       return res.status(401).json({ error: 'Incorrect password' });
     }
 
@@ -54,16 +57,30 @@ const adminLogin = async (req, res) => {
       { expiresIn: '24h' }
     );
 
-    // Send response with admin data (excluding sensitive info)
-    return res.json({
+    // Prepare admin data for response
+    const adminData = {
+      id: admin._id,
+      username: admin.username,
+      email: admin.email,
+      role: 'admin',
+      isActive: admin.isActive,
+      lastLogin: admin.lastLogin
+    };
+
+    console.log('Login successful for admin:', username);
+
+    // Send response
+    return res.status(200).json({
       message: 'Admin login successful',
       token,
-      role: 'admin',
-      admin: admin.getPublicProfile()
+      admin: adminData
     });
   } catch (err) {
     console.error('Admin login error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 
@@ -231,9 +248,10 @@ const refreshToken = async (req, res) => {
   }
 };
 
+// Export all controller functions
 module.exports = {
-  studentLogin,
   adminLogin,
+  studentLogin,
   getProfile,
   changePassword,
   changeUsername,
