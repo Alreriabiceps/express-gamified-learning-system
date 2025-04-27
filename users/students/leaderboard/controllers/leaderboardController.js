@@ -1,5 +1,5 @@
 const Leaderboard = require('../models/leaderboardModel');
-const Student = require('../../models/studentModel');
+const Student = require('../../../../users/admin/student/models/studentModels');
 
 // Get leaderboard by subject
 exports.getLeaderboardBySubject = async (req, res) => {

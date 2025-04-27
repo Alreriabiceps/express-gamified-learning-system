@@ -44,14 +44,23 @@ const lobbySchema = new mongoose.Schema({
             return !this.isPrivate;
         }
     }
-}, {
-    timestamps: true
 });
 
-// Add indexes for better query performance
-lobbySchema.index({ status: 1, isPrivate: 1 });
-lobbySchema.index({ hostId: 1 });
-lobbySchema.index({ players: 1 });
-lobbySchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+// Static method to clean up expired lobbies
+lobbySchema.statics.cleanupExpiredLobbies = async function () {
+    try {
+        const result = await this.deleteMany({
+            $or: [
+                { expiresAt: { $lt: new Date() } },
+                { status: 'waiting', players: { $size: 0 } }
+            ]
+        });
+        console.log(`Cleaned up ${result.deletedCount} expired lobbies`);
+        return result;
+    } catch (error) {
+        console.error('Error cleaning up expired lobbies:', error);
+        throw error;
+    }
+};
 
 module.exports = mongoose.model('Lobby', lobbySchema); 

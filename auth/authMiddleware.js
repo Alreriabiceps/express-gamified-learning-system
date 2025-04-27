@@ -68,7 +68,7 @@ exports.verifyQuizmaster = (req, res, next) => {
   }
 };
 
-// Combined middleware for admin authentication
+// Middleware to authenticate admin (combines verifyToken and isAdmin)
 exports.authenticateAdmin = (req, res, next) => {
   console.log('Authenticating admin request:', {
     path: req.path,
@@ -83,3 +83,5 @@ exports.authenticateAdmin = (req, res, next) => {
     exports.isAdmin(req, res, next);
   });
 };
+
+module.exports = exports;

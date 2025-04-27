@@ -1,5 +1,5 @@
 const Duel = require('../models/duelModel');
-const Student = require('../../models/studentModel');
+const Student = require('../../../../users/admin/student/models/studentModels');
 
 // Challenge a student to a duel
 exports.challengeDuel = async (req, res) => {

@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const Student = require('../users/admin/student/models/studentModels');
-const Admin = require('../models/adminModel');
+const Admin = require('../users/admin/models/adminModel');
 const bcryptjs = require('bcryptjs');
 
 // Admin login logic

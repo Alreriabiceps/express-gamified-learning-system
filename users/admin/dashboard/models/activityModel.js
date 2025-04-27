@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const activitySchema = new mongoose.Schema({
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Admin',
+        required: true
+    },
     description: {
         type: String,
         required: true
@@ -8,11 +13,6 @@ const activitySchema = new mongoose.Schema({
     timestamp: {
         type: Date,
         default: Date.now
-    },
-    userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Admin',
-        required: true
     },
     icon: {
         type: String,
@@ -26,6 +26,11 @@ const activitySchema = new mongoose.Schema({
         type: String,
         required: true
     }
+}, {
+    timestamps: true
 });
+
+// Add index for faster queries
+activitySchema.index({ timestamp: -1 });
 
 module.exports = mongoose.model('Activity', activitySchema); 
