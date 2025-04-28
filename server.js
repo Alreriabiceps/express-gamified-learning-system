@@ -171,8 +171,9 @@ io.on('connection', (socket) => {
       
       // If both players have made their choices, broadcast the result
       if (result) {
+        const { winner, isDraw } = result;
         io.to(lobbyId).emit('rps_result', {
-          result: result.winner,
+          result: isDraw ? 'draw' : (winner === socket.userId ? 'player' : 'opponent'),
           timestamp: new Date()
         });
       }

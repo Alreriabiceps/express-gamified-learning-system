@@ -50,7 +50,9 @@ class Game {
     const [player1Id, choice1] = choices[0];
     const [player2Id, choice2] = choices[1];
 
-    if (choice1 === choice2) return null;
+    if (choice1 === choice2) {
+      return { winner: null, isDraw: true };
+    }
 
     const winningMoves = {
       rock: 'scissors',
@@ -58,7 +60,8 @@ class Game {
       scissors: 'paper'
     };
 
-    return winningMoves[choice1] === choice2 ? player1Id : player2Id;
+    const winner = winningMoves[choice1] === choice2 ? player1Id : player2Id;
+    return { winner, isDraw: false };
   }
 
   setSubject(subject) {
@@ -144,7 +147,7 @@ exports.handleRpsChoice = async (lobbyId, playerId, choice) => {
 
     const allChoicesMade = game.setRpsChoice(playerId, choice);
     if (allChoicesMade) {
-      const winner = game.determineRpsWinner();
+      const { winner } = game.determineRpsWinner();
       if (winner) {
         game.currentTurn = winner;
         game.state = GAME_STATE.SUBJECT_SELECTION;
