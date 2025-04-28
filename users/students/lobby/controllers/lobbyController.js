@@ -1,5 +1,6 @@
 const Lobby = require('../models/lobbyModel');
 const Student = require('../../../../users/admin/student/models/studentModels');
+const { io } = require('../../../../server');
 
 // Cleanup function to remove expired lobbies
 const cleanupExpiredLobbies = async () => {
@@ -71,6 +72,9 @@ exports.createLobby = async (req, res) => {
 
         // Populate host information
         await lobby.populate('hostId', 'firstName lastName');
+
+        // Emit lobby created event
+        io.emit('lobby:created', lobby);
 
         console.log('Lobby created successfully:', lobby._id);
 
@@ -205,6 +209,17 @@ exports.joinLobby = async (req, res) => {
         if (!lobby.isPrivate && lobby.expiresAt) {
             const timeRemaining = Math.max(0, Math.floor((lobby.expiresAt - new Date()) / 1000));
             lobbyObj.timeRemaining = timeRemaining;
+        }
+
+        // Emit lobby updated event
+        io.emit('lobby:updated', lobbyObj);
+
+        // If lobby is full, emit game start event
+        if (lobby.status === 'in-progress') {
+            io.emit('game:start', {
+                lobbyId: lobby._id,
+                players: lobby.players
+            });
         }
 
         res.status(200).json({
