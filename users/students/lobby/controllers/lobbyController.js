@@ -16,8 +16,21 @@ setInterval(cleanupExpiredLobbies, 60 * 1000);
 // Create a new lobby
 exports.createLobby = async (req, res) => {
     try {
+        console.log('Create lobby request received:', {
+            body: req.body,
+            user: req.user,
+            headers: req.headers
+        });
+
         const { name, isPrivate, password } = req.body;
         const userId = req.user.id;
+
+        console.log('Parsed request data:', {
+            name,
+            isPrivate,
+            hasPassword: !!password,
+            userId
+        });
 
         // Check if user already has an active lobby (either private or open)
         const existingLobby = await Lobby.findOne({
@@ -27,29 +40,39 @@ exports.createLobby = async (req, res) => {
         });
 
         if (existingLobby) {
+            console.log('User already has an active lobby:', existingLobby._id);
             return res.status(400).json({
                 success: false,
                 error: 'You already have an active lobby. Please wait for it to expire or delete it before creating a new one.'
             });
         }
 
-        // Set expiration time for all lobbies (3 minutes from now)
-        const expiresAt = new Date(Date.now() + 3 * 60 * 1000);
+        // Set expiration time for all lobbies (30 minutes from now)
+        const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
-        // Create new lobby
+        // Create new lobby with empty players array
         const lobby = new Lobby({
             name,
             hostId: userId,
             isPrivate,
             password: isPrivate ? password : undefined,
-            players: [userId],
+            players: [], // Start with empty players array
             expiresAt
+        });
+
+        console.log('Creating new lobby:', {
+            name: lobby.name,
+            isPrivate: lobby.isPrivate,
+            hostId: lobby.hostId,
+            expiresAt: lobby.expiresAt
         });
 
         await lobby.save();
 
         // Populate host information
         await lobby.populate('hostId', 'firstName lastName');
+
+        console.log('Lobby created successfully:', lobby._id);
 
         res.status(201).json({
             success: true,
@@ -68,9 +91,12 @@ exports.createLobby = async (req, res) => {
 // Get all lobbies
 exports.getLobbies = async (req, res) => {
     try {
+        console.log('Fetching lobbies...');
+        
         // Run cleanup before fetching lobbies
         await cleanupExpiredLobbies();
 
+        // Find all waiting lobbies that are either private or not expired
         const lobbies = await Lobby.find({
             status: 'waiting',
             $or: [
@@ -78,8 +104,10 @@ exports.getLobbies = async (req, res) => {
                 { expiresAt: { $gt: new Date() } }
             ]
         })
-            .populate('hostId', 'firstName lastName')
-            .populate('players', 'firstName lastName');
+        .populate('hostId', 'firstName lastName')
+        .populate('players', 'firstName lastName');
+
+        console.log('Found lobbies:', lobbies.length);
 
         // Add time remaining for each lobby
         const lobbiesWithTimeRemaining = lobbies.map(lobby => {
@@ -90,6 +118,8 @@ exports.getLobbies = async (req, res) => {
             }
             return lobbyObj;
         });
+
+        console.log('Lobbies with time remaining:', lobbiesWithTimeRemaining.length);
 
         res.status(200).json({
             success: true,
@@ -159,6 +189,12 @@ exports.joinLobby = async (req, res) => {
         }
 
         lobby.players.push(userId);
+        
+        // Check if lobby is full (2 players)
+        if (lobby.players.length === lobby.maxPlayers) {
+            lobby.status = 'in-progress';
+        }
+        
         await lobby.save();
 
         await lobby.populate('hostId', 'firstName lastName');

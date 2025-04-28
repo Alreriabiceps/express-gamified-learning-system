@@ -34,16 +34,14 @@ const lobbySchema = new mongoose.Schema({
         enum: ['waiting', 'in-progress', 'completed'],
         default: 'waiting'
     },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
     expiresAt: {
         type: Date,
         required: function () {
             return !this.isPrivate;
         }
     }
+}, {
+    timestamps: true // Adds createdAt and updatedAt fields
 });
 
 // Static method to clean up expired lobbies
@@ -51,8 +49,10 @@ lobbySchema.statics.cleanupExpiredLobbies = async function () {
     try {
         const result = await this.deleteMany({
             $or: [
+                // Only delete if the lobby has expired
                 { expiresAt: { $lt: new Date() } },
-                { status: 'waiting', players: { $size: 0 } }
+                // Or if it's a completed lobby
+                { status: 'completed' }
             ]
         });
         console.log(`Cleaned up ${result.deletedCount} expired lobbies`);
