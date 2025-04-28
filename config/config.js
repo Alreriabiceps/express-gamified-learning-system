@@ -11,7 +11,8 @@ module.exports = {
     clientUrls: [
         'http://localhost:5173',
         'http://localhost:3000',
-        'https://vite-gamified-learning-system.vercel.app'
+        'https://vite-gamified-learning-system.vercel.app',
+        'https://alreria-alreriabiceps-projects.vercel.app'
     ],
 
     // API Configuration
