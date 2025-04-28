@@ -17,66 +17,41 @@ setInterval(cleanupExpiredLobbies, 60 * 1000);
 // Create a new lobby
 exports.createLobby = async (req, res) => {
     try {
-        console.log('Create lobby request received:', {
-            body: req.body,
-            user: req.user,
-            headers: req.headers
-        });
-
         const { name, isPrivate, password } = req.body;
         const userId = req.user.id;
 
-        console.log('Parsed request data:', {
-            name,
-            isPrivate,
-            hasPassword: !!password,
-            userId
-        });
-
-        // Check if user already has an active lobby (either private or open)
+        // Check if user already has an active lobby
         const existingLobby = await Lobby.findOne({
-            hostId: userId,
-            status: 'waiting',
-            expiresAt: { $gt: new Date() }
+            $or: [
+                { hostId: userId, status: 'waiting' },
+                { players: userId, status: 'waiting' }
+            ]
         });
 
         if (existingLobby) {
-            console.log('User already has an active lobby:', existingLobby._id);
             return res.status(400).json({
                 success: false,
-                error: 'You already have an active lobby. Please wait for it to expire or delete it before creating a new one.'
+                error: 'You are already in a lobby'
             });
         }
 
-        // Set expiration time for all lobbies (30 minutes from now)
-        const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
-
-        // Create new lobby with empty players array
+        // Create new lobby
         const lobby = new Lobby({
-            name,
+            name: name || 'Open Lobby',
             hostId: userId,
             isPrivate,
             password: isPrivate ? password : undefined,
-            players: [], // Start with empty players array
-            expiresAt
-        });
-
-        console.log('Creating new lobby:', {
-            name: lobby.name,
-            isPrivate: lobby.isPrivate,
-            hostId: lobby.hostId,
-            expiresAt: lobby.expiresAt
+            players: [userId], // Add creator as first player
+            status: 'waiting',
+            expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes
         });
 
         await lobby.save();
-
-        // Populate host information
         await lobby.populate('hostId', 'firstName lastName');
+        await lobby.populate('players', 'firstName lastName');
 
         // Emit lobby created event
         io.emit('lobby:created', lobby);
-
-        console.log('Lobby created successfully:', lobby._id);
 
         res.status(201).json({
             success: true,
@@ -86,8 +61,7 @@ exports.createLobby = async (req, res) => {
         console.error('Error creating lobby:', error);
         res.status(500).json({
             success: false,
-            error: error.message || 'Failed to create lobby',
-            details: error
+            error: 'Failed to create lobby'
         });
     }
 };
@@ -95,12 +69,6 @@ exports.createLobby = async (req, res) => {
 // Get all lobbies
 exports.getLobbies = async (req, res) => {
     try {
-        console.log('Fetching lobbies...');
-        
-        // Run cleanup before fetching lobbies
-        await cleanupExpiredLobbies();
-
-        // Find all waiting lobbies that are either private or not expired
         const lobbies = await Lobby.find({
             status: 'waiting',
             $or: [
@@ -111,23 +79,9 @@ exports.getLobbies = async (req, res) => {
         .populate('hostId', 'firstName lastName')
         .populate('players', 'firstName lastName');
 
-        console.log('Found lobbies:', lobbies.length);
-
-        // Add time remaining for each lobby
-        const lobbiesWithTimeRemaining = lobbies.map(lobby => {
-            const lobbyObj = lobby.toObject();
-            if (!lobby.isPrivate && lobby.expiresAt) {
-                const timeRemaining = Math.max(0, Math.floor((lobby.expiresAt - new Date()) / 1000));
-                lobbyObj.timeRemaining = timeRemaining;
-            }
-            return lobbyObj;
-        });
-
-        console.log('Lobbies with time remaining:', lobbiesWithTimeRemaining.length);
-
         res.status(200).json({
             success: true,
-            data: lobbiesWithTimeRemaining
+            data: lobbies
         });
     } catch (error) {
         console.error('Error fetching lobbies:', error);
@@ -145,7 +99,22 @@ exports.joinLobby = async (req, res) => {
         const { password } = req.body;
         const userId = req.user.id;
 
-        const lobby = await Lobby.findById(lobbyId);
+        // Check if user is already in any lobby
+        const userInLobby = await Lobby.findOne({
+            players: userId,
+            status: 'waiting'
+        });
+
+        if (userInLobby) {
+            return res.status(400).json({
+                success: false,
+                error: 'You are already in a lobby'
+            });
+        }
+
+        const lobby = await Lobby.findById(lobbyId)
+            .populate('hostId', 'firstName lastName')
+            .populate('players', 'firstName lastName');
 
         if (!lobby) {
             return res.status(404).json({
@@ -158,16 +127,6 @@ exports.joinLobby = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 error: 'Lobby is not available for joining'
-            });
-        }
-
-        // Check if lobby has expired
-        if (!lobby.isPrivate && lobby.expiresAt && lobby.expiresAt < new Date()) {
-            // Delete expired lobby
-            await lobby.deleteOne();
-            return res.status(400).json({
-                success: false,
-                error: 'Lobby has expired'
             });
         }
 
@@ -185,46 +144,32 @@ exports.joinLobby = async (req, res) => {
             });
         }
 
-        if (lobby.players.includes(userId)) {
-            return res.status(400).json({
-                success: false,
-                error: 'You are already in this lobby'
-            });
-        }
-
+        // Add player to lobby
         lobby.players.push(userId);
         
-        // Check if lobby is full (2 players)
+        // Check if lobby is full
         if (lobby.players.length === lobby.maxPlayers) {
             lobby.status = 'in-progress';
         }
         
         await lobby.save();
-
-        await lobby.populate('hostId', 'firstName lastName');
         await lobby.populate('players', 'firstName lastName');
 
-        // Add time remaining to response
-        const lobbyObj = lobby.toObject();
-        if (!lobby.isPrivate && lobby.expiresAt) {
-            const timeRemaining = Math.max(0, Math.floor((lobby.expiresAt - new Date()) / 1000));
-            lobbyObj.timeRemaining = timeRemaining;
-        }
-
         // Emit lobby updated event
-        io.emit('lobby:updated', lobbyObj);
+        io.emit('lobby:updated', lobby);
 
         // If lobby is full, emit game start event
         if (lobby.status === 'in-progress') {
             io.emit('game:start', {
                 lobbyId: lobby._id,
+                lobbyName: lobby.name,
                 players: lobby.players
             });
         }
 
         res.status(200).json({
             success: true,
-            data: lobbyObj
+            data: lobby
         });
     } catch (error) {
         console.error('Error joining lobby:', error);
