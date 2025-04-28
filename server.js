@@ -19,6 +19,9 @@ const socketService = require('./services/socketService');
 // Import main routes
 const mainRoutes = require("./core/routes");
 
+// Import PVP controller
+const pvpController = require('./users/students/pvp/controllers/pvpController');
+
 // Create an Express application
 const app = express();
 const server = http.createServer(app);
@@ -131,6 +134,139 @@ io.on('connection', (socket) => {
   // Join user's personal room for private messages
   socket.join(socket.userId);
 
+  // Handle joining a game
+  socket.on('join_game', async (data) => {
+    const { lobbyId, playerName } = data;
+    try {
+      // Create game if it doesn't exist
+      let game = await pvpController.createGame(lobbyId);
+      
+      // Join the game
+      game = await pvpController.joinGame(lobbyId, socket.userId, playerName);
+      
+      // Join the socket room for this game
+      socket.join(lobbyId);
+      
+      // Notify other players in the lobby
+      socket.to(lobbyId).emit('opponent_joined', {
+        opponentId: socket.userId,
+        opponentName: playerName
+      });
+
+      console.log(`User ${socket.userId} joined game lobby ${lobbyId}`);
+    } catch (error) {
+      console.error('Error joining game:', error);
+      socket.emit('error', { message: 'Failed to join game' });
+    }
+  });
+
+  // Handle RPS choice
+  socket.on('rps_choice', async (data) => {
+    const { choice, lobbyId } = data;
+    try {
+      const result = await pvpController.handleRpsChoice(lobbyId, socket.userId, choice);
+      
+      // Broadcast the choice to other players in the lobby
+      socket.to(lobbyId).emit('opponent_rps_choice', choice);
+      
+      // If both players have made their choices, broadcast the result
+      if (result) {
+        io.to(lobbyId).emit('rps_result', {
+          result: result.winner,
+          timestamp: new Date()
+        });
+      }
+      
+      console.log(`User ${socket.userId} chose ${choice} in RPS`);
+    } catch (error) {
+      console.error('Error handling RPS choice:', error);
+      socket.emit('error', { message: 'Failed to process RPS choice' });
+    }
+  });
+
+  // Handle subject selection
+  socket.on('subject_selected', async (data) => {
+    const { subject, lobbyId } = data;
+    try {
+      const game = await pvpController.handleSubjectSelection(lobbyId, subject);
+      
+      // Broadcast the selected subject to all players
+      io.to(lobbyId).emit('subject_selected', {
+        subject,
+        selectedBy: socket.userId,
+        questions: game.questions
+      });
+      
+      console.log(`User ${socket.userId} selected subject ${subject.name}`);
+    } catch (error) {
+      console.error('Error handling subject selection:', error);
+      socket.emit('error', { message: 'Failed to process subject selection' });
+    }
+  });
+
+  // Handle answer submission
+  socket.on('submit_answer', async (data) => {
+    const { answer, questionId, lobbyId } = data;
+    try {
+      const result = await pvpController.handleAnswerSubmission(lobbyId, socket.userId, questionId, answer);
+      
+      // Broadcast the answer result to other players
+      socket.to(lobbyId).emit('opponent_answer_submitted', {
+        answer,
+        questionId,
+        answeredBy: socket.userId,
+        isCorrect: result.isCorrect
+      });
+      
+      // If the game is over, broadcast the result
+      if (result.gameOver) {
+        io.to(lobbyId).emit('game_ended', {
+          winner: result.winner,
+          timestamp: new Date()
+        });
+        
+        // Clean up the game
+        await pvpController.endGame(lobbyId);
+      }
+      
+      console.log(`User ${socket.userId} submitted answer for question ${questionId}`);
+    } catch (error) {
+      console.error('Error handling answer submission:', error);
+      socket.emit('error', { message: 'Failed to process answer submission' });
+    }
+  });
+
+  // Handle game completion
+  socket.on('game_complete', async (data) => {
+    const { lobbyId, winner, finalScore } = data;
+    try {
+      // End the game
+      await pvpController.endGame(lobbyId);
+      
+      // Broadcast game completion to all players
+      io.to(lobbyId).emit('game_ended', {
+        winner,
+        finalScore,
+        timestamp: new Date()
+      });
+      
+      console.log(`Game completed in lobby ${lobbyId}. Winner: ${winner}`);
+    } catch (error) {
+      console.error('Error handling game completion:', error);
+      socket.emit('error', { message: 'Failed to process game completion' });
+    }
+  });
+
+  // Handle player disconnect
+  socket.on('disconnect', async () => {
+    console.log('User disconnected:', socket.userId);
+    try {
+      await pvpController.handleDisconnect(socket.userId);
+    } catch (error) {
+      console.error('Error handling disconnect:', error);
+    }
+  });
+
   // Handle duel challenges
   socket.on('challenge_duel', async (data) => {
     const { opponentId } = data;
@@ -159,10 +295,6 @@ io.on('connection', (socket) => {
       score,
       timestamp: new Date()
     });
-  });
-
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.userId);
   });
 });
 
