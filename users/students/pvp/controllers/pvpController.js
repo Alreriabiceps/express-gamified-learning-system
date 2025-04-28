@@ -1,5 +1,5 @@
 const socketService = require('../../../../services/socketService');
-const Question = require('../../admin/question/models/questionModels');
+const Question = require('../../../../users/admin/question/models/questionModels');
 
 // Store active games in memory
 const activeGames = new Map();
