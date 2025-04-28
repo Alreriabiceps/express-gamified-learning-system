@@ -116,7 +116,14 @@ const updateWeeklyTestStatus = async (req, res) => {
 // Get test results by student ID
 const getTestResultsByStudent = async (req, res) => {
     try {
-        const { studentId } = req.params;
+        const studentId = req.params.studentId || req.query.studentId;
+
+        if (!studentId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Student ID is required'
+            });
+        }
 
         // Find all test results for the student
         const results = await WeeklyTest.find({ studentId })
@@ -147,10 +154,54 @@ const getTestResultsByStudent = async (req, res) => {
     }
 };
 
+// Get test statistics by test result ID
+const getTestStatistics = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const testResult = await WeeklyTest.findById(id)
+            .populate('subject', 'name')
+            .populate('createdBy', 'firstName lastName');
+
+        if (!testResult) {
+            return res.status(404).json({
+                success: false,
+                message: 'Test result not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: {
+                id: testResult._id,
+                title: testResult.title,
+                subject: testResult.subject.name,
+                score: testResult.score || 0,
+                totalPoints: testResult.totalPoints,
+                completedAt: testResult.updatedAt,
+                questions: testResult.questions.map(q => ({
+                    id: q._id,
+                    question: q.question,
+                    correctAnswer: q.correctAnswer,
+                    studentAnswer: q.studentAnswer,
+                    isCorrect: q.isCorrect
+                }))
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching test statistics:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch test statistics'
+        });
+    }
+};
+
 module.exports = {
     createWeeklyTest,
     getAllWeeklyTests,
     getWeeklyTestsBySubject,
     updateWeeklyTestStatus,
-    getTestResultsByStudent
+    getTestResultsByStudent,
+    getTestStatistics
 }; 

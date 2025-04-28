@@ -15,6 +15,9 @@ router.get('/subject/:subjectId', verifyToken, weeklyTestController.getWeeklyTes
 // Get test results by student ID
 router.get('/results/:studentId', verifyToken, weeklyTestController.getTestResultsByStudent);
 
+// Get test statistics by test result ID
+router.get('/results/details/:id', verifyToken, weeklyTestController.getTestStatistics);
+
 // Update weekly test status (Admin only)
 router.patch('/:testId/status', verifyToken, isAdmin, weeklyTestController.updateWeeklyTestStatus);
 

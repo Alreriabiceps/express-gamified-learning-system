@@ -8,7 +8,7 @@ const lobbySchema = new mongoose.Schema({
     },
     hostId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+        ref: 'Student',
         required: true
     },
     isPrivate: {
@@ -23,7 +23,7 @@ const lobbySchema = new mongoose.Schema({
     },
     players: [{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
+        ref: 'Student'
     }],
     maxPlayers: {
         type: Number,

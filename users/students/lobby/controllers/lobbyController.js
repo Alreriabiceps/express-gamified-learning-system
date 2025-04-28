@@ -1,5 +1,5 @@
 const Lobby = require('../models/lobbyModel');
-const User = require('../../../../users/admin/student/models/studentModels');
+const Student = require('../../../../users/admin/student/models/studentModels');
 
 // Cleanup function to remove expired lobbies
 const cleanupExpiredLobbies = async () => {
@@ -17,7 +17,7 @@ setInterval(cleanupExpiredLobbies, 60 * 1000);
 exports.createLobby = async (req, res) => {
     try {
         const { name, isPrivate, password } = req.body;
-        const userId = req.user._id;
+        const userId = req.user.id;
 
         // Check if user already has an active lobby (either private or open)
         const existingLobby = await Lobby.findOne({
@@ -59,7 +59,8 @@ exports.createLobby = async (req, res) => {
         console.error('Error creating lobby:', error);
         res.status(500).json({
             success: false,
-            error: 'Failed to create lobby'
+            error: error.message || 'Failed to create lobby',
+            details: error
         });
     }
 };
@@ -108,7 +109,7 @@ exports.joinLobby = async (req, res) => {
     try {
         const { lobbyId } = req.params;
         const { password } = req.body;
-        const userId = req.user._id;
+        const userId = req.user.id;
 
         const lobby = await Lobby.findById(lobbyId);
 
