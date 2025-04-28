@@ -1,7 +1,16 @@
 const config = require('./config');
 
 module.exports = {
-    origin: config.clientUrls,
+    origin: function(origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        if (config.clientUrls.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
@@ -12,7 +21,8 @@ module.exports = {
         'Origin',
         'Access-Control-Allow-Origin',
         'Access-Control-Allow-Headers',
-        'Access-Control-Allow-Methods'
+        'Access-Control-Allow-Methods',
+        'Access-Control-Allow-Credentials'
     ],
     exposedHeaders: [
         'Content-Range',

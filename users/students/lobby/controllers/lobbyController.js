@@ -1,6 +1,6 @@
 const Lobby = require('../models/lobbyModel');
 const Student = require('../../../../users/admin/student/models/studentModels');
-const { io } = require('../../../../server');
+const socketService = require('../../../../services/socketService');
 
 // Cleanup function to remove expired lobbies
 const cleanupExpiredLobbies = async () => {
@@ -31,7 +31,15 @@ exports.createLobby = async (req, res) => {
         if (existingLobby) {
             return res.status(400).json({
                 success: false,
-                error: 'You are already in a lobby'
+                error: 'You already have an active lobby. Please wait for it to expire before creating a new one.'
+            });
+        }
+
+        // Validate required fields
+        if (isPrivate && !password) {
+            return res.status(400).json({
+                success: false,
+                error: 'Password is required for private lobbies'
             });
         }
 
@@ -41,27 +49,30 @@ exports.createLobby = async (req, res) => {
             hostId: userId,
             isPrivate,
             password: isPrivate ? password : undefined,
-            players: [userId], // Add creator as first player
+            players: [userId], // Add host as first player
             status: 'waiting',
-            expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes
+            expiresAt: new Date(Date.now() + 3 * 60 * 1000) // 3 minutes
         });
 
+        // Save the lobby
         await lobby.save();
+        
+        // Populate host and player information
         await lobby.populate('hostId', 'firstName lastName');
         await lobby.populate('players', 'firstName lastName');
 
         // Emit lobby created event
-        io.emit('lobby:created', lobby);
+        socketService.emitEvent('lobby:created', lobby);
 
-        res.status(201).json({
+        return res.status(201).json({
             success: true,
             data: lobby
         });
     } catch (error) {
         console.error('Error creating lobby:', error);
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
-            error: 'Failed to create lobby'
+            error: error.message || 'Failed to save lobby'
         });
     }
 };
@@ -101,14 +112,16 @@ exports.joinLobby = async (req, res) => {
 
         // Check if user is already in any lobby
         const userInLobby = await Lobby.findOne({
-            players: userId,
-            status: 'waiting'
+            $or: [
+                { hostId: userId, status: 'waiting' },
+                { players: userId, status: 'waiting' }
+            ]
         });
 
         if (userInLobby) {
             return res.status(400).json({
                 success: false,
-                error: 'You are already in a lobby'
+                error: 'You already have an active lobby'
             });
         }
 
@@ -120,6 +133,14 @@ exports.joinLobby = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 error: 'Lobby not found'
+            });
+        }
+
+        // Check if user is trying to join their own lobby
+        if (lobby.hostId._id.toString() === userId) {
+            return res.status(400).json({
+                success: false,
+                error: 'You cannot join your own lobby'
             });
         }
 
@@ -156,26 +177,68 @@ exports.joinLobby = async (req, res) => {
         await lobby.populate('players', 'firstName lastName');
 
         // Emit lobby updated event
-        io.emit('lobby:updated', lobby);
+        socketService.emitEvent('lobby:updated', lobby);
 
         // If lobby is full, emit game start event
         if (lobby.status === 'in-progress') {
-            io.emit('game:start', {
+            socketService.emitEvent('game:start', {
                 lobbyId: lobby._id,
                 lobbyName: lobby.name,
                 players: lobby.players
             });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             data: lobby
         });
     } catch (error) {
         console.error('Error joining lobby:', error);
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
-            error: 'Failed to join lobby'
+            error: error.message || 'Failed to join lobby'
+        });
+    }
+};
+
+// Delete a lobby
+exports.deleteLobby = async (req, res) => {
+    try {
+        const { lobbyId } = req.params;
+        const userId = req.user.id;
+
+        const lobby = await Lobby.findById(lobbyId);
+
+        if (!lobby) {
+            return res.status(404).json({
+                success: false,
+                error: 'Lobby not found'
+            });
+        }
+
+        // Only allow host to delete the lobby
+        if (lobby.hostId.toString() !== userId) {
+            return res.status(403).json({
+                success: false,
+                error: 'Only the lobby host can delete this lobby'
+            });
+        }
+
+        // Delete the lobby
+        await lobby.deleteOne();
+
+        // Emit lobby deleted event
+        socketService.emitEvent('lobby:deleted', { lobbyId: lobby._id });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Lobby deleted successfully'
+        });
+    } catch (error) {
+        console.error('Error deleting lobby:', error);
+        return res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to delete lobby'
         });
     }
 }; 

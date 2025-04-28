@@ -14,6 +14,7 @@ const config = require('./config/config');
 const corsConfig = require('./config/cors');
 const jwtConfig = require('./config/jwt');
 const connectDB = require('./config/db');
+const socketService = require('./services/socketService');
 
 // Import main routes
 const mainRoutes = require("./core/routes");
@@ -23,10 +24,36 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: config.clientUrls,
-    methods: ['GET', 'POST']
-  }
+    origin: function(origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      if (config.clientUrls.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: ['GET', 'POST'],
+    credentials: true,
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Access-Control-Allow-Origin',
+      'Access-Control-Allow-Headers',
+      'Access-Control-Allow-Credentials'
+    ]
+  },
+  transports: ['websocket', 'polling'],
+  allowEIO3: true,
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  connectTimeout: 45000,
+  path: '/socket.io/'
 });
+
+// Initialize socket service
+socketService.initializeSocket(io);
 
 // Set the port for the server
 const PORT = config.server.port;

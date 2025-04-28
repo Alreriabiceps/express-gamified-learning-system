@@ -4,7 +4,8 @@ const { verifyToken } = require('../../../../auth/authMiddleware');
 const {
     createLobby,
     getLobbies,
-    joinLobby
+    joinLobby,
+    deleteLobby
 } = require('../controllers/lobbyController');
 
 // Create a new lobby
@@ -15,5 +16,8 @@ router.get('/', verifyToken, getLobbies);
 
 // Join a lobby
 router.post('/:lobbyId/join', verifyToken, joinLobby);
+
+// Delete a lobby
+router.delete('/:lobbyId', verifyToken, deleteLobby);
 
 module.exports = router; 

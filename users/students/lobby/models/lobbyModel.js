@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const socketService = require('../../../../services/socketService');
 
 const lobbySchema = new mongoose.Schema({
     name: {
@@ -47,14 +48,27 @@ const lobbySchema = new mongoose.Schema({
 // Static method to clean up expired lobbies
 lobbySchema.statics.cleanupExpiredLobbies = async function () {
     try {
-        const result = await this.deleteMany({
+        // Find expired lobbies before deleting them
+        const expiredLobbies = await this.find({
             $or: [
-                // Only delete if the lobby has expired
                 { expiresAt: { $lt: new Date() } },
-                // Or if it's a completed lobby
                 { status: 'completed' }
             ]
         });
+
+        // Delete the expired lobbies
+        const result = await this.deleteMany({
+            $or: [
+                { expiresAt: { $lt: new Date() } },
+                { status: 'completed' }
+            ]
+        });
+
+        // Emit lobby:deleted event for each expired lobby
+        expiredLobbies.forEach(lobby => {
+            socketService.emitEvent('lobby:deleted', { lobbyId: lobby._id });
+        });
+
         console.log(`Cleaned up ${result.deletedCount} expired lobbies`);
         return result;
     } catch (error) {
