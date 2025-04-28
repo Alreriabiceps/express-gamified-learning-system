@@ -103,7 +103,4 @@ studentSchema.methods.getPublicProfile = function() {
   };
 };
 
-// Ensure unique studentId and index
-studentSchema.index({ studentId: 1 }, { unique: true });
-
 module.exports = mongoose.model('Student', studentSchema);

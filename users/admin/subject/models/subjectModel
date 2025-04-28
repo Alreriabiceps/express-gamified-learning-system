@@ -14,7 +14,4 @@ const subjectSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Add index for potentially faster lookups if needed
-subjectSchema.index({ subject: 1 });
-
 module.exports = mongoose.model("Subject", subjectSchema);
