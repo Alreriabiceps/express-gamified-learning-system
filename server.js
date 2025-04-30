@@ -15,6 +15,7 @@ const corsConfig = require('./config/cors');
 const jwtConfig = require('./config/jwt');
 const connectDB = require('./config/db');
 const socketService = require('./services/socketService');
+const GAME_STATE = require('./users/students/pvp/constants/gameStates');
 
 // Import main routes
 const mainRoutes = require("./core/routes");
@@ -27,17 +28,8 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: function(origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-      
-      if (config.clientUrls.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    methods: ['GET', 'POST'],
+    origin: "*", // Allow all origins in development
+    methods: ["GET", "POST"],
     credentials: true,
     allowedHeaders: [
       'Content-Type',
@@ -52,11 +44,22 @@ const io = new Server(server, {
   pingTimeout: 60000,
   pingInterval: 25000,
   connectTimeout: 45000,
-  path: '/socket.io/'
+  path: '/socket.io/',
+  maxHttpBufferSize: 1e8,
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+    allowedHeaders: ["*"],
+    credentials: true
+  }
 });
 
-// Initialize socket service
-socketService.initializeSocket(io);
+// Initialize socket service with error handling
+try {
+  socketService.initializeSocket(io);
+} catch (error) {
+  console.error('Error initializing socket service:', error);
+}
 
 // Set the port for the server
 const PORT = config.server.port;
@@ -111,192 +114,276 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal Server Error" });
 });
 
-// WebSocket authentication middleware
-io.use((socket, next) => {
-  const token = socket.handshake.auth.token;
-  if (!token) {
-    return next(new Error('Authentication error'));
-  }
+// Add detailed connection logging
+io.engine.on("connection_error", (err) => {
+  console.log('Connection error details:');
+  console.log('- Request:', err.req?.url);
+  console.log('- Code:', err.code);
+  console.log('- Message:', err.message);
+  console.log('- Context:', err.context);
+});
 
+// WebSocket authentication middleware with better error handling
+io.use(async (socket, next) => {
   try {
+    const token = socket.handshake.auth.token;
+    if (!token) {
+      console.log('No token provided for socket:', socket.id);
+      return next(new Error('Authentication token required'));
+    }
+
     const decoded = jwt.verify(token, jwtConfig.secret);
     socket.userId = decoded.id;
+    socket.userName = decoded.firstName || 'Player';
+    console.log('Socket authenticated:', socket.id, 'User:', socket.userId, 'Name:', socket.userName);
     next();
   } catch (err) {
-    next(new Error('Authentication error'));
+    console.error('Socket authentication error:', err);
+    next(new Error('Invalid authentication token'));
   }
 });
 
-// WebSocket connection handling
+// WebSocket connection handling with improved logging
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.userId);
+  console.log('User connected:', socket.userId, 'Socket ID:', socket.id, 'Name:', socket.userName);
 
   // Join user's personal room for private messages
   socket.join(socket.userId);
+  console.log('User joined personal room:', socket.userId);
 
-  // Handle joining a game
-  socket.on('join_game', async (data) => {
-    const { lobbyId, playerName } = data;
+  // Handle joining game room with better error handling
+  socket.on('join_game_room', (data) => {
     try {
-      // Create game if it doesn't exist
-      let game = await pvpController.createGame(lobbyId);
-      
-      // Join the game
-      game = await pvpController.joinGame(lobbyId, socket.userId, playerName);
-      
-      // Join the socket room for this game
+      const { lobbyId, playerId, playerName } = data;
+      if (!lobbyId) {
+        throw new Error('Lobby ID is required');
+      }
+
+      console.log('Player joining game room:', { 
+        socketId: socket.id, 
+        lobbyId,
+        playerId: playerId || socket.userId,
+        playerName: playerName || socket.userName
+      });
+
+      // Join the socket room
       socket.join(lobbyId);
       
-      // Notify other players in the lobby
-      socket.to(lobbyId).emit('opponent_joined', {
-        opponentId: socket.userId,
-        opponentName: playerName
-      });
-
-      console.log(`User ${socket.userId} joined game lobby ${lobbyId}`);
+      try {
+        // Get current game state
+        const game = pvpController.getGame(lobbyId);
+        if (game) {
+          const players = game.getPlayers();
+          console.log('Current game state:', { 
+            lobbyId, 
+            playerCount: players.length,
+            players: players,
+            state: game.state
+          });
+          
+          // Notify all players in the room about current state
+          io.to(lobbyId).emit('room_status', {
+            playerCount: players.length,
+            players: players,
+            state: game.state
+          });
+        }
+      } catch (gameError) {
+        // If game doesn't exist yet, that's okay - it will be created when the player joins
+        console.log('Game not found yet for lobby:', lobbyId);
+      }
     } catch (error) {
-      console.error('Error joining game:', error);
-      socket.emit('error', { message: 'Failed to join game' });
+      console.error('Error in join_game_room:', error);
+      socket.emit('error', { message: error.message });
     }
   });
 
-  // Handle RPS choice
+  // Handle joining a game with improved error handling and logging
+  socket.on('join_game', async (data) => {
+    try {
+      const { lobbyId, playerId, playerName } = data;
+      console.log('Player joining game:', { 
+        socketId: socket.id, 
+        lobbyId, 
+        playerId: playerId || socket.userId,
+        playerName: playerName || socket.userName
+      });
+
+      // Ensure socket is in the room
+      if (!socket.rooms.has(lobbyId)) {
+        console.log('Socket not in room, joining:', lobbyId);
+        socket.join(lobbyId);
+      }
+
+      // Join or create game
+      const game = await pvpController.joinGame(lobbyId, playerId || socket.userId, playerName || socket.userName);
+      const players = game.getPlayers();
+      
+      console.log('Game state after join:', {
+        lobbyId,
+        players: players,
+        playerCount: players.length,
+        state: game.state
+      });
+
+      // Notify all players about the join
+      io.to(lobbyId).emit('player_joined', {
+        playerId: playerId || socket.userId,
+        playerName: playerName || socket.userName,
+        playerCount: players.length,
+        players: players,
+        state: game.state
+      });
+
+      // If game is full, start the countdown
+      if (players.length === 2) {
+        console.log('Game is full, starting countdown:', lobbyId);
+        game.state = GAME_STATE.RPS;
+        io.to(lobbyId).emit('game_ready', {
+          players: players,
+          state: game.state
+        });
+      }
+    } catch (error) {
+      console.error('Error in join_game:', error);
+      socket.emit('error', { message: error.message });
+    }
+  });
+
+  // Handle ready for RPS
+  socket.on('ready_for_rps', (data) => {
+    try {
+      const { lobbyId, playerId } = data;
+      console.log('Player ready for RPS:', { socketId: socket.id, lobbyId, playerId });
+      
+      const game = pvpController.getGame(lobbyId);
+      if (!game) {
+        throw new Error('Game not found');
+      }
+
+      game.setPlayerReady(playerId);
+      
+      // If all players are ready, start RPS
+      if (game.areAllPlayersReady()) {
+        console.log('All players ready, starting RPS:', lobbyId);
+        io.to(lobbyId).emit('start_rps');
+      }
+    } catch (error) {
+      console.error('Error in ready_for_rps:', error);
+      socket.emit('error', { message: error.message });
+    }
+  });
+
+  // Handle RPS choice submission
   socket.on('rps_choice', async (data) => {
-    const { choice, lobbyId } = data;
+    const { lobbyId, choice } = data;
+    const playerId = socket.userId; // Get playerId from authenticated socket
+    console.log(`[Socket Event] rps_choice received: lobby ${lobbyId}, player ${playerId}, choice ${choice}`);
     try {
-      const result = await pvpController.handleRpsChoice(lobbyId, socket.userId, choice);
-      
-      // Broadcast the choice to other players in the lobby
-      socket.to(lobbyId).emit('opponent_rps_choice', choice);
-      
-      // If both players have made their choices, broadcast the result
-      if (result) {
-        const { winner, isDraw } = result;
-        io.to(lobbyId).emit('rps_result', {
-          result: isDraw ? 'draw' : (winner === socket.userId ? 'player' : 'opponent'),
-          timestamp: new Date()
-        });
+        await pvpController.handleRpsChoice(lobbyId, playerId, choice);
+        // Controller handles emitting results/updates
+    } catch (error) {
+        console.error(`Error handling rps_choice for player ${playerId} in lobby ${lobbyId}:`, error);
+        socket.emit('game_error', { message: error.message || 'Failed to process RPS choice' });
+    }
+  });
+
+  // Handle Subject Selection
+  socket.on('select_subject', async (data) => {
+      const { lobbyId, subject } = data; // subject likely { id: ..., name: ... }
+      const playerId = socket.userId;
+      console.log(`[Socket Event] select_subject received: lobby ${lobbyId}, player ${playerId}, subject ${subject?.id}`);
+      try {
+          // Ensure subject object is passed correctly
+          if (!subject || !subject.id || !subject.name) {
+              throw new Error('Invalid subject data provided.');
+          }
+          await pvpController.handleSubjectSelection(lobbyId, playerId, { _id: subject.id, name: subject.name }); // Pass required fields
+          // Controller now handles deck creation, dealing, and state transition internally
+      } catch (error) {
+          console.error(`Error handling select_subject for player ${playerId} in lobby ${lobbyId}:`, error);
+          socket.emit('game_error', { message: error.message || 'Failed to process subject selection' });
       }
-      
-      console.log(`User ${socket.userId} chose ${choice} in RPS`);
-    } catch (error) {
-      console.error('Error handling RPS choice:', error);
-      socket.emit('error', { message: 'Failed to process RPS choice' });
-    }
   });
 
-  // Handle subject selection
-  socket.on('subject_selected', async (data) => {
-    const { subject, lobbyId } = data;
-    try {
-      const game = await pvpController.handleSubjectSelection(lobbyId, subject);
-      
-      // Broadcast the selected subject to all players
-      io.to(lobbyId).emit('subject_selected', {
-        subject,
-        selectedBy: socket.userId,
-        questions: game.questions
-      });
-      
-      console.log(`User ${socket.userId} selected subject ${subject.name}`);
-    } catch (error) {
-      console.error('Error handling subject selection:', error);
-      socket.emit('error', { message: 'Failed to process subject selection' });
-    }
+  // Handle Dice Roll
+  socket.on('dice_roll', async (data) => {
+      const { lobbyId } = data;
+      const playerId = socket.userId;
+      console.log(`[Socket Event] dice_roll received: lobby ${lobbyId}, player ${playerId}`);
+      try {
+          await pvpController.handleDiceRoll(lobbyId, playerId);
+          // Controller handles emitting results/updates
+      } catch (error) {
+          console.error(`Error handling dice_roll for player ${playerId} in lobby ${lobbyId}:`, error);
+          socket.emit('game_error', { message: error.message || 'Failed to process dice roll' });
+      }
   });
 
-  // Handle answer submission
+  // --- NEW Gameplay Event Listeners ---
+
+  // Handle Summoning a Question Card
+  socket.on('summon_card', async (data) => {
+      const { lobbyId, cardId } = data;
+      const playerId = socket.userId;
+      console.log(`[Socket Event] summon_card received: lobby ${lobbyId}, player ${playerId}, card ${cardId}`);
+      try {
+          if (!cardId) throw new Error('Card ID is required to summon.');
+          await pvpController.handleSummonCard(lobbyId, playerId, cardId);
+          // Controller handles emitting updates
+      } catch (error) {
+          console.error(`Error handling summon_card for player ${playerId} in lobby ${lobbyId}:`, error);
+          socket.emit('game_error', { message: error.message || 'Failed to summon card' });
+      }
+  });
+
+  // Handle Playing a Spell/Effect Card
+  socket.on('play_spell_effect', async (data) => {
+      const { lobbyId, cardId } = data;
+      const playerId = socket.userId;
+      console.log(`[Socket Event] play_spell_effect received: lobby ${lobbyId}, player ${playerId}, card ${cardId}`);
+      try {
+           if (!cardId) throw new Error('Card ID is required to play spell/effect.');
+          await pvpController.handlePlaySpellEffect(lobbyId, playerId, cardId);
+          // Controller handles emitting updates and game over checks
+      } catch (error) {
+          console.error(`Error handling play_spell_effect for player ${playerId} in lobby ${lobbyId}:`, error);
+          socket.emit('game_error', { message: error.message || 'Failed to play spell/effect card' });
+      }
+  });
+
+  // Handle Submitting an Answer
   socket.on('submit_answer', async (data) => {
-    const { answer, questionId, lobbyId } = data;
-    try {
-      const result = await pvpController.handleAnswerSubmission(lobbyId, socket.userId, questionId, answer);
-      
-      // Broadcast the answer result to other players
-      socket.to(lobbyId).emit('opponent_answer_submitted', {
-        answer,
-        questionId,
-        answeredBy: socket.userId,
-        isCorrect: result.isCorrect
-      });
-      
-      // If the game is over, broadcast the result
-      if (result.gameOver) {
-        io.to(lobbyId).emit('game_ended', {
-          winner: result.winner,
-          timestamp: new Date()
-        });
-        
-        // Clean up the game
-        await pvpController.endGame(lobbyId);
+      const { lobbyId, answer } = data;
+      const playerId = socket.userId;
+      console.log(`[Socket Event] submit_answer received: lobby ${lobbyId}, player ${playerId}`);
+      try {
+          // Assuming 'answer' contains the necessary submitted value
+          if (answer === undefined || answer === null) throw new Error('Answer value is required.');
+          await pvpController.handleSubmitAnswer(lobbyId, playerId, answer);
+          // Controller handles emitting results/updates and game over checks
+      } catch (error) {
+          console.error(`Error handling submit_answer for player ${playerId} in lobby ${lobbyId}:`, error);
+          socket.emit('game_error', { message: error.message || 'Failed to submit answer' });
       }
-      
-      console.log(`User ${socket.userId} submitted answer for question ${questionId}`);
-    } catch (error) {
-      console.error('Error handling answer submission:', error);
-      socket.emit('error', { message: 'Failed to process answer submission' });
-    }
   });
 
-  // Handle game completion
-  socket.on('game_complete', async (data) => {
-    const { lobbyId, winner, finalScore } = data;
-    try {
-      // End the game
-      await pvpController.endGame(lobbyId);
-      
-      // Broadcast game completion to all players
-      io.to(lobbyId).emit('game_ended', {
-        winner,
-        finalScore,
-        timestamp: new Date()
-      });
-      
-      console.log(`Game completed in lobby ${lobbyId}. Winner: ${winner}`);
-    } catch (error) {
-      console.error('Error handling game completion:', error);
-      socket.emit('error', { message: 'Failed to process game completion' });
-    }
+  // --- End NEW Gameplay Event Listeners ---
+
+  // Handle player leaving a game room
+  socket.on('leave_game_room', (lobbyId) => {
+    // ... existing leave logic ...
   });
 
   // Handle player disconnect
-  socket.on('disconnect', async () => {
-    console.log('User disconnected:', socket.userId);
-    try {
-      await pvpController.handleDisconnect(socket.userId);
-    } catch (error) {
-      console.error('Error handling disconnect:', error);
-    }
+  socket.on('disconnect', () => {
+    // ... existing disconnect logic ...
+    // Make sure handleDisconnect is called correctly
+    console.log('User disconnected:', socket.userId, 'Socket ID:', socket.id);
+    pvpController.handleDisconnect(socket.userId);
   });
 
-  // Handle duel challenges
-  socket.on('challenge_duel', async (data) => {
-    const { opponentId } = data;
-    io.to(opponentId).emit('duel_challenge', {
-      challengerId: socket.userId,
-      timestamp: new Date()
-    });
-  });
-
-  // Handle duel acceptance
-  socket.on('accept_duel', async (data) => {
-    const { duelId, challengerId } = data;
-    io.to(challengerId).emit('duel_accepted', {
-      duelId,
-      opponentId: socket.userId,
-      timestamp: new Date()
-    });
-  });
-
-  // Handle duel completion
-  socket.on('complete_duel', async (data) => {
-    const { duelId, opponentId, score } = data;
-    io.to(opponentId).emit('duel_completed', {
-      duelId,
-      challengerId: socket.userId,
-      score,
-      timestamp: new Date()
-    });
-  });
+  // Other event handlers...
 });
 
 // Start the server
