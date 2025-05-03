@@ -1,6 +1,6 @@
 const socketService = require('../../../../services/socketService');
 // const Game = require('../../../../models/Game'); // Remove this incorrect import
-const GAME_STATE = require('../constants/gameStates'); // Correct relative path
+const RequiredGameStates = require('../constants/gameStates'); // Rename require temporarily
 const Question = require('../../../admin/question/models/questionModels');
 
 // Store active games in memory
@@ -8,10 +8,11 @@ const activeGames = new Map();
 
 // Rename the local class to avoid conflict with the imported Game model
 class PvpGameInstance {
-  constructor(lobbyId) {
+  constructor(lobbyId, gameStateConstants) { // Accept game states as argument
     this.lobbyId = lobbyId;
     this.players = new Map(); // Stores player objects { id, name, hp, joinedAt, deck, hand }
-    this.state = GAME_STATE.WAITING;
+    this.GAME_STATE = gameStateConstants; // Store game states on instance
+    this.state = this.GAME_STATE.WAITING; // Use instance property
     this.currentTurn = null; // ID of the player whose turn it is
     this.selectedSubject = null;
     // Rework card/question storage:
@@ -21,13 +22,15 @@ class PvpGameInstance {
     this.currentSummonedCard = null; // Track the question card played this turn
     this.rpsChoices = new Map();
     this.playerDiceRolls = new Map();
+    this.selectedQuestionsByPlayer = new Map(); // Store selected questions per player
+    this.questions = []; // Store the pool of questions for the subject
 
     // Turn tracking flags
     this.hasSummonedQuestionThisTurn = false;
     this.hasPlayedSpellEffectThisTurn = false;
     
     this.createdAt = Date.now();
-    console.log('New game instance created:', { lobbyId, createdAt: this.createdAt });
+    console.log('New game instance created:', { lobbyId, createdAt: this.createdAt, initialState: this.state });
   }
 
   addPlayer(playerId, playerName) {
@@ -153,7 +156,7 @@ class PvpGameInstance {
 
     // Set game state for subject selection
     this.currentTurn = winner; // Winner of RPS chooses subject
-    this.state = GAME_STATE.SUBJECT_SELECTION;
+    this.state = this.GAME_STATE.SUBJECT_SELECTION; // Use instance property
 
     // Clear choices AFTER winner is determined and state set
     this.clearRpsChoices(); 
@@ -175,72 +178,106 @@ class PvpGameInstance {
   }
 
   canSelectSubject(playerId) {
-    return this.state === GAME_STATE.SUBJECT_SELECTION && this.currentTurn === playerId;
+    return this.state === this.GAME_STATE.SUBJECT_SELECTION && this.currentTurn === playerId; // Use instance property
   }
 
-  // REWORKED: setSubject now fetches cards, creates decks, deals hands, and transitions to DICE_ROLL
-  async setSubject(playerId, subject) {
+  // REVISED: setSubject now only stores the subject and transitions state to DECK_CREATION
+  async setSubject(playerId, subject) { 
     if (!this.canSelectSubject(playerId)) {
       throw new Error('Not allowed to select subject at this time');
     }
-    console.log(`[Lobby ${this.lobbyId}] Player ${playerId} selected subject: ${subject.name} (ID: ${subject._id})`);
-    this.selectedSubject = subject;
+    console.log(`[Lobby ${this.lobbyId}] Player ${playerId} selected subject: ${subject.name} (ID: ${subject.id || subject._id})`);
+    this.selectedSubject = subject; 
     
-    try {
-      // --- Card Fetching and Deck Creation ---
-      console.log(`[Lobby ${this.lobbyId}] Fetching cards for subject ${subject._id}...`);
-      // IMPORTANT: Replace fetchCardsBySubject with your actual async function
-      // It should return an array of card objects like: { _id: '...', type: 'question'/'spellEffect', text: '...', answer: '...', effect: '...', ... }
-      const allSubjectCards = await fetchCardsBySubject(subject._id); 
-      console.log(`[Lobby ${this.lobbyId}] Fetched ${allSubjectCards.length} cards for subject.`);
-
-      if (allSubjectCards.length < 15) { // Need enough for at least one deck
-          console.error(`[Lobby ${this.lobbyId}] Not enough cards found for subject ${subject._id} to create decks.`);
-          throw new Error('Insufficient cards available for the selected subject.');
-      }
-
-      // Separate card types
-      const questionCards = allSubjectCards.filter(card => card.type === 'question');
-      const spellEffectCards = allSubjectCards.filter(card => card.type === 'spellEffect');
-
-      console.log(`[Lobby ${this.lobbyId}] Separated cards: ${questionCards.length} questions, ${spellEffectCards.length} spell/effects.`);
-
-      // Basic check for enough variety
-      if (questionCards.length < 10 || spellEffectCards.length < 5) {
-           console.warn(`[Lobby ${this.lobbyId}] Warning: Low variety of card types for subject ${subject._id}. Required Q:10, S/E:5`);
-           // Decide if this should be an error or just proceed with fewer special cards
-           // throw new Error('Insufficient variety of cards for the selected subject.'); 
-      }
-
-      const playerIds = Array.from(this.players.keys());
-      if (playerIds.length !== 2) {
-           throw new Error('Cannot create decks without exactly 2 players.');
-      }
-      
-      const createdDecks = this._createAndAssignDecks(playerIds, questionCards, spellEffectCards);
-      if (!createdDecks) {
-          // Error handled within _createAndAssignDecks
-          throw new Error('Failed to create decks.');
-      }
-      
-      // --- Initial Hand Deal ---
-      this._dealInitialHands(playerIds);
-
-      // --- Transition to Next Phase ---
-      this.state = GAME_STATE.DICE_ROLL; // State becomes DICE_ROLL
-      console.log(`[Lobby ${this.lobbyId}] Decks created and hands dealt. Transitioning to ${this.state}.`);
-      
-      return true; // Indicate success
-
-    } catch (error) {
-      console.error(`[Lobby ${this.lobbyId}] Error during setSubject and deck creation:`, error);
-      // Consider resetting state or notifying players of the error
-      this.state = GAME_STATE.ERROR; // Or back to SUBJECT_SELECTION?
-      // Potentially clear decks/hands if partially created
-      this.playerDecks.clear();
-      this.playerHands.clear();
-      throw error; // Re-throw for the controller to handle
+    this.state = this.GAME_STATE.DECK_CREATION; // Use instance property - Use DECK_CREATION state
+    if (this.state === undefined) {
+        console.error(`[Lobby ${this.lobbyId}] CRITICAL ERROR: this.GAME_STATE.DECK_CREATION resolved to undefined!`);
+        throw new Error('Internal server error: Game state constant missing on instance.');
     }
+    console.log(`[Lobby ${this.lobbyId}] Subject set. Transitioning state to ${this.state}.`);
+    return true; 
+  }
+
+  // Store fetched questions (called by controller)
+  storeFetchedQuestions(questions) {
+    this.questions = questions; // Store the raw questions fetched by the controller
+    console.log(`[Lobby ${this.lobbyId}] Stored ${questions.length} questions fetched by controller.`);
+  }
+
+  // Assign selected cards to player decks (called by controller during DECK_CREATION)
+  assignCards(playerId, selectedQuestionIds) {
+      if (!this.selectedQuestionsByPlayer) {
+          console.error(`[Lobby ${this.lobbyId}] Error: selectedQuestionsByPlayer map not initialized!`);
+          this.selectedQuestionsByPlayer = new Map(); // Initialize if missing
+      }
+
+      // Validate input selection size immediately
+      const DECK_SIZE_REQUIRED = 15;
+      if (!Array.isArray(selectedQuestionIds) || selectedQuestionIds.length !== DECK_SIZE_REQUIRED) {
+          console.warn(`[Lobby ${this.lobbyId}] Player ${playerId} submitted invalid selection count: ${selectedQuestionIds?.length}. Required: ${DECK_SIZE_REQUIRED}`);
+          // Optionally throw an error or return specific feedback
+          // throw new Error(`Invalid number of questions selected. Required ${DECK_SIZE_REQUIRED}.`);
+          return false; // Indicate failure
+      }
+      
+      // Ensure IDs are unique within the player's own selection
+      const uniqueIds = new Set(selectedQuestionIds);
+      if (uniqueIds.size !== DECK_SIZE_REQUIRED) {
+            console.warn(`[Lobby ${this.lobbyId}] Player ${playerId} submitted selection with duplicate IDs.`);
+            return false; // Indicate failure
+      }
+
+      if (!this.selectedQuestionsByPlayer.has(playerId)) {
+          this.selectedQuestionsByPlayer.set(playerId, selectedQuestionIds);
+          console.log(`[Lobby ${this.lobbyId}] Player ${playerId} confirmed selection of ${selectedQuestionIds.length} questions.`);
+      } else {
+          console.warn(`[Lobby ${this.lobbyId}] Player ${playerId} tried to confirm selection again.`);
+          return false; 
+      }
+
+      // Check if both players have selected
+      if (this.selectedQuestionsByPlayer.size === 2) {
+          console.log(`[Lobby ${this.lobbyId}] Both players have selected questions. Creating decks...`);
+          const playerIds = Array.from(this.players.keys());
+          const [player1Id, player2Id] = playerIds;
+
+          const player1SelectedIds = this.selectedQuestionsByPlayer.get(player1Id);
+          const player2SelectedIds = this.selectedQuestionsByPlayer.get(player2Id);
+
+          // Retrieve full question objects for each player based on their individual selections
+          const deck1Pool = this.questions.filter(q => player1SelectedIds.includes(q._id.toString()));
+          const deck2Pool = this.questions.filter(q => player2SelectedIds.includes(q._id.toString()));
+
+          // Validate final pool sizes (should match required deck size)
+          if (deck1Pool.length !== DECK_SIZE_REQUIRED) {
+               console.error(`[Lobby ${this.lobbyId}] Error creating deck for Player 1: Found ${deck1Pool.length} questions, expected ${DECK_SIZE_REQUIRED}.`);
+               return false;
+          }
+          if (deck2Pool.length !== DECK_SIZE_REQUIRED) {
+               console.error(`[Lobby ${this.lobbyId}] Error creating deck for Player 2: Found ${deck2Pool.length} questions, expected ${DECK_SIZE_REQUIRED}.`);
+               return false;
+          }
+
+          // Shuffle each player's selected pool to create their deck
+          const deck1 = this._shuffleArray([...deck1Pool]);
+          const deck2 = this._shuffleArray([...deck2Pool]);
+
+          this.playerDecks.set(player1Id, deck1);
+          this.playerDecks.set(player2Id, deck2);
+          console.log(`[Lobby ${this.lobbyId}] Decks created from individual player selections.`);
+          
+          // Deal initial hands
+          this._dealInitialHands(playerIds);
+
+          // Transition state
+          this.state = this.GAME_STATE.DICE_ROLL; // Use instance property
+          console.log(`[Lobby ${this.lobbyId}] Decks created and hands dealt after card selection. Transitioning to ${this.state}.`);
+          return true; // Ready to proceed to dice roll
+      } else {
+          // Only one player has selected, wait for the other
+          console.log(`[Lobby ${this.lobbyId}] Waiting for second player to confirm selection.`);
+          return false;
+      }
   }
 
   // --- Helper to shuffle an array (Fisher-Yates) ---
@@ -365,7 +402,7 @@ class PvpGameInstance {
     if (this.currentTurn !== playerId) {
         throw new Error('It\'s not your turn.');
     }
-    if (this.state !== GAME_STATE.AWAITING_CARD_SUMMON) {
+    if (this.state !== this.GAME_STATE.AWAITING_CARD_SUMMON) { // Use instance property
         throw new Error(`Cannot summon card in current state: ${this.state}`);
     }
     if (this.hasSummonedQuestionThisTurn) {
@@ -398,7 +435,7 @@ class PvpGameInstance {
     
     // Update turn flags and state
     this.hasSummonedQuestionThisTurn = true;
-    this.state = GAME_STATE.AWAITING_OPPONENT_ANSWER;
+    this.state = this.GAME_STATE.AWAITING_OPPONENT_ANSWER; // Use instance property
 
     const opponentId = Array.from(this.players.keys()).find(id => id !== playerId);
 
@@ -426,7 +463,7 @@ class PvpGameInstance {
     if (this.currentTurn !== playerId) {
         throw new Error('It\'s not your turn.');
     }
-    if (this.state !== GAME_STATE.AWAITING_CARD_SUMMON) {
+    if (this.state !== this.GAME_STATE.AWAITING_CARD_SUMMON) { // Use instance property
         throw new Error(`Cannot play spell/effect card in current state: ${this.state}`);
     }
     if (this.hasPlayedSpellEffectThisTurn) {
@@ -466,7 +503,7 @@ class PvpGameInstance {
     let gameOver = false;
     let winnerId = null;
     if (this.isGameOver()) {
-        this.state = GAME_STATE.GAME_OVER;
+        this.state = this.GAME_STATE.GAME_OVER; // Use instance property
         winnerId = this.getWinner();
         gameOver = true;
         console.log(`[Lobby ${this.lobbyId}] Game Over triggered by spell/effect card ${cardId}. Winner: ${winnerId}`);
@@ -562,7 +599,7 @@ class PvpGameInstance {
     console.log(`[Lobby ${this.lobbyId}] Player ${playerId} attempting to submit answer: ${submittedAnswer}. Current state: ${this.state}`);
 
     // --- Validation Checks ---
-    if (this.state !== GAME_STATE.AWAITING_OPPONENT_ANSWER) {
+    if (this.state !== this.GAME_STATE.AWAITING_OPPONENT_ANSWER) { // Use instance property
         throw new Error(`Cannot submit answer in current state: ${this.state}`);
     }
     if (!this.currentSummonedCard) {
@@ -630,7 +667,7 @@ class PvpGameInstance {
 
     // Check for Game Over
     if (this.isGameOver()) {
-      this.state = GAME_STATE.GAME_OVER;
+      this.state = this.GAME_STATE.GAME_OVER; // Use instance property
       const winnerId = this.getWinner();
       console.log(`[Lobby ${this.lobbyId}] Game Over! Winner: ${winnerId}. Final HP -> Attacker(${attackerId}): ${attackerHp}, Defender(${defenderId}): ${defenderHp}. State: ${this.state}`);
       return {
@@ -651,7 +688,7 @@ class PvpGameInstance {
     this.drawCard(this.currentTurn);
 
     // Set state for the new turn
-    this.state = GAME_STATE.AWAITING_CARD_SUMMON;
+    this.state = this.GAME_STATE.AWAITING_CARD_SUMMON; // Use instance property
     
     console.log(`[Lobby ${this.lobbyId}] Turn resolved. Next turn: ${this.currentTurn}. State: ${this.state}. HP -> Attacker(${attackerId}): ${attackerHp}, Defender(${defenderId}): ${defenderHp}`);
 
@@ -667,7 +704,7 @@ class PvpGameInstance {
   // Method to handle setting a player's dice roll
   setDiceRoll(playerId, rollValue) {
     console.log(`[Lobby ${this.lobbyId}] setDiceRoll called for player ${playerId} with value ${rollValue}. Current state: ${this.state}`);
-    if (this.state !== GAME_STATE.DICE_ROLL) {
+    if (this.state !== this.GAME_STATE.DICE_ROLL) { // Use instance property
       console.error(`[Lobby ${this.lobbyId}] Error: Cannot roll dice outside of DICE_ROLL state.`);
       throw new Error('Cannot roll dice outside of DICE_ROLL state');
     }
@@ -696,20 +733,20 @@ class PvpGameInstance {
         if (roll1 === roll2) {
             console.log(`Dice roll tie (${roll1} vs ${roll2}) in lobby ${this.lobbyId}. Resetting for re-roll.`);
             winnerId = null; // Tie
-            this.state = GAME_STATE.DICE_ROLL; // Stay in dice roll state
+            this.state = this.GAME_STATE.DICE_ROLL; // Use instance property (Stay in dice roll state)
             this.playerDiceRolls.clear(); // Clear rolls for the re-roll
             isTie = true;
         } else if (roll1 > roll2) {
             winnerId = player1Id;
             nextTurnPlayerId = player1Id; // Winner takes the first turn
-            this.state = GAME_STATE.AWAITING_CARD_SUMMON; // Move to gameplay
+            this.state = this.GAME_STATE.AWAITING_CARD_SUMMON; // Use instance property (Move to gameplay)
             this.currentTurn = nextTurnPlayerId;
             this.playerDiceRolls.clear(); // Clear rolls after determining winner
             console.log(`Player ${player1Id} wins roll (${roll1} vs ${roll2}). Next state: ${this.state}, Turn: ${this.currentTurn}`);
         } else { // roll2 > roll1
             winnerId = player2Id;
             nextTurnPlayerId = player2Id; // Winner takes the first turn
-            this.state = GAME_STATE.AWAITING_CARD_SUMMON; // Move to gameplay
+            this.state = this.GAME_STATE.AWAITING_CARD_SUMMON; // Use instance property (Move to gameplay)
             this.currentTurn = nextTurnPlayerId;
             this.playerDiceRolls.clear(); // Clear rolls after determining winner
             console.log(`Player ${player2Id} wins roll (${roll2} vs ${roll1}). Next state: ${this.state}, Turn: ${this.currentTurn}`);
@@ -753,10 +790,10 @@ class PvpGameInstance {
   }
 }
 
-// Update the createGame function to use the new class name
+// Update the createGame function to use the new class name and pass constants
 exports.createGame = async (lobbyId) => {
   try {
-    const game = new PvpGameInstance(lobbyId); // Use renamed class
+    const game = new PvpGameInstance(lobbyId, RequiredGameStates); // Pass the required constants
     activeGames.set(lobbyId, game);
     return game;
   } catch (error) {
@@ -785,7 +822,7 @@ exports.joinGame = async (lobbyId, playerId, playerName) => {
     });
     
     if (game.players.size === 2) {
-      game.state = GAME_STATE.RPS;
+      game.state = RequiredGameStates.RPS;
       console.log('Game ready for RPS:', { 
         lobbyId,
         players: game.getPlayers(),
@@ -830,7 +867,7 @@ exports.handleRpsChoice = async (lobbyId, playerId, choice) => {
       
       // If there IS a winner (and not a draw)
       if (winner) {
-          console.log(`RPS winner determined: ${winner}. State should now be SUBJECT_SELECTION.`);
+          console.log(`RPS winner determined: ${winner}. State should now be ${game.GAME_STATE.SUBJECT_SELECTION}.`);
           // State and turn were set correctly by the single call to determineRpsWinner
 
           // Emit the game update to synchronize clients with the state set by determineRpsWinner
@@ -871,32 +908,43 @@ exports.handleRpsChoice = async (lobbyId, playerId, choice) => {
 };
 
 // Update handleSubjectSelection to store fetched questions
-exports.handleSubjectSelection = async (lobbyId, playerId, subject) => { // Added playerId
+exports.handleSubjectSelection = async (lobbyId, playerId, subject) => { 
   try {
     const game = activeGames.get(lobbyId);
     if (!game) throw new Error('Game not found');
+    // Check turn/state *before* calling setSubject
     if (!game.canSelectSubject(playerId)) throw new Error('Not player\'s turn or wrong state for subject selection');
 
-    game.setSubject(playerId, subject); // Updates state to CARD_SELECTION
+    await game.setSubject(playerId, subject); // Updates state to DECK_CREATION
 
-    // Fetch questions for the selected subject
-    console.log(`Fetching questions for subject ${subject.id} in lobby ${lobbyId}`);
-    const questions = await Question.find({ subject: subject.id })
-      .select('_id questionText choices correctAnswer difficulty') // Fetch needed fields
-      .limit(30); // Fetch enough for both players initially
+    // Use the subject ID stored reliably in the game instance
+    const subjectIdToFetch = game.selectedSubject?.id || game.selectedSubject?._id;
+    if (!subjectIdToFetch) {
+        console.error(`[Lobby ${lobbyId}] Error: Could not retrieve subject ID from game instance after setSubject.`);
+        throw new Error('Internal error processing subject selection.')
+    }
 
-    if (!questions || questions.length < 30) { // Need enough for both players
-        console.error(`Insufficient questions found for subject ${subject.id}: Found ${questions?.length || 0}`);
-        throw new Error(`Not enough questions available for subject: ${subject.name}`);
+    // Fetch questions for the selected subject using the stored ID
+    console.log(`Fetching questions for subject ${subjectIdToFetch} in lobby ${lobbyId}`);
+    const questions = await Question.find({ subject: subjectIdToFetch })
+      .select('_id questionText choices correctAnswer difficulty type') 
+      .limit(30); 
+
+    // --- CORRECTED CHECK: Ensure at least 15 questions are available --- 
+    const DECK_SELECTION_COUNT = 15; // Define locally for clarity
+    if (!questions || questions.length < DECK_SELECTION_COUNT) { 
+        console.error(`Insufficient questions found for subject ${subjectIdToFetch}: Found ${questions?.length || 0}, Required: ${DECK_SELECTION_COUNT}`);
+        // Update error message
+        throw new Error(`Not enough questions available for subject: ${game.selectedSubject?.name || 'selected subject'}. Need at least ${DECK_SELECTION_COUNT}.`);
     }
     
     game.storeFetchedQuestions(questions); // Store questions on the game instance
     
     console.log(`Subject selection complete, ${questions.length} questions stored for lobby ${lobbyId}. State: ${game.state}`);
-    // Inform clients that subject is selected and state is CARD_SELECTION
+    // Inform clients that subject is selected and state is DECK_CREATION
     const io = socketService.getIo();
     io.to(lobbyId).emit('game_update', {
-        gameState: game.state, // Should be CARD_SELECTION
+        gameState: game.state, // Use state from game instance (should be DECK_CREATION)
         selectedSubject: game.selectedSubject,
         // Send available questions to BOTH clients for selection
         availableQuestions: game.questions.map(q => ({ id: q._id, text: q.questionText })) // Send only id/text
@@ -916,7 +964,7 @@ exports.handleQuestionSelection = async (lobbyId, playerId, selectedQuestionIds)
     try {
         const game = activeGames.get(lobbyId);
         if (!game) throw new Error('Game not found');
-        if (game.state !== GAME_STATE.CARD_SELECTION) throw new Error('Not in card selection phase');
+        if (game.state !== RequiredGameStates.DECK_CREATION) throw new Error('Not in deck creation phase'); // Check against DECK_CREATION
 
         // Assign cards and check if both players are done
         const readyToDeal = game.assignCards(playerId, selectedQuestionIds);
@@ -933,11 +981,12 @@ exports.handleQuestionSelection = async (lobbyId, playerId, selectedQuestionIds)
                     io.to(targetSocketId).emit('deal_cards', { 
                         // Send full question objects for the hand
                         playerHand: playerHand.map(q => ({ 
-                            id: q._id.toString(), 
+                           _id: q._id.toString(), // Use _id for consistency
                             text: q.questionText, 
                             options: q.choices, 
-                            correctAnswer: q.correctAnswer, // Client needs this eventually?
-                            difficulty: q.difficulty
+                            correctAnswer: q.correctAnswer, 
+                            difficulty: q.difficulty,
+                            type: 'question' // Add the missing type property
                         })) 
                     });
                     console.log(`Emitted deal_cards to player ${pId}`);
@@ -948,7 +997,7 @@ exports.handleQuestionSelection = async (lobbyId, playerId, selectedQuestionIds)
 
             // Emit game update to lobby to change state to DICE_ROLL
             io.to(lobbyId).emit('game_update', {
-                gameState: game.state, // Should be DICE_ROLL
+                gameState: game.state, // Use state from game instance (should be DICE_ROLL)
                 playerHandCount: game.playerHands.get(playerIds[0])?.length || 0, // Example count
                 opponentHandCount: game.playerHands.get(playerIds[1])?.length || 0 // Example count
             });
@@ -1015,7 +1064,7 @@ exports.handleAnswerSubmission = async (lobbyId, playerId, questionId, answerCho
     const playerIds = Array.from(game.players.keys());
     const nextTurnPlayerId = playerIds.find(id => id !== playerId);
     game.currentTurn = nextTurnPlayerId;
-    game.state = nextTurnPlayerId ? GAME_STATE.PLAYER_SELECT_CARD : GAME_STATE.WAITING; // Or determine based on whose turn
+    game.state = nextTurnPlayerId ? RequiredGameStates.AWAITING_CARD_SUMMON : RequiredGameStates.WAITING; // Use RequiredGameStates
 
     console.log('Game state after answer:', { lobbyId, state: game.state, currentTurn: game.currentTurn });
 
@@ -1037,7 +1086,7 @@ exports.handleAnswerSubmission = async (lobbyId, playerId, questionId, answerCho
 
     // Check for game over AFTER emitting the result
     if (game.isGameOver()) {
-        game.state = GAME_STATE.GAME_OVER; // Correct state
+        game.state = RequiredGameStates.GAME_OVER; // Use instance property
         const winnerId = game.getWinner();
         const loserId = playerIds.find(id => id !== winnerId);
 
@@ -1083,7 +1132,7 @@ exports.endGame = async (lobbyId) => {
       throw new Error('Game not found');
     }
 
-    game.state = GAME_STATE.COMPLETED;
+    game.state = RequiredGameStates.COMPLETED; // Use RequiredGameStates
     activeGames.delete(lobbyId);
 
     return { message: 'Game ended successfully' };
@@ -1098,23 +1147,45 @@ exports.handleDisconnect = async (playerId) => {
   try {
     for (const [lobbyId, game] of activeGames.entries()) {
       if (game.players.has(playerId)) {
-        game.state = GAME_STATE.COMPLETED;
+        console.log(`[Disconnect] Found player ${playerId} in lobby ${lobbyId}. Setting state.`);
+        // Check if game instance still exists and has the GAME_STATE property
+        if (game && game.GAME_STATE) {
+             game.state = game.GAME_STATE.COMPLETED; // Preferably use instance state if available
+        } else {
+             // Fallback if instance or property missing (should not happen ideally)
+             console.warn(`[Disconnect] Game instance or GAME_STATE missing for lobby ${lobbyId}. Using RequiredGameStates.`);
+             // game.state = RequiredGameStates.COMPLETED; // Set state directly if needed as fallback
+        }
         const otherPlayerId = Array.from(game.players.keys())
           .find(id => id !== playerId);
         
         if (otherPlayerId) {
-          socketService.emitEvent('player_disconnected', {
+          const opponentSocketId = socketService.findSocketIdByUserId(otherPlayerId);
+           console.log(`[Disconnect] Notifying opponent ${otherPlayerId} in lobby ${lobbyId}.`);
+           // Get io instance
+           const io = socketService.getIo();
+           if (io && opponentSocketId) {
+               io.to(opponentSocketId).emit('opponent_disconnected', {
+                   message: `Player ${game.players.get(playerId)?.name || 'Opponent'} disconnected.`,
+                   lobbyId
+               });
+               console.log(`[Disconnect] Emitted opponent_disconnected to ${opponentSocketId}.`);
+           } else {
+                console.warn(`[Disconnect] Could not get io instance or opponent socket ID for lobby ${lobbyId}.`);
+           }
+          socketService.emitEvent('player_disconnected', { // This might be redundant if handled above
             lobbyId,
             disconnectedPlayer: playerId
           });
         }
         
+        console.log(`[Disconnect] Removing game instance ${lobbyId} due to player ${playerId} disconnect.`);
         activeGames.delete(lobbyId);
       }
     }
   } catch (error) {
     console.error('Error handling disconnect:', error);
-    throw error;
+    // Avoid throwing error here as it might crash server during normal disconnect
   }
 };
 
@@ -1141,7 +1212,7 @@ exports.handleDiceRoll = async (lobbyId, playerId) => {
             console.error(`[Controller] Game not found for lobby ${lobbyId} in handleDiceRoll`);
             throw new Error('Game not found');
         }
-        if (game.state !== GAME_STATE.DICE_ROLL) { 
+        if (game.state !== RequiredGameStates.DICE_ROLL) { 
             console.error(`[Controller] Incorrect state (${game.state}) for dice roll in lobby ${lobbyId}`);
             throw new Error('Not in dice roll phase');
         }
@@ -1192,6 +1263,14 @@ exports.handleDiceRoll = async (lobbyId, playerId) => {
                     player2Hp: player2?.hp,
                     player1HandCount: game.playerHands.get(diceResult.player1Id)?.length || 0,
                     player2HandCount: game.playerHands.get(diceResult.player2Id)?.length || 0,
+                    playerHand: (game.playerHands.get(diceResult.nextTurn) || []).map(q => ({
+                      _id: q._id.toString(),
+                      text: q.questionText,
+                      options: q.choices,
+                      correctAnswer: q.correctAnswer,
+                      difficulty: q.difficulty,
+                      type: 'question'
+                    })),
                     gameMessage: `Dice roll complete. ${game.players.get(diceResult.winnerId)?.name} goes first!`
                 });
             }
@@ -1259,7 +1338,14 @@ exports.handleSummonCard = async (lobbyId, playerId, cardId) => {
             // 1. Update attacker's hand (send privately)
             if (attackerSocketId) {
                 io.to(attackerSocketId).emit('game_update', {
-                    playerHand: game.playerHands.get(attackerId), // Send updated hand
+                    playerHand: (game.playerHands.get(attackerId) || []).map(q => ({
+                        _id: q._id.toString(),
+                        text: q.questionText,
+                        options: q.choices,
+                        correctAnswer: q.correctAnswer,
+                        difficulty: q.difficulty,
+                        type: 'question'
+                    })),
                     playerHandCount: game.playerHands.get(attackerId)?.length || 0
                     // Include other relevant state if needed
                 });
@@ -1302,7 +1388,7 @@ exports.handleSummonCard = async (lobbyId, playerId, cardId) => {
             const io = socketService.getIo();
             if (io) io.to(errorSocketId).emit('game_error', { message: error.message || 'Failed to summon card' });
         }
-        throw error;
+        // throw error; // Remove re-throw to prevent potential disconnect
     }
 };
 
@@ -1371,7 +1457,7 @@ exports.handlePlaySpellEffect = async (lobbyId, playerId, cardId) => {
         }
         
         // Return game instance only if not game over?
-        return game.state !== GAME_STATE.GAME_OVER ? game : null; 
+        return game.state !== RequiredGameStates.GAME_OVER ? game : null; 
 
     } catch (error) {
         console.error(`[Controller] Error handling play spell/effect for player ${playerId} in lobby ${lobbyId}:`, error);
@@ -1452,7 +1538,7 @@ exports.handleSubmitAnswer = async (lobbyId, playerId, answer) => {
             });
         }
         
-        return game.state !== GAME_STATE.GAME_OVER ? game : null; 
+        return game.state !== RequiredGameStates.GAME_OVER ? game : null; 
 
     } catch (error) {
         console.error(`[Controller] Error handling submit answer for player ${playerId} in lobby ${lobbyId}:`, error);

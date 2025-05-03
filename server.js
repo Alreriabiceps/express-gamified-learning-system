@@ -290,7 +290,7 @@ io.on('connection', (socket) => {
 
   // Handle Subject Selection
   socket.on('select_subject', async (data) => {
-      const { lobbyId, subject } = data; // subject likely { id: ..., name: ... }
+      const { lobbyId, subject } = data;
       const playerId = socket.userId;
       console.log(`[Socket Event] select_subject received: lobby ${lobbyId}, player ${playerId}, subject ${subject?.id}`);
       try {
@@ -298,11 +298,30 @@ io.on('connection', (socket) => {
           if (!subject || !subject.id || !subject.name) {
               throw new Error('Invalid subject data provided.');
           }
-          await pvpController.handleSubjectSelection(lobbyId, playerId, { _id: subject.id, name: subject.name }); // Pass required fields
+          // Pass the original subject object directly to the controller
+          await pvpController.handleSubjectSelection(lobbyId, playerId, subject); 
           // Controller now handles deck creation, dealing, and state transition internally
       } catch (error) {
           console.error(`Error handling select_subject for player ${playerId} in lobby ${lobbyId}:`, error);
           socket.emit('game_error', { message: error.message || 'Failed to process subject selection' });
+      }
+  });
+
+  // Handle Confirming Question Selection (after DECK_CREATION phase)
+  socket.on('confirm_question_selection', async (data) => {
+      const { lobbyId, selectedQuestionIds } = data;
+      const playerId = socket.userId;
+      console.log(`[Socket Event] confirm_question_selection received: lobby ${lobbyId}, player ${playerId}, count ${selectedQuestionIds?.length}`);
+      try {
+          if (!lobbyId || !Array.isArray(selectedQuestionIds)) {
+              throw new Error('Lobby ID and selected question IDs array are required.');
+          }
+          // Call the controller function to handle the confirmation
+          await pvpController.handleQuestionSelection(lobbyId, playerId, selectedQuestionIds);
+          // Controller handles waiting for both players, dealing cards, and changing state
+      } catch (error) {
+          console.error(`Error handling confirm_question_selection for player ${playerId} in lobby ${lobbyId}:`, error);
+          socket.emit('game_error', { message: error.message || 'Failed to confirm question selection' });
       }
   });
 
