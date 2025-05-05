@@ -159,8 +159,8 @@ io.on('connection', (socket) => {
         throw new Error('Lobby ID is required');
       }
 
-      console.log('Player joining game room:', { 
-        socketId: socket.id, 
+      console.log('Player joining game room:', {
+        socketId: socket.id,
         lobbyId,
         playerId: playerId || socket.userId,
         playerName: playerName || socket.userName
@@ -168,19 +168,19 @@ io.on('connection', (socket) => {
 
       // Join the socket room
       socket.join(lobbyId);
-      
+
       try {
         // Get current game state
         const game = pvpController.getGame(lobbyId);
         if (game) {
           const players = game.getPlayers();
-          console.log('Current game state:', { 
-            lobbyId, 
+          console.log('Current game state:', {
+            lobbyId,
             playerCount: players.length,
             players: players,
             state: game.state
           });
-          
+
           // Notify all players in the room about current state
           io.to(lobbyId).emit('room_status', {
             playerCount: players.length,
@@ -202,9 +202,9 @@ io.on('connection', (socket) => {
   socket.on('join_game', async (data) => {
     try {
       const { lobbyId, playerId, playerName } = data;
-      console.log('Player joining game:', { 
-        socketId: socket.id, 
-        lobbyId, 
+      console.log('Player joining game:', {
+        socketId: socket.id,
+        lobbyId,
         playerId: playerId || socket.userId,
         playerName: playerName || socket.userName
       });
@@ -218,7 +218,7 @@ io.on('connection', (socket) => {
       // Join or create game
       const game = await pvpController.joinGame(lobbyId, playerId || socket.userId, playerName || socket.userName);
       const players = game.getPlayers();
-      
+
       console.log('Game state after join:', {
         lobbyId,
         players: players,
@@ -255,14 +255,14 @@ io.on('connection', (socket) => {
     try {
       const { lobbyId, playerId } = data;
       console.log('Player ready for RPS:', { socketId: socket.id, lobbyId, playerId });
-      
+
       const game = pvpController.getGame(lobbyId);
       if (!game) {
         throw new Error('Game not found');
       }
 
       game.setPlayerReady(playerId);
-      
+
       // If all players are ready, start RPS
       if (game.areAllPlayersReady()) {
         console.log('All players ready, starting RPS:', lobbyId);
@@ -280,111 +280,112 @@ io.on('connection', (socket) => {
     const playerId = socket.userId; // Get playerId from authenticated socket
     console.log(`[Socket Event] rps_choice received: lobby ${lobbyId}, player ${playerId}, choice ${choice}`);
     try {
-        await pvpController.handleRpsChoice(lobbyId, playerId, choice);
-        // Controller handles emitting results/updates
+      await pvpController.handleRpsChoice(lobbyId, playerId, choice);
+      // Controller handles emitting results/updates
     } catch (error) {
-        console.error(`Error handling rps_choice for player ${playerId} in lobby ${lobbyId}:`, error);
-        socket.emit('game_error', { message: error.message || 'Failed to process RPS choice' });
+      console.error(`Error handling rps_choice for player ${playerId} in lobby ${lobbyId}:`, error);
+      socket.emit('game_error', { message: error.message || 'Failed to process RPS choice' });
     }
   });
 
   // Handle Subject Selection
   socket.on('select_subject', async (data) => {
-      const { lobbyId, subject } = data;
-      const playerId = socket.userId;
-      console.log(`[Socket Event] select_subject received: lobby ${lobbyId}, player ${playerId}, subject ${subject?.id}`);
-      try {
-          // Ensure subject object is passed correctly
-          if (!subject || !subject.id || !subject.name) {
-              throw new Error('Invalid subject data provided.');
-          }
-          // Pass the original subject object directly to the controller
-          await pvpController.handleSubjectSelection(lobbyId, playerId, subject); 
-          // Controller now handles deck creation, dealing, and state transition internally
-      } catch (error) {
-          console.error(`Error handling select_subject for player ${playerId} in lobby ${lobbyId}:`, error);
-          socket.emit('game_error', { message: error.message || 'Failed to process subject selection' });
+    const { lobbyId, subject } = data;
+    const playerId = socket.userId;
+    console.log(`[Socket Event] select_subject received: lobby ${lobbyId}, player ${playerId}, subject ${subject?.id}`);
+    try {
+      // Ensure subject object is passed correctly
+      if (!subject || !subject.id || !subject.name) {
+        throw new Error('Invalid subject data provided.');
       }
+      // Pass the original subject object directly to the controller
+      await pvpController.handleSubjectSelection(lobbyId, playerId, subject);
+      // Controller now handles deck creation, dealing, and state transition internally
+    } catch (error) {
+      console.error(`Error handling select_subject for player ${playerId} in lobby ${lobbyId}:`, error);
+      socket.emit('game_error', { message: error.message || 'Failed to process subject selection' });
+    }
   });
 
   // Handle Confirming Question Selection (after DECK_CREATION phase)
   socket.on('confirm_question_selection', async (data) => {
-      const { lobbyId, selectedQuestionIds } = data;
-      const playerId = socket.userId;
-      console.log(`[Socket Event] confirm_question_selection received: lobby ${lobbyId}, player ${playerId}, count ${selectedQuestionIds?.length}`);
-      try {
-          if (!lobbyId || !Array.isArray(selectedQuestionIds)) {
-              throw new Error('Lobby ID and selected question IDs array are required.');
-          }
-          // Call the controller function to handle the confirmation
-          await pvpController.handleQuestionSelection(lobbyId, playerId, selectedQuestionIds);
-          // Controller handles waiting for both players, dealing cards, and changing state
-      } catch (error) {
-          console.error(`Error handling confirm_question_selection for player ${playerId} in lobby ${lobbyId}:`, error);
-          socket.emit('game_error', { message: error.message || 'Failed to confirm question selection' });
+    const { lobbyId, selectedQuestionIds } = data;
+    const playerId = socket.userId;
+    console.log(`[Socket Event] confirm_question_selection received: lobby ${lobbyId}, player ${playerId}, count ${selectedQuestionIds?.length}`);
+    try {
+      if (!lobbyId || !Array.isArray(selectedQuestionIds)) {
+        throw new Error('Lobby ID and selected question IDs array are required.');
       }
+      // Call the controller function to handle the confirmation
+      await pvpController.handleQuestionSelection(lobbyId, playerId, selectedQuestionIds);
+      // Controller handles waiting for both players, dealing cards, and changing state
+    } catch (error) {
+      console.error(`Error handling confirm_question_selection for player ${playerId} in lobby ${lobbyId}:`, error);
+      socket.emit('game_error', { message: error.message || 'Failed to confirm question selection' });
+    }
   });
 
   // Handle Dice Roll
   socket.on('dice_roll', async (data) => {
-      const { lobbyId } = data;
-      const playerId = socket.userId;
-      console.log(`[Socket Event] dice_roll received: lobby ${lobbyId}, player ${playerId}`);
-      try {
-          await pvpController.handleDiceRoll(lobbyId, playerId);
-          // Controller handles emitting results/updates
-      } catch (error) {
-          console.error(`Error handling dice_roll for player ${playerId} in lobby ${lobbyId}:`, error);
-          socket.emit('game_error', { message: error.message || 'Failed to process dice roll' });
-      }
+    const { lobbyId } = data;
+    const playerId = socket.userId;
+    console.log(`[Socket Event] dice_roll received: lobby ${lobbyId}, player ${playerId}`);
+    try {
+      await pvpController.handleDiceRoll(lobbyId, playerId);
+      // Controller handles emitting results/updates
+    } catch (error) {
+      console.error(`Error handling dice_roll for player ${playerId} in lobby ${lobbyId}:`, error);
+      socket.emit('game_error', { message: error.message || 'Failed to process dice roll' });
+    }
   });
 
   // --- NEW Gameplay Event Listeners ---
 
   // Handle Summoning a Question Card
   socket.on('summon_card', async (data) => {
-      const { lobbyId, cardId } = data;
-      const playerId = socket.userId;
-      console.log(`[Socket Event] summon_card received: lobby ${lobbyId}, player ${playerId}, card ${cardId}`);
-      try {
-          if (!cardId) throw new Error('Card ID is required to summon.');
-          await pvpController.handleSummonCard(lobbyId, playerId, cardId);
-          // Controller handles emitting updates
-      } catch (error) {
-          console.error(`Error handling summon_card for player ${playerId} in lobby ${lobbyId}:`, error);
-          socket.emit('game_error', { message: error.message || 'Failed to summon card' });
-      }
+    const { lobbyId, cardId } = data;
+    const playerId = socket.userId;
+    console.log(`[Socket Event] summon_card received: lobby ${lobbyId}, player ${playerId}, card ${cardId}`);
+    try {
+      if (!cardId) throw new Error('Card ID is required to summon.');
+      await pvpController.handleSummonCard(lobbyId, playerId, cardId);
+      // Controller handles emitting updates
+    } catch (error) {
+      console.error(`Error handling summon_card for player ${playerId} in lobby ${lobbyId}:`, error);
+      socket.emit('game_error', { message: error.message || 'Failed to summon card' });
+    }
   });
 
   // Handle Playing a Spell/Effect Card
   socket.on('play_spell_effect', async (data) => {
-      const { lobbyId, cardId } = data;
-      const playerId = socket.userId;
-      console.log(`[Socket Event] play_spell_effect received: lobby ${lobbyId}, player ${playerId}, card ${cardId}`);
-      try {
-           if (!cardId) throw new Error('Card ID is required to play spell/effect.');
-          await pvpController.handlePlaySpellEffect(lobbyId, playerId, cardId);
-          // Controller handles emitting updates and game over checks
-      } catch (error) {
-          console.error(`Error handling play_spell_effect for player ${playerId} in lobby ${lobbyId}:`, error);
-          socket.emit('game_error', { message: error.message || 'Failed to play spell/effect card' });
-      }
+    const { lobbyId, cardId } = data;
+    const playerId = socket.userId;
+    console.log(`[Socket Event] play_spell_effect received: lobby ${lobbyId}, player ${playerId}, card ${cardId}`);
+    try {
+      if (!cardId) throw new Error('Card ID is required to play spell/effect.');
+      await pvpController.handlePlaySpellEffect(lobbyId, playerId, cardId);
+      // Controller handles emitting updates and game over checks
+    } catch (error) {
+      console.error(`Error handling play_spell_effect for player ${playerId} in lobby ${lobbyId}:`, error);
+      socket.emit('game_error', { message: error.message || 'Failed to play spell/effect card' });
+    }
   });
 
   // Handle Submitting an Answer
   socket.on('submit_answer', async (data) => {
-      const { lobbyId, answer } = data;
-      const playerId = socket.userId;
-      console.log(`[Socket Event] submit_answer received: lobby ${lobbyId}, player ${playerId}`);
-      try {
-          // Assuming 'answer' contains the necessary submitted value
-          if (answer === undefined || answer === null) throw new Error('Answer value is required.');
-          await pvpController.handleSubmitAnswer(lobbyId, playerId, answer);
-          // Controller handles emitting results/updates and game over checks
-      } catch (error) {
-          console.error(`Error handling submit_answer for player ${playerId} in lobby ${lobbyId}:`, error);
-          socket.emit('game_error', { message: error.message || 'Failed to submit answer' });
-      }
+    const { lobbyId, answer, questionId } = data;
+    const playerId = socket.userId;
+    console.log(`[Socket Event] submit_answer received: lobby ${lobbyId}, player ${playerId}`);
+    try {
+      // Assuming 'answer' contains the necessary submitted value
+      if (answer === undefined || answer === null) throw new Error('Answer value is required.');
+      if (!questionId) throw new Error('Question ID is required.');
+      await pvpController.handleSubmitAnswer(lobbyId, playerId, answer, questionId);
+      // Controller handles emitting results/updates and game over checks
+    } catch (error) {
+      console.error(`Error handling submit_answer for player ${playerId} in lobby ${lobbyId}:`, error);
+      socket.emit('game_error', { message: error.message || 'Failed to submit answer' });
+    }
   });
 
   // --- End NEW Gameplay Event Listeners ---
