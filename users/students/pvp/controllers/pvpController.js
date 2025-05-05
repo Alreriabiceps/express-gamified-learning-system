@@ -281,6 +281,31 @@ class PvpGameInstance {
       // Deal initial hands
       this._dealInitialHands(playerIds);
 
+      // --- SAFETY CHECK: Always emit deal_cards to both players after dealing initial hands ---
+      const io = socketService.getIo();
+      for (const pId of playerIds) {
+        const playerHand = this.playerHands.get(pId);
+        const targetSocketId = socketService.findSocketIdByUserId(pId);
+        if (targetSocketId && playerHand) {
+          console.log(`[DEBUG] Safety check: Emitting deal_cards to player ${pId} after initial hand dealt. Hand:`,
+            { length: playerHand.length, firstQuestionText: playerHand[0]?.questionText?.substring(0, 30) + '...' });
+
+          io.to(targetSocketId).emit('deal_cards', {
+            playerHand: playerHand.slice(0, 5).map(q => ({
+              _id: q._id.toString(),
+              text: q.questionText,
+              options: q.choices,
+              correctAnswer: q.correctAnswer,
+              difficulty: q.difficulty,
+              type: 'question'
+            }))
+          });
+          console.log(`[Safety] Emitted deal_cards to player ${pId} with ${playerHand.slice(0, 5).length} cards`);
+        } else {
+          console.error(`[Safety] Could not find socket (${targetSocketId}) or hand (${playerHand?.length}) for player ${pId}`);
+        }
+      }
+
       // Transition state
       this.state = this.GAME_STATE.DICE_ROLL; // Use instance property
       console.log(`[Lobby ${this.lobbyId}] Decks created and hands dealt after card selection. Transitioning to ${this.state}.`);
@@ -369,20 +394,36 @@ class PvpGameInstance {
         console.error(`[Lobby ${this.lobbyId}] Cannot deal hand for ${playerId}, deck has ${deck?.length || 0} cards.`);
         throw new Error(`Insufficient cards in deck for player ${playerId} to deal initial hand.`);
       }
-      // Only add unique cards to the hand by questionText
+
+      // Initialize empty hand and text tracking set
       const hand = [];
       const handTexts = new Set();
+
+      // Step 1: Draw unique cards until we have EXACTLY 5
       while (hand.length < 5 && deck.length > 0) {
         const card = deck.shift();
         const textKey = card.questionText?.trim().toLowerCase();
+
+        // Only add if not a duplicate question text
         if (textKey && !handTexts.has(textKey)) {
           hand.push(card);
           handTexts.add(textKey);
         }
       }
-      this.playerHands.set(playerId, hand);
+
+      // If we couldn't get 5 unique cards, log an error
+      if (hand.length < 5) {
+        console.error(`[Lobby ${this.lobbyId}] Could only add ${hand.length} unique cards to hand for player ${playerId}.`);
+      }
+
+      // Step 2: STRICTLY limit hand to 5 cards (this should never trim if previous code works correctly)
+      const finalHand = hand.slice(0, 5);
+
+      // Step 3: Update player's hand in game state
+      this.playerHands.set(playerId, finalHand);
       this.playerDecks.set(playerId, deck);
-      console.log(`[Lobby ${this.lobbyId}] Dealt 5 unique cards (by text) to ${playerId}. Hand size: ${hand.length}, Deck size: ${deck.length}`);
+
+      console.log(`[Lobby ${this.lobbyId}] Dealt exactly ${finalHand.length} unique cards (by text) to ${playerId}. Hand size: ${finalHand.length}, Deck size: ${deck.length}`);
     });
   }
 
@@ -994,7 +1035,7 @@ exports.handleQuestionSelection = async (lobbyId, playerId, selectedQuestionIds)
   try {
     const game = activeGames.get(lobbyId);
     if (!game) throw new Error('Game not found');
-    if (game.state !== RequiredGameStates.DECK_CREATION) throw new Error('Not in deck creation phase'); // Check against DECK_CREATION
+    if (game.state !== RequiredGameStates.DECK_CREATION) throw new Error('Not in deck creation phase');
 
     // Assign cards and check if both players are done
     const readyToDeal = game.assignCards(playerId, selectedQuestionIds);
@@ -1007,29 +1048,37 @@ exports.handleQuestionSelection = async (lobbyId, playerId, selectedQuestionIds)
       for (const pId of playerIds) {
         const playerHand = game.playerHands.get(pId);
         const targetSocketId = socketService.findSocketIdByUserId(pId);
+
+        // Add detailed debug logs
+        console.log(`[DEBUG] Player ${pId} hand before sending:`,
+          playerHand ? { length: playerHand.length, firstText: playerHand[0]?.questionText } : 'No hand');
+
         if (targetSocketId && playerHand) {
+          // Ensure we're only sending exactly 5 cards, no more
+          const handToSend = playerHand.slice(0, 5);
+
           io.to(targetSocketId).emit('deal_cards', {
-            // Send only the first 5 cards for the hand
-            playerHand: playerHand.slice(0, 5).map(q => ({
-              _id: q._id.toString(), // Use _id for consistency
+            playerHand: handToSend.map(q => ({
+              _id: q._id.toString(),
               text: q.questionText,
               options: q.choices,
               correctAnswer: q.correctAnswer,
               difficulty: q.difficulty,
-              type: 'question' // Add the missing type property
+              type: 'question'
             }))
           });
-          console.log(`Emitted deal_cards to player ${pId}`);
+          console.log(`Emitted deal_cards to player ${pId} with exactly ${handToSend.length} cards`);
         } else {
           console.error(`Could not find socket or hand for player ${pId} to emit deal_cards`);
         }
       }
 
       // Emit game update to lobby to change state to DICE_ROLL
+      // IMPORTANT: Do NOT include playerHand in broadcast events - only in private events
       io.to(lobbyId).emit('game_update', {
-        gameState: game.state, // Use state from game instance (should be DICE_ROLL)
-        playerHandCount: game.playerHands.get(playerIds[0])?.length || 0,
-        opponentHandCount: game.playerHands.get(playerIds[1])?.length || 0,
+        gameState: game.state,
+        player1HandCount: game.playerHands.get(playerIds[0])?.length || 0,
+        player2HandCount: game.playerHands.get(playerIds[1])?.length || 0,
         currentTurn: game.currentTurn
       });
       console.log('[EMIT game_update]', {
@@ -1037,7 +1086,6 @@ exports.handleQuestionSelection = async (lobbyId, playerId, selectedQuestionIds)
         gameState: game.state,
         currentTurn: game.currentTurn,
         players: Array.from(game.players.keys()),
-        currentSummonedCard: game.currentSummonedCard,
         state: game.state
       });
     } else {
@@ -1046,11 +1094,9 @@ exports.handleQuestionSelection = async (lobbyId, playerId, selectedQuestionIds)
       io.to(lobbyId).emit('game_message', { message: `Player ${game.players.get(playerId)?.name} confirmed selection. Waiting for opponent...` });
     }
 
-    return game; // Return updated game instance
-
+    return game;
   } catch (error) {
     console.error('Error handling question selection:', error);
-    // Emit error back?
     throw error;
   }
 };
@@ -1336,30 +1382,42 @@ exports.handleDiceRoll = async (lobbyId, playerId) => {
         console.log(`[Controller] Dice winner determined. Emitting game_update for state ${diceResult.newState} to lobby ${lobbyId}`);
         const player1 = game.players.get(diceResult.player1Id);
         const player2 = game.players.get(diceResult.player2Id);
+
+        // BROADCAST update WITHOUT playerHand (remove it)
         io.to(lobbyId).emit('game_update', {
-          gameState: diceResult.newState, // Should be AWAITING_CARD_SUMMON
-          currentTurn: diceResult.nextTurn, // ID of the winner
+          gameState: diceResult.newState,
+          currentTurn: diceResult.nextTurn,
           player1Hp: player1?.hp,
           player2Hp: player2?.hp,
           player1HandCount: game.playerHands.get(diceResult.player1Id)?.length || 0,
           player2HandCount: game.playerHands.get(diceResult.player2Id)?.length || 0,
-          playerHand: (game.playerHands.get(diceResult.nextTurn) || []).slice(0, 5).map(q => ({
-            _id: q._id.toString(),
-            text: q.questionText,
-            options: q.choices,
-            correctAnswer: q.correctAnswer,
-            difficulty: q.difficulty,
-            type: 'question'
-          })),
           gameMessage: `Dice roll complete. ${game.players.get(diceResult.winnerId)?.name} goes first!`,
           currentTurn: diceResult.nextTurn
         });
+
+        // PRIVATE hand update to the winner only
+        const winnerSocketId = socketService.findSocketIdByUserId(diceResult.nextTurn);
+        if (winnerSocketId) {
+          const winnerHand = game.playerHands.get(diceResult.nextTurn) || [];
+          // Ensure we send exactly 5 cards max
+          io.to(winnerSocketId).emit('player_hand_update', {
+            playerHand: winnerHand.slice(0, 5).map(q => ({
+              _id: q._id.toString(),
+              text: q.questionText,
+              options: q.choices,
+              correctAnswer: q.correctAnswer,
+              difficulty: q.difficulty,
+              type: 'question'
+            }))
+          });
+          console.log(`[Controller] Sent private hand update to winner ${diceResult.nextTurn} with ${winnerHand.slice(0, 5).length} cards`);
+        }
+
         console.log('[EMIT game_update]', {
           lobbyId,
           gameState: diceResult.newState,
           currentTurn: diceResult.nextTurn,
           players: Array.from(game.players.keys()),
-          currentSummonedCard: game.currentSummonedCard,
           state: game.state
         });
 
@@ -1597,4 +1655,59 @@ exports.handlePlaySpellEffect = async (lobbyId, playerId, cardId) => {
     }
     throw error;
   }
-}; 
+};
+
+// Add this new controller function for handling request_initial_cards
+exports.handleRequestInitialCards = async (lobbyId, playerId) => {
+  try {
+    const game = activeGames.get(lobbyId);
+    if (!game) throw new Error('Game not found');
+
+    console.log(`[Controller] Player ${playerId} requested initial cards for lobby ${lobbyId}`);
+
+    const io = socketService.getIo();
+    if (!io) throw new Error("Socket service not available");
+
+    // Get all player IDs for the game
+    const playerIds = Array.from(game.players.keys());
+
+    // For each player, re-emit their hand as a private deal_cards event
+    for (const pId of playerIds) {
+      const playerHand = game.playerHands.get(pId);
+      const targetSocketId = socketService.findSocketIdByUserId(pId);
+
+      if (targetSocketId && playerHand) {
+        console.log(`[Initial Cards] Re-emitting deal_cards to player ${pId} with ${playerHand.slice(0, 5).length} cards`);
+
+        io.to(targetSocketId).emit('deal_cards', {
+          playerHand: playerHand.slice(0, 5).map(q => ({
+            _id: q._id.toString(),
+            text: q.questionText,
+            options: q.choices,
+            correctAnswer: q.correctAnswer,
+            difficulty: q.difficulty,
+            type: 'question'
+          }))
+        });
+      } else {
+        console.error(`[Initial Cards] Could not find socket (${targetSocketId}) or hand (${playerHand?.length}) for player ${pId}`);
+      }
+    }
+
+    // Also emit a game_update to ensure all clients have the current game state
+    io.to(lobbyId).emit('game_update', {
+      gameState: game.state,
+      currentTurn: game.currentTurn,
+      player1HandCount: game.playerHands.get(playerIds[0])?.length || 0,
+      player2HandCount: game.playerHands.get(playerIds[1])?.length || 0,
+      player1DeckCount: game.playerDecks.get(playerIds[0])?.length || 0,
+      player2DeckCount: game.playerDecks.get(playerIds[1])?.length || 0,
+      gameMessage: `Cards have been dealt. ${game.players.get(game.currentTurn)?.name || 'Current player'}'s turn to play.`
+    });
+
+    return game;
+  } catch (error) {
+    console.error(`[Controller] Error handling request_initial_cards:`, error);
+    throw error;
+  }
+};

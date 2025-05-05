@@ -23,6 +23,9 @@ const mainRoutes = require("./core/routes");
 // Import PVP controller
 const pvpController = require('./users/students/pvp/controllers/pvpController');
 
+// Import PVP socket handlers
+const registerPvpSocketHandlers = require('./users/students/pvp/socket/index');
+
 // Create an Express application
 const app = express();
 const server = http.createServer(app);
@@ -146,6 +149,10 @@ io.use(async (socket, next) => {
 // WebSocket connection handling with improved logging
 io.on('connection', (socket) => {
   console.log('User connected:', socket.userId, 'Socket ID:', socket.id, 'Name:', socket.userName);
+
+  // Register PVP-specific socket handlers
+  registerPvpSocketHandlers(socket);
+  console.log('PVP socket handlers registered for socket:', socket.id);
 
   // Join user's personal room for private messages
   socket.join(socket.userId);
