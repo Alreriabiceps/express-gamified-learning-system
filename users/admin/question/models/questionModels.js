@@ -26,10 +26,23 @@ const questionSchema = new mongoose.Schema({
     required: true,
     validate: {
       validator: function(val) {
+        if (!this.choices) return true;
         return this.choices.includes(val);
       },
       message: "Correct answer must be one of the choices"
     }
+  },
+  bloomsLevel: {
+    type: String,
+    required: true,
+    enum: [
+      'Remembering',
+      'Understanding',
+      'Applying',
+      'Analyzing',
+      'Evaluating',
+      'Creating'
+    ]
   },
   createdAt: {
     type: Date,
