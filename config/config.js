@@ -14,6 +14,8 @@ module.exports = {
         'http://localhost:3000',
         'http://127.0.0.1:3000',
         'https://alreria.vercel.app',
+        'https://your-frontend.vercel.app',
+        'https://alreria-alreriabiceps-projects.vercel.app',
         undefined // Allow undefined origin for local development
     ],
 
