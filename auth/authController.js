@@ -262,7 +262,9 @@ const sendConfirmationEmail = async (to, token, studentDetails = {}) => {
     }
   });
 
-  const confirmUrl = `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/confirm-email?token=${token}`;
+  // Use BACKEND_URL from environment, fallback to localhost for local dev
+  const baseUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+  const confirmUrl = `${baseUrl}/api/auth/confirm-email?token=${token}`;
 
   const { firstName, lastName, studentId, track, section, yearLevel } = studentDetails;
 
