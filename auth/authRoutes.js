@@ -36,6 +36,15 @@ router.post('/change-password', verifyToken, authController.changePassword);
 // Change username route (protected route)
 router.post('/change-username', verifyToken, authController.changeUsername);
 
+// Student registration route
+router.post('/student-register', authController.studentRegister);
+
+// Email confirmation route
+router.get('/confirm-email', authController.confirmEmail);
+
+// Finalize registration route
+router.get('/finalize-registration', authController.finalizeRegistration);
+
 // Add error handling middleware
 router.use((err, req, res, next) => {
     console.error('Auth route error:', err);

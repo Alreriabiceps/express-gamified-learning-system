@@ -5,7 +5,10 @@ const studentSchema = new mongoose.Schema({
   firstName: { type: String, required: true },
   middleName: String,
   lastName: { type: String, required: true },
-  age: { type: Number, required: true },
+  email: { type: String, required: true, unique: true },
+  isEmailConfirmed: { type: Boolean, default: false },
+  emailConfirmationToken: { type: String },
+  emailConfirmationExpires: { type: Date },
   studentId: { 
     type: Number, 
     required: true, 
@@ -22,7 +25,11 @@ const studentSchema = new mongoose.Schema({
     required: true,
     minlength: 6
   },
-  strand: String,
+  track: {
+    type: String,
+    required: true,
+    enum: ['Academic Track', 'Technical-Professional Track'],
+  },
   section: String,
   yearLevel: { 
     type: String, 
@@ -91,7 +98,7 @@ studentSchema.methods.getPublicProfile = function() {
     middleName: studentObject.middleName,
     lastName: studentObject.lastName,
     age: studentObject.age,
-    strand: studentObject.strand,
+    track: studentObject.track,
     section: studentObject.section,
     yearLevel: studentObject.yearLevel,
     isActive: studentObject.isActive,

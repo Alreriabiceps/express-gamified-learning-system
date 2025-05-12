@@ -2,6 +2,10 @@ const jwt = require('jsonwebtoken');
 const Student = require('../users/admin/student/models/studentModels');
 const Admin = require('../users/admin/models/adminModel');
 const bcryptjs = require('bcryptjs');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
+const PendingStudent = require('../users/admin/student/models/pendingStudentModel');
+const bcrypt = require('bcryptjs');
 
 // Admin login logic
 const adminLogin = async (req, res) => {
@@ -248,6 +252,175 @@ const refreshToken = async (req, res) => {
   }
 };
 
+// Email sending utility
+const sendConfirmationEmail = async (to, token, studentDetails = {}) => {
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+    }
+  });
+
+  const confirmUrl = `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/confirm-email?token=${token}`;
+
+  const { firstName, lastName, studentId, track, section, yearLevel } = studentDetails;
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to,
+    subject: 'Confirm your email for GLEAS Registration',
+    html: `
+      <div style="font-family: 'Segoe UI', Arial, sans-serif; background: #f9f9f9; padding: 32px; border-radius: 8px; max-width: 480px; margin: auto; color: #222;">
+        <h2 style="color: #00b894;">Welcome to GLEAS!</h2>
+        <p>Hi${firstName ? ` <b>${firstName}</b>` : ''},</p>
+        <p>Thank you for registering for the GLEAS platform. Please confirm your email address to activate your account.</p>
+        <div style="margin: 24px 0; text-align: center;">
+          <a href="${confirmUrl}" style="background: #00b894; color: #fff; padding: 12px 28px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 1.1em; display: inline-block;">Confirm Email</a>
+        </div>
+        <div style="background: #fff; border-radius: 6px; padding: 16px; margin: 18px 0; border: 1px solid #e0e0e0;">
+          <h4 style="margin: 0 0 8px 0; color: #636e72;">Registration Details</h4>
+          <ul style="list-style: none; padding: 0; margin: 0; font-size: 0.98em;">
+            <li><b>Name:</b> ${firstName || ''} ${lastName || ''}</li>
+            <li><b>Student ID:</b> ${studentId || ''}</li>
+            <li><b>Track:</b> ${track || ''}</li>
+            <li><b>Section:</b> ${section || ''}</li>
+            <li><b>Year Level:</b> ${yearLevel || ''}</li>
+            <li><b>Email:</b> ${to}</li>
+          </ul>
+        </div>
+        <p style="font-size: 0.97em; color: #636e72;">If you did not register for GLEAS, you can ignore this email.</p>
+        <p style="font-size: 0.97em; color: #636e72;">If you don't see the email in your inbox, please check your <b>Spam</b> or <b>Promotions</b> folder.</p>
+        <hr style="margin: 24px 0; border: none; border-top: 1px solid #e0e0e0;" />
+        <p style="font-size: 0.95em; color: #b2bec3;">&copy; ${new Date().getFullYear()} GLEAS. All rights reserved.</p>
+      </div>
+    `
+  });
+};
+
+// Student registration logic
+const studentRegister = async (req, res) => {
+  try {
+    const {
+      firstName,
+      middleName,
+      lastName,
+      email,
+      studentId,
+      password,
+      track,
+      section,
+      yearLevel
+    } = req.body;
+
+    // Validate required fields
+    if (!firstName || !lastName || !email || !studentId || !password || !track || !section || !yearLevel) {
+      return res.status(400).json({ error: 'All required fields must be filled.' });
+    }
+
+    // Check if studentId or email already exists in Student or PendingStudent
+    const existingStudent = await Student.findOne({ $or: [ { studentId }, { email } ] });
+    const existingPending = await PendingStudent.findOne({ $or: [ { studentId }, { email } ] });
+    if (existingStudent || existingPending) {
+      return res.status(409).json({ error: 'Student ID or email already exists.' });
+    }
+
+    // Generate confirmation token
+    const confirmationToken = crypto.randomBytes(32).toString('hex');
+    const confirmationExpires = Date.now() + 1000 * 60 * 60 * 24; // 24 hours
+
+    // Save to PendingStudent
+    const pendingStudent = new PendingStudent({
+      firstName,
+      middleName,
+      lastName,
+      email,
+      studentId,
+      password,
+      track,
+      section,
+      yearLevel,
+      confirmationToken,
+      confirmationExpires
+    });
+    await pendingStudent.save();
+
+    // Send confirmation email
+    await sendConfirmationEmail(email, confirmationToken, {
+      firstName,
+      lastName,
+      studentId,
+      track,
+      section,
+      yearLevel
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Registration started! Please check your email to confirm your account.'
+    });
+  } catch (error) {
+    console.error('Student registration error:', error);
+    res.status(500).json({ error: 'Error registering student', details: error.message });
+  }
+};
+
+// Email confirmation endpoint
+const confirmEmail = async (req, res) => {
+  try {
+    const { token } = req.query;
+    // Always redirect to frontend, regardless of token validity
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/registration-success?token=${token}`);
+  } catch (error) {
+    // On error, also redirect to frontend
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/registration-success?token=${req.query.token || ''}`);
+  }
+};
+
+// Finalize registration endpoint
+const finalizeRegistration = async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) {
+      return res.status(400).json({ error: 'No token provided.' });
+    }
+    const pending = await PendingStudent.findOne({ confirmationToken: token, confirmationExpires: { $gt: Date.now() } });
+    if (!pending) {
+      // Try to find the student in the database (already finalized)
+      const student = await Student.findOne({
+        $or: [
+          { email: req.query.email },
+          { studentId: req.query.studentId }
+        ]
+      });
+      if (student) {
+        return res.json({ success: true, student: student.getPublicProfile() });
+      }
+      return res.status(400).json({ error: 'Invalid or expired token.' });
+    }
+    // Hash the password before saving to Student
+    const hashedPassword = await bcrypt.hash(pending.password, 10);
+    const student = new Student({
+      firstName: pending.firstName,
+      middleName: pending.middleName,
+      lastName: pending.lastName,
+      email: pending.email,
+      studentId: pending.studentId,
+      password: hashedPassword,
+      track: pending.track,
+      section: pending.section,
+      yearLevel: pending.yearLevel,
+      isEmailConfirmed: true
+    });
+    await student.save();
+    await PendingStudent.deleteOne({ _id: pending._id });
+    res.json({ success: true, student: student.getPublicProfile() });
+  } catch (error) {
+    console.error('Finalize registration error:', error);
+    res.status(500).json({ error: 'Error finalizing registration', details: error.message });
+  }
+};
+
 // Export all controller functions
 module.exports = {
   adminLogin,
@@ -255,5 +428,8 @@ module.exports = {
   getProfile,
   changePassword,
   changeUsername,
-  refreshToken
+  refreshToken,
+  studentRegister,
+  confirmEmail,
+  finalizeRegistration
 };
