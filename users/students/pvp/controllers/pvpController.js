@@ -287,11 +287,9 @@ class PvpGameInstance {
         const playerHand = this.playerHands.get(pId);
         const targetSocketId = socketService.findSocketIdByUserId(pId);
         if (targetSocketId && playerHand) {
-          console.log(`[DEBUG] Safety check: Emitting deal_cards to player ${pId} after initial hand dealt. Hand:`,
-            { length: playerHand.length, firstQuestionText: playerHand[0]?.questionText?.substring(0, 30) + '...' });
-
+          const handToSend = playerHand.slice(0, 5);
           io.to(targetSocketId).emit('deal_cards', {
-            playerHand: playerHand.slice(0, 5).map(q => ({
+            playerHand: handToSend.map(q => ({
               _id: q._id.toString(),
               text: q.questionText,
               options: q.choices,
@@ -300,7 +298,6 @@ class PvpGameInstance {
               type: 'question'
             }))
           });
-          console.log(`[Safety] Emitted deal_cards to player ${pId} with ${playerHand.slice(0, 5).length} cards`);
         } else {
           console.error(`[Safety] Could not find socket (${targetSocketId}) or hand (${playerHand?.length}) for player ${pId}`);
         }
@@ -1677,10 +1674,12 @@ exports.handleRequestInitialCards = async (lobbyId, playerId) => {
       const targetSocketId = socketService.findSocketIdByUserId(pId);
 
       if (targetSocketId && playerHand) {
-        console.log(`[Initial Cards] Re-emitting deal_cards to player ${pId} with ${playerHand.slice(0, 5).length} cards`);
+        const handToSend = playerHand.slice(0, 5);
+        console.log(`[Initial Cards] Re-emitting deal_cards to player ${pId} (socket: ${targetSocketId}) with ${handToSend.length} cards`);
+        console.log(`[Initial Cards] Hand contents:`, handToSend.map(q => q.questionText || q.text));
 
         io.to(targetSocketId).emit('deal_cards', {
-          playerHand: playerHand.slice(0, 5).map(q => ({
+          playerHand: handToSend.map(q => ({
             _id: q._id.toString(),
             text: q.questionText,
             options: q.choices,

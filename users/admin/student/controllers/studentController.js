@@ -1,4 +1,5 @@
 const Student = require('../models/studentModels');
+const mongoose = require('mongoose');
 
 // Create a new student
 exports.addStudent = async (req, res) => {
@@ -57,23 +58,31 @@ exports.getAllStudents = async (req, res) => {
   }
 };
 
-// Update student
+// Update student by studentId or _id
 exports.updateStudent = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = { ...req.body };
-    
-    // If password is being updated, it will be hashed by the pre-save middleware
-    const student = await Student.findByIdAndUpdate(
-      id,
+    let query = [];
+    // Always try studentId as number if possible
+    if (!isNaN(Number(id))) {
+      query.push({ studentId: Number(id) });
+    }
+    // Only add _id if valid ObjectId
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      query.push({ _id: id });
+    }
+    if (query.length === 0) {
+      return res.status(400).json({ success: false, message: 'Invalid student ID format' });
+    }
+    let student = await Student.findOneAndUpdate(
+      { $or: query },
       updateData,
       { new: true, runValidators: true }
     ).select('-password');
-
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student not found' });
     }
-
     res.status(200).json({ 
       success: true, 
       message: 'Student updated successfully',
@@ -85,16 +94,24 @@ exports.updateStudent = async (req, res) => {
   }
 };
 
-// Delete student
+// Delete student by studentId or _id
 exports.deleteStudent = async (req, res) => {
   try {
     const { id } = req.params;
-    const student = await Student.findByIdAndDelete(id);
-
+    let query = [];
+    if (!isNaN(Number(id))) {
+      query.push({ studentId: Number(id) });
+    }
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      query.push({ _id: id });
+    }
+    if (query.length === 0) {
+      return res.status(400).json({ success: false, message: 'Invalid student ID format' });
+    }
+    let student = await Student.findOneAndDelete({ $or: query });
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student not found' });
     }
-
     res.status(200).json({ 
       success: true, 
       message: 'Student deleted successfully' 
@@ -109,8 +126,13 @@ exports.deleteStudent = async (req, res) => {
 exports.getStudentById = async (req, res) => {
   try {
     const { id } = req.params;
-    
-    const student = await Student.findById(id);
+    let student = null;
+    if (!isNaN(Number(id))) {
+      student = await Student.findOne({ studentId: Number(id) });
+    }
+    if (!student && mongoose.Types.ObjectId.isValid(id)) {
+      student = await Student.findById(id);
+    }
     if (!student) {
       return res.status(404).json({
         success: false,
