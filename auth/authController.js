@@ -371,11 +371,14 @@ const studentRegister = async (req, res) => {
 const confirmEmail = async (req, res) => {
   try {
     const { token } = req.query;
+    // Use FRONTEND_URL, fallback to CLIENT_URL, then localhost
+    const frontendUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:5173';
     // Always redirect to frontend, regardless of token validity
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/registration-success?token=${token}`);
+    res.redirect(`${frontendUrl}/registration-success?token=${token}`);
   } catch (error) {
     // On error, also redirect to frontend
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/registration-success?token=${req.query.token || ''}`);
+    const fallbackUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:5173';
+    res.redirect(`${fallbackUrl}/registration-success?token=${req.query.token || ''}`);
   }
 };
 
