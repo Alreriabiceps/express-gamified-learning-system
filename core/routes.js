@@ -19,6 +19,9 @@ const leaderboardRoutes = require('../users/students/leaderboard/routes/leaderbo
 // Admin routes
 const adminRoutes = require('../users/admin/routes/adminRoutes');
 
+// Match routes
+const matchRoutes = require('../auth/matchRoutes');
+
 // Mount routes
 router.use('/auth', authRoutes);
 router.use('/questions', questionRoutes);
@@ -31,6 +34,7 @@ router.use('/duel', duelRoutes);
 router.use('/weekly-test', weeklyTestRoutes);
 router.use('/leaderboard', leaderboardRoutes);
 router.use('/admin', adminRoutes);
+router.use('/match', matchRoutes);
 
 // Add AI question generation endpoint
 router.post('/generate-questions', async (req, res) => {

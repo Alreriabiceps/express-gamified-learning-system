@@ -45,6 +45,10 @@ router.get('/confirm-email', authController.confirmEmail);
 // Finalize registration route
 router.get('/finalize-registration', authController.finalizeRegistration);
 
+// Password reset routes
+router.post('/request-password-reset', authController.requestPasswordReset);
+router.post('/reset-password', authController.resetPassword);
+
 // Add error handling middleware
 router.use((err, req, res, next) => {
     console.error('Auth route error:', err);

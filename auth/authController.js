@@ -114,12 +114,6 @@ const studentLogin = async (req, res) => {
       return res.status(403).json({ error: 'Account is deactivated' });
     }
 
-    // If password is "1234567", update the student's password
-    if (password === "1234567") {
-      student.password = "1234567";
-      await student.save();
-    }
-
     // Check if password matches
     const isMatch = await student.comparePassword(password);
     console.log('Password match:', isMatch ? 'Yes' : 'No');
@@ -273,16 +267,13 @@ const sendConfirmationEmail = async (to, token, studentDetails = {}) => {
     to,
     subject: 'Confirm your email for GLEAS Registration',
     html: `
-      <div style="font-family: 'Segoe UI', Arial, sans-serif; background: #f9f9f9; padding: 32px; border-radius: 8px; max-width: 480px; margin: auto; color: #222;">
-        <h2 style="color: #00b894;">Welcome to GLEAS!</h2>
-        <p>Hi${firstName ? ` <b>${firstName}</b>` : ''},</p>
-        <p>Thank you for registering for the GLEAS platform. Please confirm your email address to activate your account.</p>
-        <div style="margin: 24px 0; text-align: center;">
-          <a href="${confirmUrl}" style="background: #00b894; color: #fff; padding: 12px 28px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 1.1em; display: inline-block;">Confirm Email</a>
-        </div>
-        <div style="background: #fff; border-radius: 6px; padding: 16px; margin: 18px 0; border: 1px solid #e0e0e0;">
-          <h4 style="margin: 0 0 8px 0; color: #636e72;">Registration Details</h4>
-          <ul style="list-style: none; padding: 0; margin: 0; font-size: 0.98em;">
+      <div style="font-family: 'Segoe UI', Arial, sans-serif; background: #f9f9f9; padding: 32px; border-radius: 12px; max-width: 480px; margin: auto; color: #222; box-shadow: 0 4px 24px rgba(0,0,0,0.08);">
+        <h2 style="color: #00b894; margin-bottom: 0.5em;">Welcome to <span style='color:#4a1a5c;'>GLEAS</span>!</h2>
+        <p style="font-size: 1.1em; margin-bottom: 1.2em;">Hi${firstName ? ` <b>${firstName}</b>` : ''},</p>
+        <p style="margin-bottom: 1.2em;">Thank you for registering for the <b>GLEAS</b> platform. We're excited to have you join our learning community!</p>
+        <div style="background: #fff; border-radius: 8px; padding: 18px; margin: 18px 0; border: 1px solid #e0e0e0;">
+          <h4 style="margin: 0 0 10px 0; color: #636e72;">Your Registration Details</h4>
+          <ul style="list-style: none; padding: 0; margin: 0; font-size: 1em;">
             <li><b>Name:</b> ${firstName || ''} ${lastName || ''}</li>
             <li><b>Student ID:</b> ${studentId || ''}</li>
             <li><b>Track:</b> ${track || ''}</li>
@@ -291,10 +282,21 @@ const sendConfirmationEmail = async (to, token, studentDetails = {}) => {
             <li><b>Email:</b> ${to}</li>
           </ul>
         </div>
+        <div style="margin: 28px 0; text-align: center;">
+          <a href="${confirmUrl}" style="background: linear-gradient(90deg,#00b894,#4a1a5c); color: #fff; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 1.1em; display: inline-block; box-shadow: 0 2px 8px #00b89433; letter-spacing: 1px;">Confirm Email</a>
+        </div>
+        <div style="background: #f1f8f6; border-radius: 8px; padding: 16px; margin: 18px 0; border: 1px solid #d0f5e8;">
+          <h4 style="margin: 0 0 8px 0; color: #00b894;">What's Next?</h4>
+          <ol style="padding-left: 1.2em; margin: 0; font-size: 0.98em; color: #222;">
+            <li>Click the <b>Confirm Email</b> button above.</li>
+            <li>Once confirmed, you can <b>log in</b> to your GLEAS account.</li>
+            <li>Start exploring courses, earning points, and enjoying your learning journey!</li>
+          </ol>
+        </div>
+        <p style="font-size: 1em; color: #636e72; margin-top: 1.5em;">If you don't see the email in your inbox, please check your <b>Spam</b> or <b>Promotions</b> folder.</p>
         <p style="font-size: 0.97em; color: #636e72;">If you did not register for GLEAS, you can ignore this email.</p>
-        <p style="font-size: 0.97em; color: #636e72;">If you don't see the email in your inbox, please check your <b>Spam</b> or <b>Promotions</b> folder.</p>
-        <hr style="margin: 24px 0; border: none; border-top: 1px solid #e0e0e0;" />
-        <p style="font-size: 0.95em; color: #b2bec3;">&copy; ${new Date().getFullYear()} GLEAS. All rights reserved.</p>
+        <hr style="margin: 28px 0; border: none; border-top: 1px solid #e0e0e0;" />
+        <p style="font-size: 0.95em; color: #b2bec3; text-align: center;">&copy; ${new Date().getFullYear()} GLEAS. All rights reserved.</p>
       </div>
     `
   });
@@ -403,15 +405,14 @@ const finalizeRegistration = async (req, res) => {
       }
       return res.status(400).json({ error: 'Invalid or expired token.' });
     }
-    // Hash the password before saving to Student
-    const hashedPassword = await bcrypt.hash(pending.password, 10);
+    // Password is already hashed in PendingStudent, do NOT hash again
     const student = new Student({
       firstName: pending.firstName,
       middleName: pending.middleName,
       lastName: pending.lastName,
       email: pending.email,
       studentId: pending.studentId,
-      password: hashedPassword,
+      password: pending.password, // already hashed
       track: pending.track,
       section: pending.section,
       yearLevel: pending.yearLevel,
@@ -426,6 +427,86 @@ const finalizeRegistration = async (req, res) => {
   }
 };
 
+// Request password reset
+const requestPasswordReset = async (req, res) => {
+  try {
+    const { email, studentId } = req.body;
+    let student;
+    if (email) {
+      student = await Student.findOne({ email });
+    } else if (studentId) {
+      student = await Student.findOne({ studentId });
+    }
+    if (!student) {
+      return res.status(404).json({ error: 'No student found with that email or ID.' });
+    }
+    // Generate token
+    const token = crypto.randomBytes(32).toString('hex');
+    student.resetPasswordToken = token;
+    student.resetPasswordExpires = Date.now() + 1000 * 60 * 30; // 30 minutes
+    await student.save();
+    // Send email
+    const frontendUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:5173';
+    const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
+    await sendPasswordResetEmail(student.email, resetUrl, student.firstName);
+    res.json({ success: true, message: 'Password reset link sent to your email.' });
+  } catch (error) {
+    console.error('Request password reset error:', error);
+    res.status(500).json({ error: 'Error requesting password reset', details: error.message });
+  }
+};
+
+// Send password reset email
+const sendPasswordResetEmail = async (to, resetUrl, firstName) => {
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+    }
+  });
+  await transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to,
+    subject: 'GLEAS Password Reset Request',
+    html: `
+      <div style="font-family: 'Segoe UI', Arial, sans-serif; background: #f9f9f9; padding: 32px; border-radius: 12px; max-width: 480px; margin: auto; color: #222; box-shadow: 0 4px 24px rgba(0,0,0,0.08);">
+        <h2 style="color: #00b894; margin-bottom: 0.5em;">GLEAS Password Reset</h2>
+        <p style="font-size: 1.1em; margin-bottom: 1.2em;">Hi${firstName ? ` <b>${firstName}</b>` : ''},</p>
+        <p style="margin-bottom: 1.2em;">We received a request to reset your password. Click the button below to set a new password. This link will expire in 30 minutes.</p>
+        <div style="margin: 28px 0; text-align: center;">
+          <a href="${resetUrl}" style="background: linear-gradient(90deg,#00b894,#4a1a5c); color: #fff; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 1.1em; display: inline-block; box-shadow: 0 2px 8px #00b89433; letter-spacing: 1px;">Reset Password</a>
+        </div>
+        <p style="font-size: 0.97em; color: #636e72;">If you did not request this, you can ignore this email.</p>
+        <hr style="margin: 28px 0; border: none; border-top: 1px solid #e0e0e0;" />
+        <p style="font-size: 0.95em; color: #b2bec3; text-align: center;">&copy; ${new Date().getFullYear()} GLEAS. All rights reserved.</p>
+      </div>
+    `
+  });
+};
+
+// Reset password using token
+const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    const student = await Student.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+    if (!student) {
+      return res.status(400).json({ error: 'Invalid or expired reset token.' });
+    }
+    student.password = newPassword;
+    student.resetPasswordToken = undefined;
+    student.resetPasswordExpires = undefined;
+    await student.save();
+    res.json({ success: true, message: 'Password has been reset. You can now log in.' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Error resetting password', details: error.message });
+  }
+};
+
 // Export all controller functions
 module.exports = {
   adminLogin,
@@ -436,5 +517,7 @@ module.exports = {
   refreshToken,
   studentRegister,
   confirmEmail,
-  finalizeRegistration
+  finalizeRegistration,
+  requestPasswordReset,
+  resetPassword
 };
