@@ -12,9 +12,21 @@ const saveTestResult = async (req, res) => {
             year,
             score,
             totalQuestions,
-            answers,
-            pointsGain
+            answers
         } = req.body;
+
+        // Calculate points on backend
+        const percentage = (score / totalQuestions) * 100;
+        let pointsEarned;
+        if (percentage >= 90) {
+            pointsEarned = 30;
+        } else if (percentage >= 70) {
+            pointsEarned = 20;
+        } else if (percentage >= 50) {
+            pointsEarned = 10;
+        } else {
+            pointsEarned = -10;
+        }
 
         // Check if test was already completed
         const existingResult = await TestResult.findOne({
@@ -39,7 +51,7 @@ const saveTestResult = async (req, res) => {
             score,
             totalQuestions,
             answers,
-            pointsEarned: pointsGain
+            pointsEarned
         });
 
         await testResult.save();
@@ -54,14 +66,14 @@ const saveTestResult = async (req, res) => {
             leaderboardEntry = new Leaderboard({
                 student: studentId,
                 subject: subjectId,
-                totalPoints: pointsGain,
-                weeklyPoints: pointsGain,
-                monthlyPoints: pointsGain
+                totalPoints: pointsEarned,
+                weeklyPoints: pointsEarned,
+                monthlyPoints: pointsEarned
             });
         } else {
-            leaderboardEntry.totalPoints += pointsGain;
-            leaderboardEntry.weeklyPoints += pointsGain;
-            leaderboardEntry.monthlyPoints += pointsGain;
+            leaderboardEntry.totalPoints += pointsEarned;
+            leaderboardEntry.weeklyPoints += pointsEarned;
+            leaderboardEntry.monthlyPoints += pointsEarned;
         }
 
         await leaderboardEntry.save();
@@ -70,7 +82,7 @@ const saveTestResult = async (req, res) => {
             success: true,
             data: {
                 testResult,
-                pointsEarned: pointsGain,
+                pointsEarned,
                 totalPoints: leaderboardEntry.totalPoints
             }
         });

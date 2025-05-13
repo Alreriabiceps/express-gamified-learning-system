@@ -9,7 +9,18 @@ const {
 } = require("../controllers/questionController");
 const { verifyToken } = require('../../../../auth/authMiddleware');
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
+// Update storage to preserve original file extension
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/');
+  },
+  filename: function (req, file, cb) {
+    const ext = file.originalname.split('.').pop();
+    const base = file.fieldname + '-' + Date.now();
+    cb(null, base + '.' + ext);
+  }
+});
+const upload = multer({ storage: storage });
 
 // Route to create questions (protected route)
 router.post("/", verifyToken, createQuestions);

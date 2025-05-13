@@ -5,7 +5,16 @@ const lobbies = {};
 let lobbyCounter = 1;
 const bans = {}; // { studentId: { until: Date, strikes: number, lastStrike: Date } }
 const accepts = {}; // { lobbyId: { [studentId]: true/false } }
-const BAN_STEPS = [3 * 60, 5 * 60, 15 * 60, 2 * 60 * 60, 24 * 60 * 60]; // seconds
+const BAN_STEPS = [
+  1 * 60,      // 1st Offense: 1 minute
+  3 * 60,      // 2nd Offense: 3 minutes
+  5 * 60,      // 3rd Offense: 5 minutes
+  10 * 60,     // 4th Offense: 10 minutes
+  30 * 60,     // 5th Offense: 30 minutes
+  60 * 60,     // 6th Offense: 1 hour
+  6 * 60 * 60, // 7th Offense: 6 hours
+  24 * 60 * 60 // 8th Offense: 1 day
+]; // seconds
 
 function generateLobbyId() {
   return 'lobby_' + (lobbyCounter++);

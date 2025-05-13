@@ -22,6 +22,16 @@ const adminRoutes = require('../users/admin/routes/adminRoutes');
 // Match routes
 const matchRoutes = require('../auth/matchRoutes');
 
+// Bloom's Taxonomy instructions
+const BLOOMS_INSTRUCTIONS = {
+  Remembering: "Ask questions that require recall of facts or basic concepts.",
+  Understanding: "Ask questions that require explaining ideas or concepts.",
+  Applying: "Ask questions that require using information in new situations.",
+  Analyzing: "Ask questions that require drawing connections among ideas.",
+  Evaluating: "Ask questions that require justifying a decision or course of action.",
+  Creating: "Ask questions that require producing new or original work."
+};
+
 // Mount routes
 router.use('/auth', authRoutes);
 router.use('/questions', questionRoutes);
@@ -42,8 +52,10 @@ router.post('/generate-questions', async (req, res) => {
   const subjectName = subjectId;
   const n = Math.max(1, Math.min(10, Number(numQuestions) || 2));
 
+  const bloomsInstruction = BLOOMS_INSTRUCTIONS[bloomsLevel] || "";
   const prompt = `
-Generate ${n} multiple-choice questions for the topic "${topic}" in the subject "${subjectName}" at the Bloom's Taxonomy level "${bloomsLevel}". 
+Generate ${n} multiple-choice questions for the topic "${topic}" in the subject "${subjectName}" at the Bloom's Taxonomy level "${bloomsLevel}".
+${bloomsInstruction}
 Each question should have 4 choices and indicate the correct answer.
 
 Respond ONLY with valid JSON in the following format, and nothing else:
@@ -58,35 +70,172 @@ Respond ONLY with valid JSON in the following format, and nothing else:
 `;
 
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    // Google Gemini API call
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + process.env.GEMINI_API_KEY, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: "mistralai/mixtral-8x7b-instruct",
-        messages: [{ role: "user", content: prompt }]
+        contents: [{ parts: [{ text: prompt }] }]
       })
     });
 
     const data = await response.json();
-    console.log('OpenRouter raw response:', JSON.stringify(data, null, 2));
+    console.log('Gemini raw response:', JSON.stringify(data, null, 2));
 
-    if (!data.choices || !data.choices[0] || !data.choices[0].message || !data.choices[0].message.content) {
-      return res.status(500).json({ error: "OpenRouter did not return choices as expected", details: data });
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0].text) {
+      return res.status(500).json({ error: "Gemini did not return content as expected", details: data });
     }
 
     let questions;
     try {
-      questions = JSON.parse(data.choices[0].message.content);
+      let content = data.candidates[0].content.parts[0].text.trim();
+      // Log the raw content for debugging
+      console.log('Gemini raw content:', content);
+      // Remove markdown code block if present
+      if (content.startsWith('```json')) {
+        content = content.replace(/^```json|```$/g, '').trim();
+      } else if (content.startsWith('```')) {
+        content = content.replace(/^```|```$/g, '').trim();
+      }
+      // Try to extract array from within text (ignore any text before/after the array)
+      const match = content.match(/\[.*\]/s);
+      if (match) {
+        try {
+          questions = JSON.parse(match[0]);
+        } catch (e) {
+          console.error('Failed to parse JSON from extracted array:', e, match[0]);
+          return res.status(500).json({ error: 'AI response could not be parsed as JSON (array)', raw: match[0] });
+        }
+      } else {
+        // Try to parse as JSON array directly
+        try {
+          questions = JSON.parse(content);
+        } catch (e) {
+          // Try to parse as a single object
+          try {
+            questions = [JSON.parse(content)];
+          } catch (e2) {
+            console.error('Failed to parse JSON from content:', e2, content);
+            return res.status(500).json({ error: 'AI response could not be parsed as JSON (content)', raw: content });
+          }
+        }
+      }
+      // Ensure always an array
+      if (!Array.isArray(questions)) {
+        questions = [questions];
+      }
     } catch (err) {
-      return res.status(500).json({ error: "AI response could not be parsed as JSON", raw: data.choices[0].message.content });
+      console.error('Gemini parsing error:', err, data);
+      return res.status(500).json({ error: 'Failed to parse Gemini response', details: err.message, raw: data });
     }
     res.json(questions);
   } catch (err) {
-    console.error("OpenRouter error:", err);
+    console.error("Gemini error:", err);
     res.status(500).json({ error: "Failed to generate questions", details: err.message });
+  }
+});
+
+// Admin Chatbot endpoint (Alreria)
+router.post('/admin-chatbot', async (req, res) => {
+  const { question } = req.body;
+  const systemPrompt = `
+You are a helpful assistant for a software system. 
+Only answer questions related to how the system works, its features, and how to use it. 
+Do not answer any questions that are not directly related to the system. 
+Do not perform or suggest any modifications, deletions, updates, or administrative changes. 
+If asked anything outside your scope, politely respond that you can only help with system-related questions.
+`;
+  const prompt = `
+${systemPrompt}
+You are Alreria, an expert assistant for the GLEAS admin system. Answer admin questions about using the dashboard, managing users, adding questions, generating AI questions, and other admin features. Be concise, clear, and friendly.\n\nAdmin: ${question}\nAlreria:`;
+  try {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + process.env.GEMINI_API_KEY, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    });
+    const data = await response.json();
+    let answer = '';
+    if (
+      data &&
+      data.candidates &&
+      data.candidates[0] &&
+      data.candidates[0].content &&
+      data.candidates[0].content.parts &&
+      data.candidates[0].content.parts[0].text
+    ) {
+      answer = data.candidates[0].content.parts[0].text.trim();
+      // Remove markdown if present
+      if (answer.startsWith('```')) {
+        answer = answer.replace(/^```[a-z]*|```$/g, '').trim();
+      }
+    } else {
+      answer = 'Sorry, Alreria could not generate a response.';
+    }
+    res.json({ answer });
+  } catch (err) {
+    console.error('Alreria error:', err);
+    res.status(500).json({ error: 'Failed to get response from Alreria', details: err.message });
+  }
+});
+
+// Simple Security Check Question endpoint
+router.post('/generate-simple-security-question', async (req, res) => {
+  const randomSeed = Math.floor(Math.random() * 1000000);
+  const prompt = `
+Generate a very simple security check question for a login page to prevent bots. The question should be basic math, logic, or common sense, and easy for a human to answer. Provide 3 multiple-choice options, only one of which is correct. Make sure the question is different from the last few you generated. Add some randomness. Respond ONLY with valid JSON in the following format, and nothing else:
+{
+  "questionText": "...",
+  "choices": ["...", "...", "..."],
+  "correctAnswer": "..."
+}
+Random seed: ${randomSeed}
+`;
+  try {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + process.env.GEMINI_API_KEY, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    });
+    const data = await response.json();
+    let questionObj = null;
+    if (
+      data &&
+      data.candidates &&
+      data.candidates[0] &&
+      data.candidates[0].content &&
+      data.candidates[0].content.parts &&
+      data.candidates[0].content.parts[0].text
+    ) {
+      let content = data.candidates[0].content.parts[0].text.trim();
+      if (content.startsWith('```json')) {
+        content = content.replace(/^```json|```$/g, '').trim();
+      } else if (content.startsWith('```')) {
+        content = content.replace(/^```|```$/g, '').trim();
+      }
+      try {
+        questionObj = JSON.parse(content);
+      } catch (e) {
+        return res.status(500).json({ error: 'AI response could not be parsed as JSON', raw: content });
+      }
+    }
+    if (!questionObj) {
+      return res.status(500).json({ error: 'Failed to generate security question', raw: data });
+    }
+    res.json(questionObj);
+  } catch (err) {
+    console.error('Security question AI error:', err);
+    res.status(500).json({ error: 'Failed to generate security question', details: err.message });
   }
 });
 

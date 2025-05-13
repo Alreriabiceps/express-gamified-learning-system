@@ -26,7 +26,9 @@
     "nodemailer": "^7.0.3",
     "openai": "^4.98.0",
     "pdf-parse": "^1.1.1",
-    "socket.io": "^4.8.1"
+    "react-modal": "^3.16.3",
+    "socket.io": "^4.8.1",
+    "textract": "^2.5.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"

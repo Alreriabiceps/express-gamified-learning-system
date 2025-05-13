@@ -21,7 +21,7 @@ const getActiveWeekSchedules = async (req, res) => {
   try {
     const schedules = await WeekSchedule.find({ isActive: true })
       .populate('subjectId', 'subject')
-      .populate('questionIds', 'questionText choices correctAnswer')
+      .populate('questionIds', 'questionText choices correctAnswer bloomsLevel')
       .sort({ year: -1, weekNumber: -1 });
     res.status(200).json(schedules);
   } catch (error) {
