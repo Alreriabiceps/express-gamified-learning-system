@@ -267,37 +267,124 @@ const sendConfirmationEmail = async (to, token, studentDetails = {}) => {
     to,
     subject: 'Confirm your email for GLEAS Registration',
     html: `
-      <div style="font-family: 'Segoe UI', Arial, sans-serif; background: #f9f9f9; padding: 32px; border-radius: 12px; max-width: 480px; margin: auto; color: #222; box-shadow: 0 4px 24px rgba(0,0,0,0.08);">
-        <h2 style="color: #00b894; margin-bottom: 0.5em;">Welcome to <span style='color:#4a1a5c;'>GLEAS</span>!</h2>
-        <p style="font-size: 1.1em; margin-bottom: 1.2em;">Hi${firstName ? ` <b>${firstName}</b>` : ''},</p>
-        <p style="margin-bottom: 1.2em;">Thank you for registering for the <b>GLEAS</b> platform. We're excited to have you join our learning community!</p>
-        <div style="background: #fff; border-radius: 8px; padding: 18px; margin: 18px 0; border: 1px solid #e0e0e0;">
-          <h4 style="margin: 0 0 10px 0; color: #636e72;">Your Registration Details</h4>
-          <ul style="list-style: none; padding: 0; margin: 0; font-size: 1em;">
-            <li><b>Name:</b> ${firstName || ''} ${lastName || ''}</li>
-            <li><b>Student ID:</b> ${studentId || ''}</li>
-            <li><b>Track:</b> ${track || ''}</li>
-            <li><b>Section:</b> ${section || ''}</li>
-            <li><b>Year Level:</b> ${yearLevel || ''}</li>
-            <li><b>Email:</b> ${to}</li>
-          </ul>
-        </div>
-        <div style="margin: 28px 0; text-align: center;">
-          <a href="${confirmUrl}" style="background: linear-gradient(90deg,#00b894,#4a1a5c); color: #fff; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 1.1em; display: inline-block; box-shadow: 0 2px 8px #00b89433; letter-spacing: 1px;">Confirm Email</a>
-        </div>
-        <div style="background: #f1f8f6; border-radius: 8px; padding: 16px; margin: 18px 0; border: 1px solid #d0f5e8;">
-          <h4 style="margin: 0 0 8px 0; color: #00b894;">What's Next?</h4>
-          <ol style="padding-left: 1.2em; margin: 0; font-size: 0.98em; color: #222;">
-            <li>Click the <b>Confirm Email</b> button above.</li>
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Confirm Your GLEAS Registration</title>
+        <style type="text/css">
+          /* Client-specific Reset */
+          body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+          table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+          img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+          body { height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; }
+          /* Blueprint Variables (conceptual, values used inline) */
+          /* --blueprint-bg: #0D131A; */
+          /* --blueprint-text: #E0F2F7; */
+          /* --blueprint-text-muted: #A7C0C9; */
+          /* --blueprint-accent: #82DFFF; */
+          /* --blueprint-accent-secondary: #FFDE59; */
+          /* --blueprint-panel-bg-opaque: rgb(20, 30, 40); */
+          /* --blueprint-panel-border: rgba(130, 223, 255, 0.5); */
+        </style>
+      </head>
+      <body style="background-color: #0D131A; margin: 0 !important; padding: 20px 0 !important;">
+        <table border="0" cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            <td align="center">
+              <table border="0" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px; margin: 0 auto;">
+                <!-- Header / Logo -->
+                <tr>
+                  <td align="center" style="padding: 20px 0;">
+                    <h1 style="font-family: 'Bangers', 'Arial Black', sans-serif; color: #82DFFF; font-size: 40px; margin: 0; letter-spacing: 1.5px;">GLEAS</h1>
+                  </td>
+                </tr>
+                <!-- Main Content Panel -->
+                <tr>
+                  <td align="center" style="background-color: rgb(20, 30, 40); border-radius: 12px; border: 1px solid rgba(130, 223, 255, 0.5); padding: 30px;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                      <!-- Welcome Title -->
+                      <tr>
+                        <td align="center" style="font-family: 'Roboto Condensed', Arial, sans-serif; font-size: 26px; color: #FFDE59; padding-bottom: 15px;">
+                          Welcome to GLEAS, ${firstName ? ` <b>${firstName}</b>` : 'Adventurer'}!
+                        </td>
+                      </tr>
+                      <!-- Intro Text -->
+                      <tr>
+                        <td style="font-family: 'Montserrat', Arial, sans-serif; font-size: 16px; color: #E0F2F7; line-height: 1.6; padding-bottom: 20px; text-align: center;">
+                          Thank you for registering! We're excited to have you join our learning community. Please confirm your email address to activate your account.
+                        </td>
+                      </tr>
+                      <!-- Registration Details Panel (Optional, can be themed if kept) -->
+                      ${studentDetails && Object.keys(studentDetails).length > 0 ? `
+                      <tr>
+                        <td style="padding-bottom: 25px;">
+                          <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: rgba(13, 20, 26, 0.7); border-radius: 8px; border: 1px solid rgba(130, 223, 255, 0.3); padding: 20px;">
+                            <tr>
+                              <td style="font-family: 'Roboto Condensed', Arial, sans-serif; font-size: 18px; color: #FFDE59; padding-bottom: 10px;">Your Registration Details:</td>
+                            </tr>
+                            <tr>
+                              <td style="font-family: 'Montserrat', Arial, sans-serif; font-size: 14px; color: #A7C0C9; line-height: 1.7;">
+                                ${firstName || lastName ? `<b>Name:</b> ${firstName || ''} ${lastName || ''}<br>` : ''}
+                                ${studentId ? `<b>Student ID:</b> ${studentId}<br>` : ''}
+                                ${track ? `<b>Track:</b> ${track}<br>` : ''}
+                                ${section ? `<b>Section:</b> ${section}<br>` : ''}
+                                ${yearLevel ? `<b>Year Level:</b> ${yearLevel}<br>` : ''}
+                                <b>Email:</b> ${to}
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      ` : ''}
+                      <!-- Confirmation Button -->
+                      <tr>
+                        <td align="center" style="padding-top: 10px; padding-bottom: 25px;">
+                          <table border="0" cellspacing="0" cellpadding="0">
+                            <tr>
+                              <td align="center" style="border-radius: 6px; background-color: #82DFFF;">
+                                <a href="${confirmUrl}" target="_blank" style="font-family: 'Roboto Condensed', Arial, sans-serif; font-size: 18px; color: #0D131A; text-decoration: none; border-radius: 6px; padding: 14px 35px; border: 1px solid #82DFFF; display: inline-block; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Confirm Email Address</a>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                       <!-- What's Next Section -->
+                      <tr>
+                        <td style="padding-top: 15px; padding-bottom: 15px; border-top: 1px solid rgba(130, 223, 255, 0.2);">
+                            <h4 style="font-family: 'Roboto Condensed', Arial, sans-serif; font-size: 18px; color: #FFDE59; margin: 0 0 10px 0; text-align: center;">What's Next?</h4>
+                            <ol style="font-family: 'Montserrat', Arial, sans-serif; font-size: 15px; color: #A7C0C9; line-height: 1.7; padding-left: 25px; margin: 0; text-align: left;">
+                                <li>Click the <b>Confirm Email Address</b> button above.</li>
             <li>Once confirmed, you can <b>log in</b> to your GLEAS account.</li>
-            <li>Start exploring courses, earning points, and enjoying your learning journey!</li>
+                                <li>Start exploring, learning, and earning rewards!</li>
           </ol>
-        </div>
-        <p style="font-size: 1em; color: #636e72; margin-top: 1.5em;">If you don't see the email in your inbox, please check your <b>Spam</b> or <b>Promotions</b> folder.</p>
-        <p style="font-size: 0.97em; color: #636e72;">If you did not register for GLEAS, you can ignore this email.</p>
-        <hr style="margin: 28px 0; border: none; border-top: 1px solid #e0e0e0;" />
-        <p style="font-size: 0.95em; color: #b2bec3; text-align: center;">&copy; ${new Date().getFullYear()} GLEAS. All rights reserved.</p>
-      </div>
+                        </td>
+                      </tr>
+                      <!-- Footer Info -->
+                      <tr>
+                        <td style="font-family: 'Montserrat', Arial, sans-serif; font-size: 13px; color: #A7C0C9; line-height: 1.6; text-align: center; padding-top: 20px; border-top: 1px solid rgba(130, 223, 255, 0.2);">
+                          If you didn't register for GLEAS, please disregard this email. If you have questions, feel free to contact our support team (though a support email is not provided here).
+                          <br><br>
+                          This link will expire in 24 hours.
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <!-- Footer Copyright -->
+                <tr>
+                  <td align="center" style="padding: 25px 0 15px 0; font-family: 'Montserrat', Arial, sans-serif; font-size: 12px; color: #A7C0C9;">
+                    &copy; ${new Date().getFullYear()} GLEAS. All rights reserved.<br>
+                    Blueprint Capsule Corp. Division
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
     `
   });
 };
@@ -470,17 +557,85 @@ const sendPasswordResetEmail = async (to, resetUrl, firstName) => {
     to,
     subject: 'GLEAS Password Reset Request',
     html: `
-      <div style="font-family: 'Segoe UI', Arial, sans-serif; background: #f9f9f9; padding: 32px; border-radius: 12px; max-width: 480px; margin: auto; color: #222; box-shadow: 0 4px 24px rgba(0,0,0,0.08);">
-        <h2 style="color: #00b894; margin-bottom: 0.5em;">GLEAS Password Reset</h2>
-        <p style="font-size: 1.1em; margin-bottom: 1.2em;">Hi${firstName ? ` <b>${firstName}</b>` : ''},</p>
-        <p style="margin-bottom: 1.2em;">We received a request to reset your password. Click the button below to set a new password. This link will expire in 30 minutes.</p>
-        <div style="margin: 28px 0; text-align: center;">
-          <a href="${resetUrl}" style="background: linear-gradient(90deg,#00b894,#4a1a5c); color: #fff; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 1.1em; display: inline-block; box-shadow: 0 2px 8px #00b89433; letter-spacing: 1px;">Reset Password</a>
-        </div>
-        <p style="font-size: 0.97em; color: #636e72;">If you did not request this, you can ignore this email.</p>
-        <hr style="margin: 28px 0; border: none; border-top: 1px solid #e0e0e0;" />
-        <p style="font-size: 0.95em; color: #b2bec3; text-align: center;">&copy; ${new Date().getFullYear()} GLEAS. All rights reserved.</p>
-      </div>
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>GLEAS Password Reset</title>
+        <style type="text/css">
+          body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+          table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+          img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+          body { height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; }
+        </style>
+      </head>
+      <body style="background-color: #0D131A; margin: 0 !important; padding: 20px 0 !important;">
+        <table border="0" cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            <td align="center">
+              <table border="0" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px; margin: 0 auto;">
+                <!-- Header / Logo -->
+                <tr>
+                  <td align="center" style="padding: 20px 0;">
+                    <h1 style="font-family: 'Bangers', 'Arial Black', sans-serif; color: #82DFFF; font-size: 40px; margin: 0; letter-spacing: 1.5px;">GLEAS</h1>
+                  </td>
+                </tr>
+                <!-- Main Content Panel -->
+                <tr>
+                  <td align="center" style="background-color: rgb(20, 30, 40); border-radius: 12px; border: 1px solid rgba(130, 223, 255, 0.5); padding: 30px;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                      <!-- Title -->
+                      <tr>
+                        <td align="center" style="font-family: 'Roboto Condensed', Arial, sans-serif; font-size: 26px; color: #FFDE59; padding-bottom: 15px;">
+                          Password Reset Request
+                        </td>
+                      </tr>
+                      <!-- Intro Text -->
+                      <tr>
+                        <td style="font-family: 'Montserrat', Arial, sans-serif; font-size: 16px; color: #E0F2F7; line-height: 1.6; padding-bottom: 10px; text-align: center;">
+                          Hi${firstName ? ` <b>${firstName}</b>` : ''},
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="font-family: 'Montserrat', Arial, sans-serif; font-size: 16px; color: #E0F2F7; line-height: 1.6; padding-bottom: 20px; text-align: center;">
+                          We received a request to reset your password. Click the button below to choose a new one. This link is valid for 30 minutes.
+                        </td>
+                      </tr>
+                      <!-- Reset Button -->
+                      <tr>
+                        <td align="center" style="padding-top: 10px; padding-bottom: 25px;">
+                          <table border="0" cellspacing="0" cellpadding="0">
+                            <tr>
+                              <td align="center" style="border-radius: 6px; background-color: #82DFFF;">
+                                <a href="${resetUrl}" target="_blank" style="font-family: 'Roboto Condensed', Arial, sans-serif; font-size: 18px; color: #0D131A; text-decoration: none; border-radius: 6px; padding: 14px 35px; border: 1px solid #82DFFF; display: inline-block; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Reset Your Password</a>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      <!-- Footer Info -->
+                      <tr>
+                        <td style="font-family: 'Montserrat', Arial, sans-serif; font-size: 13px; color: #A7C0C9; line-height: 1.6; text-align: center; padding-top: 20px; border-top: 1px solid rgba(130, 223, 255, 0.2);">
+                          If you didn't request a password reset, please ignore this email. Your account is still secure.
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <!-- Footer Copyright -->
+                <tr>
+                  <td align="center" style="padding: 25px 0 15px 0; font-family: 'Montserrat', Arial, sans-serif; font-size: 12px; color: #A7C0C9;">
+                    &copy; ${new Date().getFullYear()} GLEAS. All rights reserved.<br>
+                    Blueprint Capsule Corp. Division
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
     `
   });
 };

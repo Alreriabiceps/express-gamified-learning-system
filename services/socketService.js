@@ -24,20 +24,8 @@ const emitEvent = (event, data) => {
     }
 };
 
-const findSocketIdByUserId = (userId) => {
-    if (!io || !userId) return null;
-    for (const [id, socket] of io.sockets.sockets) {
-        if (socket.userId === userId) {
-            return id;
-        }
-    }
-    console.warn(`Could not find socket for userId: ${userId}`);
-    return null;
-};
-
 module.exports = {
     initializeSocket,
     getIo,
     emitEvent,
-    findSocketIdByUserId
 }; 

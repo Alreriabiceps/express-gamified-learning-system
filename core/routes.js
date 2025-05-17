@@ -197,8 +197,9 @@ Generate a very simple security check question for a login page to prevent bots.
 }
 Random seed: ${randomSeed}
 `;
+  console.log('Attempting to generate simple security question. API Key:', process.env.GEMINI_API_KEY ? 'Loaded' : 'NOT LOADED OR EMPTY');
   try {
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + process.env.GEMINI_API_KEY, {
+    const fetchResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + process.env.GEMINI_API_KEY, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -207,7 +208,26 @@ Random seed: ${randomSeed}
         contents: [{ parts: [{ text: prompt }] }]
       })
     });
-    const data = await response.json();
+
+    const responseText = await fetchResponse.text();
+    console.log('Gemini API Status for security question:', fetchResponse.status);
+    console.log('Gemini API Raw Response Text for security question:', responseText);
+
+    if (!fetchResponse.ok) {
+      return res.status(fetchResponse.status).json({ 
+        error: 'Gemini API request failed',
+        details: responseText 
+      });
+    }
+
+    let data;
+    try {
+      data = JSON.parse(responseText); // Parse the raw text
+    } catch (parseError) {
+      console.error('Failed to parse Gemini API response text as JSON:', parseError);
+      return res.status(500).json({ error: 'Gemini API response was not valid JSON', raw: responseText });
+    }
+
     let questionObj = null;
     if (
       data &&
@@ -218,6 +238,7 @@ Random seed: ${randomSeed}
       data.candidates[0].content.parts[0].text
     ) {
       let content = data.candidates[0].content.parts[0].text.trim();
+      console.log('Extracted content from Gemini for security question:', content);
       if (content.startsWith('```json')) {
         content = content.replace(/^```json|```$/g, '').trim();
       } else if (content.startsWith('```')) {
@@ -226,16 +247,23 @@ Random seed: ${randomSeed}
       try {
         questionObj = JSON.parse(content);
       } catch (e) {
-        return res.status(500).json({ error: 'AI response could not be parsed as JSON', raw: content });
+        console.error('Failed to parse extracted content as JSON for security question:', e);
+        // Keep questionObj as null, the next check will handle it.
       }
     }
+
     if (!questionObj) {
-      return res.status(500).json({ error: 'Failed to generate security question', raw: data });
+      console.error('Could not derive a valid question object. Gemini data:', JSON.stringify(data, null, 2));
+      return res.status(500).json({ 
+        error: 'Failed to generate security question from AI response',
+        details: 'AI response structure might be unexpected or content parsing failed.',
+        rawGeminiData: data // Send back the parsed Gemini data if available
+      });
     }
     res.json(questionObj);
   } catch (err) {
-    console.error('Security question AI error:', err);
-    res.status(500).json({ error: 'Failed to generate security question', details: err.message });
+    console.error('Overall error in /generate-simple-security-question:', err);
+    res.status(500).json({ error: 'Failed to generate security question due to a server error', details: err.message });
   }
 });
 

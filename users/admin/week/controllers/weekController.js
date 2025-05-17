@@ -112,25 +112,6 @@ const createWeekSchedule = async (req, res) => {
   }
 };
 
-// Get a week schedule by date
-const getWeekScheduleByDate = async (req, res) => {
-  try {
-    const { date } = req.params;
-    const schedule = await WeekSchedule.findOne({ date })
-      .populate('subjectId', 'subject')
-      .populate('questionIds', 'questionText choices');
-
-    if (!schedule) {
-      return res.status(404).json({ message: "No schedule found for this date" });
-    }
-
-    res.json(schedule);
-  } catch (error) {
-    console.error("Error fetching schedule:", error);
-    res.status(500).json({ message: "Error fetching schedule", error: error.message });
-  }
-};
-
 // Update a week schedule
 const updateWeekSchedule = async (req, res) => {
   try {
@@ -241,7 +222,6 @@ module.exports = {
   getAllWeekSchedules,
   getActiveWeekSchedules,
   createWeekSchedule,
-  getWeekScheduleByDate,
   updateWeekSchedule,
   toggleActiveStatus,
   deleteWeekSchedule

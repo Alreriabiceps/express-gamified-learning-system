@@ -16,11 +16,11 @@ router.get('/subject/:subjectId', verifyToken, weeklyTestController.getWeeklyTes
 // Save test result
 router.post('/results', verifyToken, testResultController.saveTestResult);
 
-// Get test results by student ID
-router.get('/results/:studentId', verifyToken, weeklyTestController.getTestResultsByStudent);
+// Get all test results for a specific student
+router.get('/results/student/:studentId', verifyToken, testResultController.getTestResultsForStudent);
 
-// Get test statistics by test result ID
-router.get('/results/details/:id', verifyToken, weeklyTestController.getTestStatistics);
+// Get details of a specific test result by its ID (replaces the old getTestStatistics route)
+router.get('/results/:id', verifyToken, testResultController.getTestResultDetailsById);
 
 // Update weekly test status (Admin only)
 router.patch('/:testId/status', verifyToken, isAdmin, weeklyTestController.updateWeeklyTestStatus);
