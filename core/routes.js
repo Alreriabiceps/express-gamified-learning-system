@@ -11,10 +11,12 @@ const dashboardRoutes = require('../users/admin/dashboard/routes/dashboardRoutes
 
 // Student routes
 const studentRoutes = require('../users/admin/student/routes/studentRoutes');
-const lobbyRoutes = require('../users/students/lobby/routes/lobbyRoutes');
+const lobbyRoutes = require('../users/students/chats/routes/lobbyRoutes');
 const duelRoutes = require('../users/students/duel/routes/duelRoutes');
 const weeklyTestRoutes = require('../users/students/weeklytest/routes/weeklyTestRoutes');
 const leaderboardRoutes = require('../users/students/leaderboard/routes/leaderboardRoutes');
+const friendRequestRoutes = require('../users/students/chats/routes/friendRequestRoutes');
+const messageRoutes = require('../users/students/chats/routes/messageRoutes');
 
 // Admin routes
 const adminRoutes = require('../users/admin/routes/adminRoutes');
@@ -43,6 +45,8 @@ router.use('/lobby', lobbyRoutes);
 router.use('/duel', duelRoutes);
 router.use('/weekly-test', weeklyTestRoutes);
 router.use('/leaderboard', leaderboardRoutes);
+router.use('/friend-requests', friendRequestRoutes);
+router.use('/messages', messageRoutes);
 router.use('/admin', adminRoutes);
 router.use('/match', matchRoutes);
 

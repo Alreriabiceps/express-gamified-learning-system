@@ -20,6 +20,9 @@ const socketService = require('./services/socketService');
 const mainRoutes = require("./core/routes");
 const dashboardRoutes = require("./users/students/dashboard/routes/dashboardRoutes");
 
+// Import messageController for status updates
+const messageController = require('./users/students/chats/controllers/messageController');
+
 // Create an Express application
 const app = express();
 const server = http.createServer(app);
@@ -50,6 +53,9 @@ const io = new Server(server, {
     credentials: true
   }
 });
+
+// Attach io to the app for controller access
+app.set('io', io);
 
 // Initialize socket service with error handling
 try {
@@ -159,6 +165,27 @@ io.on('connection', (socket) => {
     // ... existing disconnect logic ...
     // Make sure handleDisconnect is called correctly
     console.log('User disconnected:', socket.userId, 'Socket ID:', socket.id);
+  });
+
+  // Listen for typing events and broadcast to the recipient
+  socket.on('typing', ({ to }) => {
+    if (to) {
+      io.to(to).emit('typing', { from: socket.userId });
+    }
+  });
+
+  // Listen for message delivered event from recipient
+  socket.on('message:delivered', async ({ messageId }) => {
+    if (messageId) {
+      await messageController.markDelivered(messageId, io);
+    }
+  });
+
+  // Listen for message read event from recipient
+  socket.on('message:read', async ({ friendId }) => {
+    if (friendId) {
+      await messageController.markRead(socket.userId, friendId, io);
+    }
   });
 
   // Other event handlers...
