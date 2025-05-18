@@ -185,85 +185,45 @@ You are Alreria, an expert assistant for the GLEAS admin system. Answer admin qu
   }
 });
 
-// Simple Security Check Question endpoint
+// Add security question generation endpoint
 router.post('/generate-simple-security-question', async (req, res) => {
-  const randomSeed = Math.floor(Math.random() * 1000000);
-  const prompt = `
-Generate a very simple security check question for a login page to prevent bots. The question should be basic math, logic, or common sense, and easy for a human to answer. Provide 3 multiple-choice options, only one of which is correct. Make sure the question is different from the last few you generated. Add some randomness. Respond ONLY with valid JSON in the following format, and nothing else:
-{
-  "questionText": "...",
-  "choices": ["...", "...", "..."],
-  "correctAnswer": "..."
-}
-Random seed: ${randomSeed}
-`;
-  console.log('Attempting to generate simple security question. API Key:', process.env.GEMINI_API_KEY ? 'Loaded' : 'NOT LOADED OR EMPTY');
   try {
-    const fetchResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + process.env.GEMINI_API_KEY, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
+    // Simple math questions for security check
+    const questions = [
+      {
+        questionText: "What is 2 + 2?",
+        choices: ["3", "4", "5", "6"],
+        correctAnswer: "4"
       },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
-      })
-    });
-
-    const responseText = await fetchResponse.text();
-    console.log('Gemini API Status for security question:', fetchResponse.status);
-    console.log('Gemini API Raw Response Text for security question:', responseText);
-
-    if (!fetchResponse.ok) {
-      return res.status(fetchResponse.status).json({ 
-        error: 'Gemini API request failed',
-        details: responseText 
-      });
-    }
-
-    let data;
-    try {
-      data = JSON.parse(responseText); // Parse the raw text
-    } catch (parseError) {
-      console.error('Failed to parse Gemini API response text as JSON:', parseError);
-      return res.status(500).json({ error: 'Gemini API response was not valid JSON', raw: responseText });
-    }
-
-    let questionObj = null;
-    if (
-      data &&
-      data.candidates &&
-      data.candidates[0] &&
-      data.candidates[0].content &&
-      data.candidates[0].content.parts &&
-      data.candidates[0].content.parts[0].text
-    ) {
-      let content = data.candidates[0].content.parts[0].text.trim();
-      console.log('Extracted content from Gemini for security question:', content);
-      if (content.startsWith('```json')) {
-        content = content.replace(/^```json|```$/g, '').trim();
-      } else if (content.startsWith('```')) {
-        content = content.replace(/^```|```$/g, '').trim();
+      {
+        questionText: "What is 5 × 3?",
+        choices: ["12", "13", "14", "15"],
+        correctAnswer: "15"
+      },
+      {
+        questionText: "What is 10 - 4?",
+        choices: ["4", "5", "6", "7"],
+        correctAnswer: "6"
+      },
+      {
+        questionText: "What is 8 ÷ 2?",
+        choices: ["2", "3", "4", "5"],
+        correctAnswer: "4"
+      },
+      {
+        questionText: "What is 3 + 7?",
+        choices: ["8", "9", "10", "11"],
+        correctAnswer: "10"
       }
-      try {
-        questionObj = JSON.parse(content);
-      } catch (e) {
-        console.error('Failed to parse extracted content as JSON for security question:', e);
-        // Keep questionObj as null, the next check will handle it.
-      }
-    }
+    ];
 
-    if (!questionObj) {
-      console.error('Could not derive a valid question object. Gemini data:', JSON.stringify(data, null, 2));
-      return res.status(500).json({ 
-        error: 'Failed to generate security question from AI response',
-        details: 'AI response structure might be unexpected or content parsing failed.',
-        rawGeminiData: data // Send back the parsed Gemini data if available
-      });
-    }
-    res.json(questionObj);
-  } catch (err) {
-    console.error('Overall error in /generate-simple-security-question:', err);
-    res.status(500).json({ error: 'Failed to generate security question due to a server error', details: err.message });
+    // Randomly select one question
+    const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
+    
+    res.json(randomQuestion);
+  } catch (error) {
+    console.error('Error generating security question:', error);
+    res.status(500).json({ error: 'Failed to generate security question' });
   }
 });
 
