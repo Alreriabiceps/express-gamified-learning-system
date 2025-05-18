@@ -6,7 +6,6 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const http = require('http');
-const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 
 // Import configurations
@@ -23,46 +22,18 @@ const dashboardRoutes = require("./users/students/dashboard/routes/dashboardRout
 // Import messageController for status updates
 const messageController = require('./users/students/chats/controllers/messageController');
 
+// Import GameServer
+const GameServer = require('./socket/gameServer');
+
 // Create an Express application
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: "*", // Allow all origins in development
-    methods: ["GET", "POST"],
-    credentials: true,
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'Access-Control-Allow-Origin',
-      'Access-Control-Allow-Headers',
-      'Access-Control-Allow-Credentials'
-    ]
-  },
-  transports: ['websocket', 'polling'],
-  allowEIO3: true,
-  pingTimeout: 60000,
-  pingInterval: 25000,
-  connectTimeout: 45000,
-  path: '/socket.io/',
-  maxHttpBufferSize: 1e8,
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
-    allowedHeaders: ["*"],
-    credentials: true
-  }
-});
+
+// Initialize socket server
+const gameServer = new GameServer(server);
 
 // Attach io to the app for controller access
-app.set('io', io);
-
-// Initialize socket service with error handling
-try {
-  socketService.initializeSocket(io);
-} catch (error) {
-  console.error('Error initializing socket service:', error);
-}
+app.set('io', gameServer.io);
 
 // Set the port for the server
 const PORT = config.server.port;
@@ -72,7 +43,7 @@ connectDB();
 
 // Apply middleware to handle CORS and JSON requests
 app.use(cors(corsConfig));
-app.use(express.json()); // Parse JSON request bodies
+app.use(express.json());
 
 // Add detailed request logging middleware
 app.use((req, res, next) => {
@@ -123,74 +94,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal Server Error" });
 });
 
-// Add detailed connection logging
-io.engine.on("connection_error", (err) => {
-  console.log('Connection error details:');
-  console.log('- Request:', err.req?.url);
-  console.log('- Code:', err.code);
-  console.log('- Message:', err.message);
-  console.log('- Context:', err.context);
-});
-
-// WebSocket authentication middleware with better error handling
-io.use(async (socket, next) => {
-  try {
-    const token = socket.handshake.auth.token;
-    if (!token) {
-      console.log('No token provided for socket:', socket.id);
-      return next(new Error('Authentication token required'));
-    }
-
-    const decoded = jwt.verify(token, jwtConfig.secret);
-    socket.userId = decoded.id;
-    socket.userName = decoded.firstName || 'Player';
-    console.log('Socket authenticated:', socket.id, 'User:', socket.userId, 'Name:', socket.userName);
-    next();
-  } catch (err) {
-    console.error('Socket authentication error:', err);
-    next(new Error('Invalid authentication token'));
-  }
-});
-
-// WebSocket connection handling with improved logging
-io.on('connection', (socket) => {
-  console.log('User connected:', socket.userId, 'Socket ID:', socket.id, 'Name:', socket.userName);
-
-  // Join user's personal room for private messages
-  socket.join(socket.userId);
-  console.log('User joined personal room:', socket.userId);
-
-  // Handle player disconnect
-  socket.on('disconnect', () => {
-    // ... existing disconnect logic ...
-    // Make sure handleDisconnect is called correctly
-    console.log('User disconnected:', socket.userId, 'Socket ID:', socket.id);
-  });
-
-  // Listen for typing events and broadcast to the recipient
-  socket.on('typing', ({ to }) => {
-    if (to) {
-      io.to(to).emit('typing', { from: socket.userId });
-    }
-  });
-
-  // Listen for message delivered event from recipient
-  socket.on('message:delivered', async ({ messageId }) => {
-    if (messageId) {
-      await messageController.markDelivered(messageId, io);
-    }
-  });
-
-  // Listen for message read event from recipient
-  socket.on('message:read', async ({ friendId }) => {
-    if (friendId) {
-      await messageController.markRead(socket.userId, friendId, io);
-    }
-  });
-
-  // Other event handlers...
-});
-
 // Start the server
 server.listen(PORT, () => {
   console.log(`\n=== Server Started ===`);
@@ -199,3 +102,5 @@ server.listen(PORT, () => {
   console.log('Allowed CORS origins:', config.clientUrls);
   console.log('=====================\n');
 });
+
+module.exports = { gameServer };

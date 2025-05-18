@@ -1,6 +1,7 @@
 const Lobby = require('../models/lobbyModel');
 const Student = require('../../../../users/admin/student/models/studentModels');
 const socketService = require('../../../../services/socketService');
+const { gameServer } = require('../../../../server');
 
 // Cleanup function to remove expired lobbies
 const cleanupExpiredLobbies = async () => {
@@ -181,11 +182,20 @@ exports.joinLobby = async (req, res) => {
 
         // If lobby is full, emit game start event
         if (lobby.status === 'in-progress') {
-            socketService.emitEvent('game:start', {
-                lobbyId: lobby._id,
-                lobbyName: lobby.name,
-                players: lobby.players
-            });
+            const io = req.app.get('io');
+            if (io) {
+                lobby.players.forEach(player => {
+                    io.to(player._id ? player._id.toString() : player.toString()).emit('game:start', {
+                        gameId: lobby._id,
+                        players: lobby.players,
+                    });
+                });
+            } else {
+                console.error('Socket.io instance not found on app!');
+            }
+            if (gameServer) {
+                gameServer.createGameFromLobby(lobby);
+            }
         }
 
         return res.status(200).json({
