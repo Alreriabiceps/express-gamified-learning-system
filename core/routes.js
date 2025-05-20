@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const fetch = require('node-fetch');
+const { generateQuestionsChat } = require('../users/admin/question/controllers/questionController');
 
 // Core routes
 const authRoutes = require('../auth/authRoutes');
@@ -230,5 +231,8 @@ router.post('/generate-simple-security-question', async (req, res) => {
     res.status(500).json({ error: 'Failed to generate security question' });
   }
 });
+
+// Add direct chat AI question generation endpoint
+router.post('/generate-questions-chat', generateQuestionsChat);
 
 module.exports = router; 

@@ -21,21 +21,26 @@ const createQuestions = async (req, res) => {
       return res.status(404).json({ message: "Subject not found" });
     }
 
-    // Create questions and save them
-    const createdQuestions = await Question.insertMany(
-      questions.map((question) => ({
-        subject: subjectId,
+    // Validate and process each question
+    const processedQuestions = questions.map(question => {
+      const choices = question.choices;
+      if (choices.length !== 4) {
+        throw new Error("Multiple choice questions must have exactly 4 choices");
+      }
+      const newQuestion = new Question({
         questionText: question.questionText,
-        choices: question.choices,
+        choices: choices,
         correctAnswer: question.correctAnswer,
-        bloomsLevel: question.bloomsLevel
-      }))
-    );
-
-    res.status(201).json({
-      message: "Questions created successfully",
-      data: createdQuestions,
+        bloomsLevel: question.bloomsLevel,
+        questionType: "multiple_choice",
+        subject: subjectId
+      });
+      return newQuestion;
     });
+
+    // Create questions and save them
+    const createdQuestions = await Question.insertMany(processedQuestions);
+    res.status(201).json(createdQuestions);
   } catch (error) {
     console.error("Error creating questions:", error);
     res.status(500).json({ message: "Error creating questions", error: error.message });
@@ -69,22 +74,29 @@ const getQuestionsBySubject = async (req, res) => {
 const editQuestion = async (req, res) => {
   try {
     const { questionId } = req.params;
-    const { questionText, choices, correctAnswer } = req.body;
+    const { questionText, choices, correctAnswer, bloomsLevel } = req.body;
+
+    if (choices.length !== 4) {
+      return res.status(400).json({ message: "Multiple choice questions must have exactly 4 choices" });
+    }
 
     const updatedQuestion = await Question.findByIdAndUpdate(
       questionId,
-      { questionText, choices, correctAnswer },
-      { new: true, runValidators: true }
+      {
+        questionText,
+        choices,
+        correctAnswer,
+        bloomsLevel,
+        questionType: "multiple_choice"
+      },
+      { new: true }
     );
 
     if (!updatedQuestion) {
       return res.status(404).json({ message: "Question not found" });
     }
 
-    res.status(200).json({
-      message: "Question updated successfully",
-      data: updatedQuestion,
-    });
+    res.status(200).json(updatedQuestion);
   } catch (error) {
     console.error("Error updating question:", error);
     res.status(500).json({ message: "Error updating question", error: error.message });
@@ -109,10 +121,10 @@ const deleteQuestion = async (req, res) => {
   }
 };
 
-// Function to handle file upload and AI question generation
+// Refactor generateQuestionsFromFile
 const generateQuestionsFromFile = async (req, res) => {
   try {
-    const { subjectId, bloomsLevel, numQuestions, customPrompt } = req.body;
+    const { subjectId, bloomsLevel, numQuestions, customPrompt, questionType } = req.body;
     const file = req.file;
     if (!file) return res.status(400).json({ error: 'No file uploaded' });
 
@@ -159,10 +171,7 @@ const generateQuestionsFromFile = async (req, res) => {
     // Trim to 3000 chars
     text = text.slice(0, 3000);
 
-    // Google Gemini API call
     const n = Math.max(1, Math.min(10, Number(numQuestions) || 2));
-
-    // Chunking logic for large files
     const CHUNK_SIZE = 15000;
     const textChunks = [];
     for (let i = 0; i < text.length; i += CHUNK_SIZE) {
@@ -171,73 +180,9 @@ const generateQuestionsFromFile = async (req, res) => {
 
     let allQuestions = [];
     for (const chunk of textChunks) {
-      let prompt = `Given the following text, generate ${n} high-quality multiple-choice questions at the "${bloomsLevel}" level of Bloom's taxonomy for the subject with ID "${subjectId}". Each question must have 4 plausible choices (one correct, three distractors), and indicate the correct answer. Respond ONLY with a valid JSON array of question objects, and nothing else. Do not include any explanation, markdown, or extra text.\n[\n  {\n    \"questionText\": \"...\",\n    \"choices\": [\"...\", \"...\", \"...\", \"...\"],\n    \"correctAnswer\": \"...\",\n    \"bloomsLevel\": \"...\"\n  },\n  ...\n]\n`;
-      if (customPrompt) {
-        prompt += `\nAdditional instructions: ${customPrompt}`;
-      }
-      prompt += `\nText:\n${chunk}`;
-
-      const geminiRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + process.env.GEMINI_API_KEY, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
-      });
-      const geminiData = await geminiRes.json();
-      try {
-        if (
-          geminiData &&
-          geminiData.candidates &&
-          geminiData.candidates[0] &&
-          geminiData.candidates[0].content &&
-          geminiData.candidates[0].content.parts &&
-          geminiData.candidates[0].content.parts[0].text
-        ) {
-          let content = geminiData.candidates[0].content.parts[0].text.trim();
-          // Remove markdown code block if present
-          if (content.startsWith('```json')) {
-            content = content.replace(/^```json|```$/g, '').trim();
-          } else if (content.startsWith('```')) {
-            content = content.replace(/^```|```$/g, '').trim();
-          }
-          // Try to extract array from within text (ignore any text before/after the array)
-          const match = content.match(/\[.*\]/s);
-          let questions = [];
-          if (match) {
-            try {
-              questions = JSON.parse(match[0]);
-            } catch (e) {
-              questions = [{ questionText: content, choices: [], correctAnswer: '', bloomsLevel }];
-            }
-          } else {
-            // Try to parse as JSON array directly
-            try {
-              questions = JSON.parse(content);
-            } catch (e) {
-              // Try to parse as a single object
-              try {
-                questions = [JSON.parse(content)];
-              } catch (e2) {
-                questions = [{ questionText: content, choices: [], correctAnswer: '', bloomsLevel }];
-              }
-            }
-          }
-          // Ensure always an array
-          if (!Array.isArray(questions)) {
-            questions = [questions];
-          }
-          allQuestions = allQuestions.concat(questions);
-        } else {
-          // Fallback: log the response for debugging
-          console.error('Gemini response missing expected fields:', geminiData);
-          allQuestions.push({ questionText: 'AI did not return a valid response', choices: [], correctAnswer: '', bloomsLevel });
-        }
-      } catch (e) {
-        allQuestions.push({ questionText: geminiData.candidates?.[0]?.content?.parts?.[0]?.text || 'AI error', choices: [], correctAnswer: '', bloomsLevel });
-      }
+      let questions = [];
+      questions = await generateMultipleChoiceQuestionsAI({ text: chunk, n, bloomsLevel, subjectId, customPrompt });
+      allQuestions = allQuestions.concat(questions);
     }
 
     res.json({ extractedText: text.slice(0, 15000), questions: allQuestions });
@@ -247,10 +192,83 @@ const generateQuestionsFromFile = async (req, res) => {
   }
 };
 
+// Refactor generateQuestionsChat
+const generateQuestionsChat = async (req, res) => {
+  try {
+    const { subjectId, bloomsLevel, prompt, numQuestions, questionType } = req.body;
+    if (!subjectId || !bloomsLevel || !prompt) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    const n = Math.max(1, Math.min(10, Number(numQuestions) || 2));
+    let questions = [];
+    questions = await generateMultipleChoiceQuestionsAI({ text: prompt, n, bloomsLevel, subjectId });
+    res.json(questions);
+  } catch (error) {
+    console.error('Error in generateQuestionsChat:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Dedicated function for multiple choice AI generation
+async function generateMultipleChoiceQuestionsAI({ text, n, bloomsLevel, subjectId, customPrompt, promptOverride }) {
+  let prompt = promptOverride || `Given the following text, generate ${n} high-quality multiple-choice questions at the "${bloomsLevel}" level of Bloom's taxonomy for the subject with ID "${subjectId}". Each question must have 4 plausible choices (one correct, three distractors), and indicate the correct answer. Respond ONLY with a valid JSON array of question objects, and nothing else. Do not include any explanation, markdown, or extra text.\n[\n  {\n    \"questionText\": \"...\",\n    \"choices\": [\"...\", \"...\", \"...\", \"...\"],\n    \"correctAnswer\": \"...\",\n    \"bloomsLevel\": \"...\"\n  },\n  ...\n]\n`;
+  if (customPrompt) prompt += `\nAdditional instructions: ${customPrompt}`;
+  prompt += `\nText:\n${text}`;
+
+  const geminiRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + process.env.GEMINI_API_KEY, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }]
+    })
+  });
+  const geminiData = await geminiRes.json();
+  let questions = [];
+  try {
+    if (
+      geminiData &&
+      geminiData.candidates &&
+      geminiData.candidates[0] &&
+      geminiData.candidates[0].content &&
+      geminiData.candidates[0].content.parts &&
+      geminiData.candidates[0].content.parts[0].text
+    ) {
+      let content = geminiData.candidates[0].content.parts[0].text.trim();
+      // Remove markdown code block if present
+      if (content.startsWith('```json')) {
+        content = content.replace(/^```json|```$/g, '').trim();
+      } else if (content.startsWith('```')) {
+        content = content.replace(/^```|```$/g, '').trim();
+      }
+      questions = JSON.parse(content);
+      // Post-process: ensure correct structure
+      questions = questions.map(q => ({
+        ...q,
+        questionType: "multiple_choice",
+        choices: Array.isArray(q.choices) && q.choices.length === 4 ? q.choices : ["", "", "", ""],
+        correctAnswer: q.correctAnswer || "",
+      }));
+    }
+  } catch (e) {
+    console.error('Error processing AI response:', e);
+    questions = [{ 
+      questionText: 'AI did not return a valid response', 
+      questionType: "multiple_choice",
+      choices: ["", "", "", ""],
+      correctAnswer: "",
+      bloomsLevel: bloomsLevel
+    }];
+  }
+  return questions;
+}
+
 module.exports = {
   createQuestions,
   getQuestionsBySubject,
   editQuestion,
   deleteQuestion,
   generateQuestionsFromFile,
+  generateQuestionsChat,
 };

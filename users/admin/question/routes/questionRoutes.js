@@ -6,6 +6,7 @@ const {
   editQuestion,
   deleteQuestion,
   generateQuestionsFromFile,
+  generateQuestionsChat,
 } = require("../controllers/questionController");
 const { verifyToken } = require('../../../../auth/authMiddleware');
 const multer = require('multer');
@@ -36,5 +37,8 @@ router.delete("/:questionId", verifyToken, deleteQuestion);
 
 // Route to generate questions from file (protected route)
 router.post("/generate-questions-from-file", verifyToken, upload.single('file'), generateQuestionsFromFile);
+
+// Route to generate questions via chat prompt (protected route)
+router.post("/generate-questions-chat", verifyToken, generateQuestionsChat);
 
 module.exports = router;

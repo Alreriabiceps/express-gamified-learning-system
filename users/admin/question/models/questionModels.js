@@ -11,13 +11,18 @@ const questionSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  questionType: {
+    type: String,
+    enum: ['multiple_choice'],
+    default: 'multiple_choice',
+  },
   choices: {
     type: [String],
     validate: {
-      validator: function(val) {
+      validator: function (val) {
         return val.length === 4;
       },
-      message: "Each question must have exactly 4 choices"
+      message: "Each question must have exactly 4 choices for multiple choice."
     },
     required: true,
   },
