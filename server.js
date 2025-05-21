@@ -71,6 +71,9 @@ app.use(`${config.api.prefix}/dashboard`, (req, res, next) => {
     next();
 }, dashboardRoutes);
 
+// Admin Routes
+app.use('/api/admin/reviewers', require('./users/admin/reviewer/routes/reviewerRoutes'));
+
 // Add route logging middleware after routes are defined
 app.use((req, res, next) => {
   console.log('Route not found:', req.method, req.url);
