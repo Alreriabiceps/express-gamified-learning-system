@@ -51,7 +51,7 @@ router.use('/weekly-test', weeklyTestRoutes);
 router.use('/leaderboard', leaderboardRoutes);
 router.use('/friend-requests', friendRequestRoutes);
 router.use('/messages', messageRoutes);
-router.use('/admin', adminRoutes);
+router.use('/admin/users', adminRoutes);
 router.use('/match', matchRoutes);
 router.use('/students/favorite-reviewers', favoriteReviewerRoutes);
 
