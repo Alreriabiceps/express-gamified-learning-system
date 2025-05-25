@@ -34,6 +34,7 @@ const gameServer = new GameServer(server);
 
 // Attach io to the app for controller access
 app.set('io', gameServer.io);
+app.set('gameServer', gameServer);
 
 // Set the port for the server
 const PORT = config.server.port;

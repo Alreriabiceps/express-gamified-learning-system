@@ -12,15 +12,17 @@ const dashboardRoutes = require('../users/admin/dashboard/routes/dashboardRoutes
 
 // Student routes
 const studentRoutes = require('../users/admin/student/routes/studentRoutes');
-const lobbyRoutes = require('../users/students/chats/routes/lobbyRoutes');
+const lobbyRoutes = require('../users/students/lobby/routes/lobbyRoutes');
 const duelRoutes = require('../users/students/duel/routes/duelRoutes');
 const weeklyTestRoutes = require('../users/students/weeklytest/routes/weeklyTestRoutes');
 const leaderboardRoutes = require('../users/students/leaderboard/routes/leaderboardRoutes');
 const friendRequestRoutes = require('../users/students/chats/routes/friendRequestRoutes');
 const messageRoutes = require('../users/students/chats/routes/messageRoutes');
+const favoriteReviewerRoutes = require('../users/admin/reviewer/routes/favoriteReviewerRoutes');
 
 // Admin routes
-const adminRoutes = require('../users/admin/routes/adminRoutes');
+const adminRoutes = require('../users/admin/account/routes/adminRoutes');
+const reviewerLinkRoutes = require('../users/admin/reviewer/routes/reviewerLinkRoutes');
 
 // Match routes
 const matchRoutes = require('../auth/matchRoutes');
@@ -41,6 +43,7 @@ router.use('/questions', questionRoutes);
 router.use('/subjects', subjectRoutes);
 router.use('/weeks', weekRoutes);
 router.use('/admin/dashboard', dashboardRoutes);
+router.use('/admin/reviewer-links', reviewerLinkRoutes);
 router.use('/students', studentRoutes);
 router.use('/lobby', lobbyRoutes);
 router.use('/duel', duelRoutes);
@@ -50,6 +53,7 @@ router.use('/friend-requests', friendRequestRoutes);
 router.use('/messages', messageRoutes);
 router.use('/admin', adminRoutes);
 router.use('/match', matchRoutes);
+router.use('/students/favorite-reviewers', favoriteReviewerRoutes);
 
 // Add AI question generation endpoint
 router.post('/generate-questions', async (req, res) => {

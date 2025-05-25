@@ -1,0 +1,61 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# 🔧 My Project Rules
+
+## 🗂 Folder Structure
+- Always follow the existing `gleas_frontend/` and `gleas_backend/` folders.
+- Organize features by modules when possible (e.g., `auth/`, `dashboard/`).
+- Place shared components/utilities in `shared/` or `common/` folders.
+- Do not move or restructure folders without asking.
+
+## 📁 File Management
+- Do not create duplicate files — always search first.
+- Use consistent naming conventions:
+  - Files: `camelCase.js` or `kebab-case.ts`
+  - Components: `PascalCase.jsx`
+- Keep related files grouped (e.g., controller, model, route for each feature).
+- Avoid excessive nesting of folders.
+
+## 🧠 Reminders
+- I already have both `frontend` and `backend` folders — do not recreate them.
+- Ask before initializing new services, packages, or folders.
+- Use existing templates or patterns when creating new components or endpoints.
+
+## 🔌 Frontend Guidelines
+- Use React functional components with hooks.
+- Keep components small and reusable.
+- Use Tailwind CSS for styling (if already set up).
+- Follow the layout and naming conventions of existing UI files.
+
+## 🛠 Backend Guidelines
+- Use Express for routes and controllers.
+- Organize backend logic by feature (e.g., `user/`, `quiz/`, `admin/`).
+- Use MongoDB (or MySQL if mentioned) and follow the schema/model patterns in place.
+- Keep routes RESTful and modular.
+
+## 🧼 Code Cleanup
+- Always clean up unused code, variables, and imports.
+- Remove any functions or components that are not being used.
+- Delete commented-out code unless it's for a specific reason.
+- Keep files free from redundant logic or dead code.
+- Run linting tools (like ESLint) before committing.
+
+## ✅ General Coding Practices
+- Keep code clean and readable.
+- Comment complex logic when needed.
+- Reuse existing code before writing new.
+- Prioritize readability over cleverness.
+- Use environment variables for sensitive info.
+
+## 🧪 Testing and Debugging
+- Test changes locally before committing.
+- Log with clarity (`console.log` or logging tool with context).
+- Avoid leaving test/debug code in production files.
+
+## 💬 Communication
+- If unsure, ask before assuming.
+- Document any major changes in structure or logic.
+

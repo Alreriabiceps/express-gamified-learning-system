@@ -125,14 +125,18 @@ class GameServer {
             return;
           }
 
-          if (game.players.length >= game.numPlayers) {
+          if (game.players.includes(socket.userId)) {
+            // Player is already in the game, just join the socket room
+            this.players.set(socket.userId, gameId);
+            socket.join(gameId);
+          } else if (game.players.length < game.numPlayers) {
+            game.players.push(socket.userId);
+            this.players.set(socket.userId, gameId);
+            socket.join(gameId);
+          } else {
             socket.emit('error', { message: 'Game is full' });
             return;
           }
-
-          game.players.push(socket.userId);
-          this.players.set(socket.userId, gameId);
-          socket.join(gameId);
 
           if (game.players.length === game.numPlayers) {
             game.status = 'in-progress';
