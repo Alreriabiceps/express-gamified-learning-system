@@ -16,6 +16,7 @@ module.exports = {
         'https://alreria.vercel.app',
         'https://your-frontend.vercel.app',
         'https://alreria-alreriabiceps-projects.vercel.app',
+        'https://agilacabiao.vercel.app',
         undefined // Allow undefined origin for local development
     ],
 
