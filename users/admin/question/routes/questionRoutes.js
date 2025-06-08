@@ -1,3 +1,4 @@
+console.log('questionRoutes loaded');
 const express = require("express");
 const router = express.Router();
 const {
@@ -7,6 +8,7 @@ const {
   deleteQuestion,
   generateQuestionsFromFile,
   generateQuestionsChat,
+  getAllQuestions,
 } = require("../controllers/questionController");
 const { verifyToken } = require('../../../../auth/authMiddleware');
 const multer = require('multer');
@@ -40,5 +42,8 @@ router.post("/generate-questions-from-file", verifyToken, upload.single('file'),
 
 // Route to generate questions via chat prompt (protected route)
 router.post("/generate-questions-chat", verifyToken, generateQuestionsChat);
+
+// Add this route for fetching all questions
+router.get("/", verifyToken, getAllQuestions);
 
 module.exports = router;

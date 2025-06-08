@@ -1,49 +1,105 @@
 const Student = require('../models/studentModels');
 const mongoose = require('mongoose');
 
-// Create a new student
+// Create new students (handles both single student and bulk students)
 exports.addStudent = async (req, res) => {
   try {
-    const { 
-      firstName, 
-      middleName, 
-      lastName, 
-      age, 
-      studentId, 
-      strand, 
-      section, 
-      yearLevel,
-      password 
-    } = req.body;
-
-    // Check if student already exists
-    const existingStudent = await Student.findOne({ studentId });
-    if (existingStudent) {
-      return res.status(409).json({ success: false, message: 'Student already exists' });
+    console.log('Request body:', req.body);
+    
+    // Handle both single student and bulk students
+    let studentsToAdd = [];
+    
+    if (req.body.students) {
+      // Bulk students from frontend
+      studentsToAdd = req.body.students;
+    } else {
+      // Single student
+      studentsToAdd = [req.body];
     }
 
-    // Create new student if not exists
-    const newStudent = new Student({
-      firstName,
-      middleName,
-      lastName,
-      age,
-      studentId,
-      strand,
-      section,
-      yearLevel,
-      password: password || studentId.toString() // Use studentId as default password if not provided
-    });
+    const results = [];
+    const errors = [];
 
-    await newStudent.save();
-    res.status(201).json({ 
-      success: true, 
-      message: 'Student added successfully!',
-      student: newStudent.getPublicProfile()
-    });
+    for (let i = 0; i < studentsToAdd.length; i++) {
+      const studentData = studentsToAdd[i];
+      
+      try {
+        const { 
+          firstName, 
+          middleName, 
+          lastName, 
+          age, 
+          studentId, 
+          grade,    // From frontend
+          track,    // From frontend  
+          section, 
+          password 
+        } = studentData;
+
+                 // Map frontend fields to backend model fields
+         const mappedData = {
+           firstName,
+           middleName,
+           lastName,
+           age,
+           studentId: Number(studentId),
+           track: track, // Track is now directly "Academic Track" or "Technical-Professional Track"
+           section,
+           yearLevel: grade === '11' ? 'Grade 11' : 'Grade 12',
+           email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}${studentId}@student.gleas.edu.ph`, // Generate email
+           password: password || studentId.toString()
+         };
+
+        // Check if student already exists
+        const existingStudent = await Student.findOne({ studentId: mappedData.studentId });
+        if (existingStudent) {
+          errors.push({ index: i + 1, message: `Student ID ${studentId} already exists` });
+          continue;
+        }
+
+        // Create new student
+        const newStudent = new Student(mappedData);
+        await newStudent.save();
+        
+        results.push({
+          index: i + 1,
+          student: newStudent.getPublicProfile(),
+          message: 'Student added successfully'
+        });
+
+      } catch (studentError) {
+        console.error(`Error adding student ${i + 1}:`, studentError);
+        errors.push({ 
+          index: i + 1, 
+          message: studentError.message || 'Error adding student' 
+        });
+      }
+    }
+
+    // Return results
+    if (errors.length === 0) {
+      res.status(201).json({ 
+        success: true, 
+        message: `${results.length} student(s) added successfully!`,
+        students: results
+      });
+    } else if (results.length === 0) {
+      res.status(400).json({ 
+        success: false, 
+        message: 'No students could be added',
+        errors: errors
+      });
+    } else {
+      res.status(207).json({ 
+        success: true, 
+        message: `${results.length} student(s) added, ${errors.length} failed`,
+        students: results,
+        errors: errors
+      });
+    }
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: 'Error adding student', error: error.message });
+    console.error('Controller error:', error);
+    res.status(500).json({ success: false, message: 'Error adding student(s)', error: error.message });
   }
 };
 

@@ -1,3 +1,4 @@
+console.log('core/routes.js loaded');
 const express = require('express');
 const router = express.Router();
 const fetch = require('node-fetch');
@@ -44,7 +45,7 @@ router.use('/subjects', subjectRoutes);
 router.use('/weeks', weekRoutes);
 router.use('/admin/dashboard', dashboardRoutes);
 router.use('/admin/reviewer-links', reviewerLinkRoutes);
-router.use('/students', studentRoutes);
+router.use('/admin/students', studentRoutes);  // Fixed: changed from /students to /admin/students
 router.use('/lobby', lobbyRoutes);
 router.use('/duel', duelRoutes);
 router.use('/weekly-test', weeklyTestRoutes);

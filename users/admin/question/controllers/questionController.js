@@ -264,6 +264,16 @@ async function generateMultipleChoiceQuestionsAI({ text, n, bloomsLevel, subject
   return questions;
 }
 
+// Get all questions
+const getAllQuestions = async (req, res) => {
+  try {
+    const questions = await Question.find().populate("subject", "subject");
+    res.status(200).json(questions);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching questions", error: error.message });
+  }
+};
+
 module.exports = {
   createQuestions,
   getQuestionsBySubject,
@@ -271,4 +281,5 @@ module.exports = {
   deleteQuestion,
   generateQuestionsFromFile,
   generateQuestionsChat,
+  getAllQuestions,
 };
