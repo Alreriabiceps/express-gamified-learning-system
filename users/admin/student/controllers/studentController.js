@@ -23,28 +23,28 @@ exports.addStudent = async (req, res) => {
     for (let i = 0; i < studentsToAdd.length; i++) {
       const studentData = studentsToAdd[i];
       
-      try {
-        const { 
-          firstName, 
-          middleName, 
-          lastName, 
-          age, 
-          studentId, 
+  try {
+    const { 
+      firstName, 
+      middleName, 
+      lastName, 
+      age, 
+      studentId, 
           grade,    // From frontend
           track,    // From frontend  
-          section, 
-          password 
+      section, 
+      password 
         } = studentData;
 
                  // Map frontend fields to backend model fields
          const mappedData = {
-           firstName,
-           middleName,
-           lastName,
-           age,
+      firstName,
+      middleName,
+      lastName,
+      age,
            studentId: Number(studentId),
            track: track, // Track is now directly "Academic Track" or "Technical-Professional Track"
-           section,
+      section,
            yearLevel: grade === '11' ? 'Grade 11' : 'Grade 12',
            email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}${studentId}@student.gleas.edu.ph`, // Generate email
            password: password || studentId.toString()
@@ -78,8 +78,8 @@ exports.addStudent = async (req, res) => {
 
     // Return results
     if (errors.length === 0) {
-      res.status(201).json({ 
-        success: true, 
+    res.status(201).json({ 
+      success: true, 
         message: `${results.length} student(s) added successfully!`,
         students: results
       });
@@ -95,7 +95,7 @@ exports.addStudent = async (req, res) => {
         message: `${results.length} student(s) added, ${errors.length} failed`,
         students: results,
         errors: errors
-      });
+    });
     }
   } catch (error) {
     console.error('Controller error:', error);
