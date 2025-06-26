@@ -20,6 +20,9 @@ const socketService = require('./services/socketService');
 const mainRoutes = require("./core/routes");
 const dashboardRoutes = require("./users/students/dashboard/routes/dashboardRoutes");
 
+// Import new modular routes - TEMPORARILY DISABLED to fix model conflicts
+// const moduleRoutes = require("./modules/index");
+
 // Import messageController for status updates
 const messageController = require('./users/students/chats/controllers/messageController');
 
@@ -66,6 +69,12 @@ app.use(config.api.prefix, (req, res, next) => {
   console.log(`API Route accessed: ${req.method} ${req.url}`);
   next();
 }, mainRoutes);
+
+// Add modular routes under /api/modules (for new structure) - TEMPORARILY DISABLED
+// app.use(`${config.api.prefix}/modules`, (req, res, next) => {
+//     console.log(`Module Route accessed: ${req.method} ${req.url}`);
+//     next();
+// }, moduleRoutes);
 
 // Add dashboard routes under /api/dashboard
 app.use(`${config.api.prefix}/dashboard`, (req, res, next) => {
