@@ -95,7 +95,8 @@ exports.removeFriend = async (req, res) => {
   try {
     const userId = req.user.id;
     const { friendId } = req.params;
-    // Find the friendship (accepted) where user is requester or recipient and the other is friendId
+    
+    // First try to find by friendship ID (new approach)
     let friendship = await FriendRequest.findOne({
       _id: friendId,
       status: 'accepted',
@@ -104,17 +105,34 @@ exports.removeFriend = async (req, res) => {
         { recipient: userId },
       ],
     });
+    
+    // If not found, try to find by user ID (fallback for compatibility)
+    if (!friendship) {
+      friendship = await FriendRequest.findOne({
+        status: 'accepted',
+        $or: [
+          { requester: userId, recipient: friendId },
+          { requester: friendId, recipient: userId },
+        ],
+      });
+    }
+    
     if (!friendship) {
       return res.status(404).json({ success: false, error: 'Friendship not found' });
     }
+    
     friendship = await friendship.populate('requester', 'studentId firstName lastName');
     friendship = await friendship.populate('recipient', 'studentId firstName lastName');
     const otherUser = friendship.requester._id.toString() === userId ? friendship.recipient._id : friendship.requester._id;
+    const friendshipDocId = friendship._id;
+    
     await friendship.deleteOne();
-    // Emit real-time events
+    
+    // Emit real-time events with the friendship document ID
     const io = req.app.get('io');
-    io.to(userId).emit('friend:removed', { friendId });
-    io.to(otherUser.toString()).emit('friend:removed', { friendId });
+    io.to(userId).emit('friend:removed', { friendId: friendshipDocId });
+    io.to(otherUser.toString()).emit('friend:removed', { friendId: friendshipDocId });
+    
     res.json({ success: true, message: 'Friend removed' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

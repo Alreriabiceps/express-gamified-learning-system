@@ -1,49 +1,54 @@
-const jwt = require('jsonwebtoken');
-const Student = require('../users/admin/student/models/studentModels');
-const Admin = require('../users/admin/account/models/adminModel');
-const bcryptjs = require('bcryptjs');
-const crypto = require('crypto');
-const nodemailer = require('nodemailer');
-const PendingStudent = require('../users/admin/student/models/pendingStudentModel');
-const bcrypt = require('bcryptjs');
+const jwt = require("jsonwebtoken");
+const Student = require("../users/admin/student/models/studentModels");
+const Admin = require("../users/admin/account/models/adminModel");
+const bcryptjs = require("bcryptjs");
+const crypto = require("crypto");
+const nodemailer = require("nodemailer");
+const PendingStudent = require("../users/admin/student/models/pendingStudentModel");
+const bcrypt = require("bcryptjs");
 
 // Admin login logic
 const adminLogin = async (req, res) => {
   try {
-    console.log('Admin login request received');
-    console.log('Request body:', req.body);
+    console.log("Admin login request received");
+    console.log("Request body:", req.body);
 
     const { username, password } = req.body;
 
     if (!username || !password) {
-      console.log('Missing credentials:', { username: !!username, password: !!password });
-      return res.status(400).json({ error: 'Username and password are required' });
+      console.log("Missing credentials:", {
+        username: !!username,
+        password: !!password,
+      });
+      return res
+        .status(400)
+        .json({ error: "Username and password are required" });
     }
 
-    console.log('Login attempt for username:', username);
+    console.log("Login attempt for username:", username);
 
     // Check if admin exists
     const admin = await Admin.findOne({ username });
-    console.log('Found admin:', admin ? 'Yes' : 'No');
+    console.log("Found admin:", admin ? "Yes" : "No");
 
     if (!admin) {
-      console.log('Admin not found for username:', username);
-      return res.status(404).json({ error: 'Admin not found' });
+      console.log("Admin not found for username:", username);
+      return res.status(404).json({ error: "Admin not found" });
     }
 
     // Check if admin is active
     if (!admin.isActive) {
-      console.log('Admin account is deactivated:', username);
-      return res.status(403).json({ error: 'Account is deactivated' });
+      console.log("Admin account is deactivated:", username);
+      return res.status(403).json({ error: "Account is deactivated" });
     }
 
     // Check if password matches
     const isMatch = await admin.comparePassword(password);
-    console.log('Password match:', isMatch ? 'Yes' : 'No');
+    console.log("Password match:", isMatch ? "Yes" : "No");
 
     if (!isMatch) {
-      console.log('Incorrect password for admin:', username);
-      return res.status(401).json({ error: 'Incorrect password' });
+      console.log("Incorrect password for admin:", username);
+      return res.status(401).json({ error: "Incorrect password" });
     }
 
     // Update last login
@@ -55,10 +60,10 @@ const adminLogin = async (req, res) => {
       {
         id: admin._id,
         username: admin.username,
-        role: 'admin'
+        role: "admin",
       },
-      process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '24h' }
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "24h" }
     );
 
     // Prepare admin data for response
@@ -66,24 +71,24 @@ const adminLogin = async (req, res) => {
       id: admin._id,
       username: admin.username,
       email: admin.email,
-      role: 'admin',
+      role: "admin",
       isActive: admin.isActive,
-      lastLogin: admin.lastLogin
+      lastLogin: admin.lastLogin,
     };
 
-    console.log('Login successful for admin:', username);
+    console.log("Login successful for admin:", username);
 
     // Send response
     return res.status(200).json({
-      message: 'Admin login successful',
+      message: "Admin login successful",
       token,
-      admin: adminData
+      admin: adminData,
     });
   } catch (err) {
-    console.error('Admin login error:', err);
+    console.error("Admin login error:", err);
     return res.status(500).json({
-      error: 'Internal server error',
-      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      error: "Internal server error",
+      details: process.env.NODE_ENV === "development" ? err.message : undefined,
     });
   }
 };
@@ -96,30 +101,30 @@ const studentLogin = async (req, res) => {
     // Convert studentId to number and validate
     const numericStudentId = Number(studentId);
     if (isNaN(numericStudentId)) {
-      return res.status(400).json({ error: 'Invalid student ID format' });
+      return res.status(400).json({ error: "Invalid student ID format" });
     }
 
-    console.log('Login attempt for studentId:', numericStudentId);
+    console.log("Login attempt for studentId:", numericStudentId);
 
     // Check if student exists
     const student = await Student.findOne({ studentId: numericStudentId });
-    console.log('Found student:', student ? 'Yes' : 'No');
+    console.log("Found student:", student ? "Yes" : "No");
 
     if (!student) {
-      return res.status(404).json({ error: 'Student not found' });
+      return res.status(404).json({ error: "Student not found" });
     }
 
     // Check if student is active
     if (!student.isActive) {
-      return res.status(403).json({ error: 'Account is deactivated' });
+      return res.status(403).json({ error: "Account is deactivated" });
     }
 
     // Check if password matches
     const isMatch = await student.comparePassword(password);
-    console.log('Password match:', isMatch ? 'Yes' : 'No');
+    console.log("Password match:", isMatch ? "Yes" : "No");
 
     if (!isMatch) {
-      return res.status(401).json({ error: 'Incorrect password' });
+      return res.status(401).json({ error: "Incorrect password" });
     }
 
     // Update last login
@@ -131,22 +136,22 @@ const studentLogin = async (req, res) => {
       {
         id: student._id,
         studentId: student.studentId,
-        role: 'student'
+        role: "student",
       },
-      process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '24h' }
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "24h" }
     );
 
     // Send response with student data (excluding sensitive info)
     return res.json({
-      message: 'Student login successful',
+      message: "Student login successful",
       token,
-      role: 'student',
-      student: student.getPublicProfile()
+      role: "student",
+      student: student.getPublicProfile(),
     });
   } catch (err) {
-    console.error('Login error details:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Login error details:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -155,12 +160,12 @@ const getProfile = async (req, res) => {
   try {
     const student = await Student.findById(req.user.id);
     if (!student) {
-      return res.status(404).json({ error: 'Student not found' });
+      return res.status(404).json({ error: "Student not found" });
     }
     res.json(student.getPublicProfile());
   } catch (err) {
-    console.error('Profile error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Profile error:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -173,25 +178,25 @@ const changePassword = async (req, res) => {
     // Find admin
     const admin = await Admin.findById(adminId);
     if (!admin) {
-      return res.status(404).json({ error: 'Admin not found' });
+      return res.status(404).json({ error: "Admin not found" });
     }
 
     // Verify current password
     const isMatch = await admin.comparePassword(currentPassword);
-    console.log('Current password match:', isMatch ? 'Yes' : 'No');
+    console.log("Current password match:", isMatch ? "Yes" : "No");
 
     if (!isMatch) {
-      return res.status(401).json({ error: 'Current password is incorrect' });
+      return res.status(401).json({ error: "Current password is incorrect" });
     }
 
     // Update password
     admin.password = newPassword;
     await admin.save();
 
-    res.json({ message: 'Password updated successfully' });
+    res.json({ message: "Password updated successfully" });
   } catch (err) {
-    console.error('Change password error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Change password error:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -204,68 +209,103 @@ const changeUsername = async (req, res) => {
     // Find admin
     const admin = await Admin.findById(adminId);
     if (!admin) {
-      return res.status(404).json({ error: 'Admin not found' });
+      return res.status(404).json({ error: "Admin not found" });
     }
 
     // Verify current password
     const isMatch = await admin.comparePassword(currentPassword);
     if (!isMatch) {
-      return res.status(401).json({ error: 'Current password is incorrect' });
+      return res.status(401).json({ error: "Current password is incorrect" });
     }
 
     // Check if new username already exists
     const existingAdmin = await Admin.findOne({ username: newUsername });
     if (existingAdmin) {
-      return res.status(409).json({ error: 'Username already exists' });
+      return res.status(409).json({ error: "Username already exists" });
     }
 
     // Update username
     admin.username = newUsername;
     await admin.save();
 
-    res.json({ message: 'Username updated successfully' });
+    res.json({ message: "Username updated successfully" });
   } catch (err) {
-    console.error('Change username error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Change username error:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
 // Refresh token
 const refreshToken = async (req, res) => {
   try {
-    const user = req.user;
+    // Accept either Authorization: Bearer <token> or { token } in body
+    const authHeader = req.headers.authorization || "";
+    const bodyToken = req.body?.token;
+    const bearerToken = authHeader.startsWith("Bearer ")
+      ? authHeader.split(" ")[1]
+      : undefined;
+    const oldToken = bodyToken || bearerToken;
+
+    if (!oldToken) {
+      return res.status(400).json({ error: "No token provided" });
+    }
+
+    // Decode without verifying exp to allow refresh when expired
+    let decoded;
+    try {
+      decoded = jwt.verify(
+        oldToken,
+        process.env.JWT_SECRET || "your-secret-key"
+      );
+    } catch (err) {
+      // If token expired, decode payload anyway
+      try {
+        const base64Url = oldToken.split(".")[1];
+        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+        const payload = JSON.parse(Buffer.from(base64, "base64").toString());
+        decoded = payload;
+      } catch (e) {
+        return res.status(401).json({ error: "Invalid token" });
+      }
+    }
+
+    if (!decoded || !decoded.id || !decoded.role) {
+      return res.status(401).json({ error: "Invalid token payload" });
+    }
+
     const newToken = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+      { id: decoded.id, role: decoded.role },
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "24h" }
     );
     res.status(200).json({ token: newToken });
   } catch (error) {
-    console.error('Error refreshing token:', error);
-    res.status(500).json({ error: 'Failed to refresh token' });
+    console.error("Error refreshing token:", error);
+    res.status(500).json({ error: "Failed to refresh token" });
   }
 };
 
 // Email sending utility
 const sendConfirmationEmail = async (to, token, studentDetails = {}) => {
   const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    service: "gmail",
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    }
+      pass: process.env.EMAIL_PASS,
+    },
   });
 
   // Use BACKEND_URL from environment, fallback to localhost for local dev
-  const baseUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+  const baseUrl = process.env.BACKEND_URL || "http://localhost:5000";
   const confirmUrl = `${baseUrl}/api/auth/confirm-email?token=${token}`;
 
-  const { firstName, lastName, studentId, track, section, yearLevel } = studentDetails;
+  const { firstName, lastName, studentId, track, section, yearLevel } =
+    studentDetails;
 
   await transporter.sendMail({
     from: process.env.EMAIL_USER,
     to,
-    subject: 'Confirm your email for GLEAS Registration',
+    subject: "Confirm your email for GLEAS Registration",
     html: `
       <!DOCTYPE html>
       <html lang="en">
@@ -307,7 +347,9 @@ const sendConfirmationEmail = async (to, token, studentDetails = {}) => {
                       <!-- Welcome Title -->
                       <tr>
                         <td align="center" style="font-family: 'Roboto Condensed', Arial, sans-serif; font-size: 26px; color: #FFDE59; padding-bottom: 15px;">
-                          Welcome to GLEAS, ${firstName ? ` <b>${firstName}</b>` : 'Adventurer'}!
+                          Welcome to GLEAS, ${
+                            firstName ? ` <b>${firstName}</b>` : "Adventurer"
+                          }!
                         </td>
                       </tr>
                       <!-- Intro Text -->
@@ -317,7 +359,9 @@ const sendConfirmationEmail = async (to, token, studentDetails = {}) => {
                         </td>
                       </tr>
                       <!-- Registration Details Panel (Optional, can be themed if kept) -->
-                      ${studentDetails && Object.keys(studentDetails).length > 0 ? `
+                      ${
+                        studentDetails && Object.keys(studentDetails).length > 0
+                          ? `
                       <tr>
                         <td style="padding-bottom: 25px;">
                           <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: rgba(13, 20, 26, 0.7); border-radius: 8px; border: 1px solid rgba(130, 223, 255, 0.3); padding: 20px;">
@@ -326,18 +370,38 @@ const sendConfirmationEmail = async (to, token, studentDetails = {}) => {
                             </tr>
                             <tr>
                               <td style="font-family: 'Montserrat', Arial, sans-serif; font-size: 14px; color: #A7C0C9; line-height: 1.7;">
-                                ${firstName || lastName ? `<b>Name:</b> ${firstName || ''} ${lastName || ''}<br>` : ''}
-                                ${studentId ? `<b>Student ID:</b> ${studentId}<br>` : ''}
-                                ${track ? `<b>Track:</b> ${track}<br>` : ''}
-                                ${section ? `<b>Section:</b> ${section}<br>` : ''}
-                                ${yearLevel ? `<b>Year Level:</b> ${yearLevel}<br>` : ''}
+                                ${
+                                  firstName || lastName
+                                    ? `<b>Name:</b> ${firstName || ""} ${
+                                        lastName || ""
+                                      }<br>`
+                                    : ""
+                                }
+                                ${
+                                  studentId
+                                    ? `<b>Student ID:</b> ${studentId}<br>`
+                                    : ""
+                                }
+                                ${track ? `<b>Track:</b> ${track}<br>` : ""}
+                                ${
+                                  section
+                                    ? `<b>Section:</b> ${section}<br>`
+                                    : ""
+                                }
+                                ${
+                                  yearLevel
+                                    ? `<b>Year Level:</b> ${yearLevel}<br>`
+                                    : ""
+                                }
                                 <b>Email:</b> ${to}
                               </td>
                             </tr>
                           </table>
                         </td>
                       </tr>
-                      ` : ''}
+                      `
+                          : ""
+                      }
                       <!-- Confirmation Button -->
                       <tr>
                         <td align="center" style="padding-top: 10px; padding-bottom: 25px;">
@@ -385,7 +449,7 @@ const sendConfirmationEmail = async (to, token, studentDetails = {}) => {
         </table>
       </body>
       </html>
-    `
+    `,
   });
 };
 
@@ -401,23 +465,40 @@ const studentRegister = async (req, res) => {
       password,
       track,
       section,
-      yearLevel
+      yearLevel,
     } = req.body;
 
     // Validate required fields
-    if (!firstName || !lastName || !email || !studentId || !password || !track || !section || !yearLevel) {
-      return res.status(400).json({ error: 'All required fields must be filled.' });
+    if (
+      !firstName ||
+      !lastName ||
+      !email ||
+      !studentId ||
+      !password ||
+      !track ||
+      !section ||
+      !yearLevel
+    ) {
+      return res
+        .status(400)
+        .json({ error: "All required fields must be filled." });
     }
 
     // Check if studentId or email already exists in Student or PendingStudent
-    const existingStudent = await Student.findOne({ $or: [ { studentId }, { email } ] });
-    const existingPending = await PendingStudent.findOne({ $or: [ { studentId }, { email } ] });
+    const existingStudent = await Student.findOne({
+      $or: [{ studentId }, { email }],
+    });
+    const existingPending = await PendingStudent.findOne({
+      $or: [{ studentId }, { email }],
+    });
     if (existingStudent || existingPending) {
-      return res.status(409).json({ error: 'Student ID or email already exists.' });
+      return res
+        .status(409)
+        .json({ error: "Student ID or email already exists." });
     }
 
     // Generate confirmation token
-    const confirmationToken = crypto.randomBytes(32).toString('hex');
+    const confirmationToken = crypto.randomBytes(32).toString("hex");
     const confirmationExpires = Date.now() + 1000 * 60 * 60 * 24; // 24 hours
 
     // Save to PendingStudent
@@ -432,7 +513,7 @@ const studentRegister = async (req, res) => {
       section,
       yearLevel,
       confirmationToken,
-      confirmationExpires
+      confirmationExpires,
     });
     await pendingStudent.save();
 
@@ -443,16 +524,19 @@ const studentRegister = async (req, res) => {
       studentId,
       track,
       section,
-      yearLevel
+      yearLevel,
     });
 
     res.status(201).json({
       success: true,
-      message: 'Registration started! Please check your email to confirm your account.'
+      message:
+        "Registration started! Please check your email to confirm your account.",
     });
   } catch (error) {
-    console.error('Student registration error:', error);
-    res.status(500).json({ error: 'Error registering student', details: error.message });
+    console.error("Student registration error:", error);
+    res
+      .status(500)
+      .json({ error: "Error registering student", details: error.message });
   }
 };
 
@@ -461,13 +545,21 @@ const confirmEmail = async (req, res) => {
   try {
     const { token } = req.query;
     // Use FRONTEND_URL, fallback to CLIENT_URL, then localhost
-    const frontendUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:5173';
+    const frontendUrl =
+      process.env.FRONTEND_URL ||
+      process.env.CLIENT_URL ||
+      "http://localhost:5173";
     // Always redirect to frontend, regardless of token validity
     res.redirect(`${frontendUrl}/registration-success?token=${token}`);
   } catch (error) {
     // On error, also redirect to frontend
-    const fallbackUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:5173';
-    res.redirect(`${fallbackUrl}/registration-success?token=${req.query.token || ''}`);
+    const fallbackUrl =
+      process.env.FRONTEND_URL ||
+      process.env.CLIENT_URL ||
+      "http://localhost:5173";
+    res.redirect(
+      `${fallbackUrl}/registration-success?token=${req.query.token || ""}`
+    );
   }
 };
 
@@ -476,21 +568,21 @@ const finalizeRegistration = async (req, res) => {
   try {
     const { token } = req.query;
     if (!token) {
-      return res.status(400).json({ error: 'No token provided.' });
+      return res.status(400).json({ error: "No token provided." });
     }
-    const pending = await PendingStudent.findOne({ confirmationToken: token, confirmationExpires: { $gt: Date.now() } });
+    const pending = await PendingStudent.findOne({
+      confirmationToken: token,
+      confirmationExpires: { $gt: Date.now() },
+    });
     if (!pending) {
       // Try to find the student in the database (already finalized)
       const student = await Student.findOne({
-        $or: [
-          { email: req.query.email },
-          { studentId: req.query.studentId }
-        ]
+        $or: [{ email: req.query.email }, { studentId: req.query.studentId }],
       });
       if (student) {
         return res.json({ success: true, student: student.getPublicProfile() });
       }
-      return res.status(400).json({ error: 'Invalid or expired token.' });
+      return res.status(400).json({ error: "Invalid or expired token." });
     }
     // Password is already hashed in PendingStudent, do NOT hash again
     const student = new Student({
@@ -503,14 +595,16 @@ const finalizeRegistration = async (req, res) => {
       track: pending.track,
       section: pending.section,
       yearLevel: pending.yearLevel,
-      isEmailConfirmed: true
+      isEmailConfirmed: true,
     });
     await student.save();
     await PendingStudent.deleteOne({ _id: pending._id });
     res.json({ success: true, student: student.getPublicProfile() });
   } catch (error) {
-    console.error('Finalize registration error:', error);
-    res.status(500).json({ error: 'Error finalizing registration', details: error.message });
+    console.error("Finalize registration error:", error);
+    res
+      .status(500)
+      .json({ error: "Error finalizing registration", details: error.message });
   }
 };
 
@@ -525,37 +619,50 @@ const requestPasswordReset = async (req, res) => {
       student = await Student.findOne({ studentId });
     }
     if (!student) {
-      return res.status(404).json({ error: 'No student found with that email or ID.' });
+      return res
+        .status(404)
+        .json({ error: "No student found with that email or ID." });
     }
     // Generate token
-    const token = crypto.randomBytes(32).toString('hex');
+    const token = crypto.randomBytes(32).toString("hex");
     student.resetPasswordToken = token;
     student.resetPasswordExpires = Date.now() + 1000 * 60 * 30; // 30 minutes
     await student.save();
     // Send email
-    const frontendUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:5173';
+    const frontendUrl =
+      process.env.FRONTEND_URL ||
+      process.env.CLIENT_URL ||
+      "http://localhost:5173";
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
     await sendPasswordResetEmail(student.email, resetUrl, student.firstName);
-    res.json({ success: true, message: 'Password reset link sent to your email.' });
+    res.json({
+      success: true,
+      message: "Password reset link sent to your email.",
+    });
   } catch (error) {
-    console.error('Request password reset error:', error);
-    res.status(500).json({ error: 'Error requesting password reset', details: error.message });
+    console.error("Request password reset error:", error);
+    res
+      .status(500)
+      .json({
+        error: "Error requesting password reset",
+        details: error.message,
+      });
   }
 };
 
 // Send password reset email
 const sendPasswordResetEmail = async (to, resetUrl, firstName) => {
   const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    service: "gmail",
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    }
+      pass: process.env.EMAIL_PASS,
+    },
   });
   await transporter.sendMail({
     from: process.env.EMAIL_USER,
     to,
-    subject: 'GLEAS Password Reset Request',
+    subject: "GLEAS Password Reset Request",
     html: `
       <!DOCTYPE html>
       <html lang="en">
@@ -594,7 +701,7 @@ const sendPasswordResetEmail = async (to, resetUrl, firstName) => {
                       <!-- Intro Text -->
                       <tr>
                         <td style="font-family: 'Montserrat', Arial, sans-serif; font-size: 16px; color: #E0F2F7; line-height: 1.6; padding-bottom: 10px; text-align: center;">
-                          Hi${firstName ? ` <b>${firstName}</b>` : ''},
+                          Hi${firstName ? ` <b>${firstName}</b>` : ""},
                         </td>
                       </tr>
                       <tr>
@@ -636,7 +743,7 @@ const sendPasswordResetEmail = async (to, resetUrl, firstName) => {
         </table>
       </body>
       </html>
-    `
+    `,
   });
 };
 
@@ -646,19 +753,24 @@ const resetPassword = async (req, res) => {
     const { token, newPassword } = req.body;
     const student = await Student.findOne({
       resetPasswordToken: token,
-      resetPasswordExpires: { $gt: Date.now() }
+      resetPasswordExpires: { $gt: Date.now() },
     });
     if (!student) {
-      return res.status(400).json({ error: 'Invalid or expired reset token.' });
+      return res.status(400).json({ error: "Invalid or expired reset token." });
     }
     student.password = newPassword;
     student.resetPasswordToken = undefined;
     student.resetPasswordExpires = undefined;
     await student.save();
-    res.json({ success: true, message: 'Password has been reset. You can now log in.' });
+    res.json({
+      success: true,
+      message: "Password has been reset. You can now log in.",
+    });
   } catch (error) {
-    console.error('Reset password error:', error);
-    res.status(500).json({ error: 'Error resetting password', details: error.message });
+    console.error("Reset password error:", error);
+    res
+      .status(500)
+      .json({ error: "Error resetting password", details: error.message });
   }
 };
 
@@ -674,5 +786,5 @@ module.exports = {
   confirmEmail,
   finalizeRegistration,
   requestPasswordReset,
-  resetPassword
+  resetPassword,
 };

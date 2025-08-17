@@ -25,4 +25,9 @@ router.get('/results/:id', verifyToken, testResultController.getTestResultDetail
 // Update weekly test status (Admin only)
 router.patch('/:testId/status', verifyToken, isAdmin, weeklyTestController.updateWeeklyTestStatus);
 
+// New Learning Enhancement Routes
+router.get('/progress/:studentId', verifyToken, testResultController.getStudyProgress);
+router.get('/adaptive/:studentId', verifyToken, testResultController.getAdaptiveLearning);
+router.get('/spaced-repetition/:studentId', verifyToken, testResultController.getSpacedRepetition);
+
 module.exports = router; 

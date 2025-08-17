@@ -16,7 +16,15 @@ exports.getMessages = async (req, res) => {
       .sort({ timestamp: 1 })
       .populate('sender', 'studentId firstName lastName')
       .populate('recipient', 'studentId firstName lastName');
-    res.json({ success: true, data: messages });
+    
+    // Convert to frontend-compatible format
+    const messagesForFrontend = messages.map(message => ({
+      ...message.toObject(),
+      text: message.content, // Map content to text for frontend
+      createdAt: message.timestamp, // Map timestamp to createdAt for frontend
+    }));
+    
+    res.json({ success: true, data: messagesForFrontend });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -26,17 +34,26 @@ exports.getMessages = async (req, res) => {
 exports.sendMessage = async (req, res) => {
   try {
     const sender = req.user.id;
-    const { recipientId, content } = req.body;
-    if (!recipientId || !content) {
-      return res.status(400).json({ success: false, error: 'Recipient and content required' });
+    const { recipientId, text, content } = req.body;
+    const messageText = text || content; // Support both field names
+    if (!recipientId || !messageText) {
+      return res.status(400).json({ success: false, error: 'Recipient and message text required' });
     }
-    let message = await Message.create({ sender, recipient: recipientId, content, status: 'sent' });
+    let message = await Message.create({ sender, recipient: recipientId, content: messageText, status: 'sent' });
     message = await message.populate('sender', 'studentId firstName lastName');
     message = await message.populate('recipient', 'studentId firstName lastName');
+    
+    // Convert to frontend-compatible format
+    const messageForFrontend = {
+      ...message.toObject(),
+      text: message.content, // Map content to text for frontend
+      createdAt: message.timestamp, // Map timestamp to createdAt for frontend
+    };
+    
     // Emit real-time event to recipient
     const io = req.app.get('io');
-    io.to(recipientId).emit('chat:message', { message });
-    res.status(201).json({ success: true, data: message });
+    io.to(recipientId).emit('chat:message', { message: messageForFrontend });
+    res.status(201).json({ success: true, data: messageForFrontend });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -77,5 +94,23 @@ exports.markRead = async (userId, friendId, io) => {
     }
   } catch (err) {
     console.error('Error marking messages as read:', err);
+  }
+};
+
+// Clean up messages older than 3 days
+exports.cleanupOldMessages = async () => {
+  try {
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    
+    const result = await Message.deleteMany({
+      timestamp: { $lt: threeDaysAgo }
+    });
+    
+    console.log(`🧹 Message cleanup completed: ${result.deletedCount} messages older than 3 days deleted`);
+    return result.deletedCount;
+  } catch (err) {
+    console.error('❌ Error during message cleanup:', err);
+    return 0;
   }
 }; 

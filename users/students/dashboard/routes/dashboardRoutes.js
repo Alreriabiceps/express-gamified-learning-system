@@ -1,17 +1,36 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const dashboardController = require('../controllers/dashboardController');
+const dashboardController = require("../controllers/dashboardController");
+// Note: routes are public in dev to avoid 401 while frontend lacks auth headers
 
-// Assuming you might want to protect dashboard routes, 
-// you would add authentication middleware here. e.g.:
-// const { protect } = require('../../../auth/authMiddleware'); // Example path, adjust as needed
+// Weekly rank progression (mock)
+router.get("/weekly-rank-progress", dashboardController.getWeeklyRankProgress);
 
-// GET weekly rank progression data
-// If using auth middleware: router.get('/weekly-rank-progress', protect, dashboardController.getWeeklyRankProgress);
-router.get('/weekly-rank-progress', dashboardController.getWeeklyRankProgress);
+// User stats (mock for now)
+router.get("/user-stats", (req, res) => {
+  res.json({
+    username: "Innovator",
+    mmr: 0,
+    rankName: "Unranked",
+    currentStreak: 0,
+    projectsCompleted: 0,
+  });
+});
 
-// You can add other dashboard-related routes here later
-// router.get('/user-stats', dashboardController.getUserStats);
-// router.get('/daily-streak', dashboardController.getDailyStreak);
+// Weekly challenges (mock for now)
+router.get("/weekly-challenges", (req, res) => {
+  res.json({
+    hasActiveProjects: false,
+    activeProjects: [],
+  });
+});
 
-module.exports = router; 
+// Daily streak (mock for now)
+router.get("/daily-streak", (req, res) => {
+  res.json({
+    currentStreakDays: 0,
+    completedToday: false,
+  });
+});
+
+module.exports = router;
