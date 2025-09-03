@@ -596,6 +596,7 @@ const finalizeRegistration = async (req, res) => {
       section: pending.section,
       yearLevel: pending.yearLevel,
       isEmailConfirmed: true,
+      isApproved: false, // Students need admin approval by default
     });
     await student.save();
     await PendingStudent.deleteOne({ _id: pending._id });
@@ -641,12 +642,10 @@ const requestPasswordReset = async (req, res) => {
     });
   } catch (error) {
     console.error("Request password reset error:", error);
-    res
-      .status(500)
-      .json({
-        error: "Error requesting password reset",
-        details: error.message,
-      });
+    res.status(500).json({
+      error: "Error requesting password reset",
+      details: error.message,
+    });
   }
 };
 

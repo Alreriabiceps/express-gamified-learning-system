@@ -16,11 +16,13 @@ const dashboardRoutes = require("../users/admin/dashboard/routes/dashboardRoutes
 // Student routes
 const studentRoutes = require("../users/admin/student/routes/studentRoutes");
 const studentSelfRoutes = require("../modules/student/routes/studentRoutes"); // Add student self-access routes
+const studentApprovalRoutes = require("../modules/student/routes/studentApprovalRoutes"); // Add student approval routes
 const lobbyRoutes = require("../users/students/lobby/routes/lobbyRoutes");
 const duelRoutes = require("../users/students/duel/routes/duelRoutes");
 const gameRoutes = require("../users/students/game/routes/gameRoutes");
 const weeklyTestRoutes = require("../users/students/weeklytest/routes/weeklyTestRoutes");
 const leaderboardRoutes = require("../users/students/leaderboard/routes/leaderboardRoutes");
+const pvpMatchRoutes = require("../users/students/pvp/routes/pvpMatchRoutes");
 const friendRequestRoutes = require("../users/students/chats/routes/friendRequestRoutes");
 const messageRoutes = require("../users/students/chats/routes/messageRoutes");
 const favoriteReviewerRoutes = require("../users/admin/reviewer/routes/favoriteReviewerRoutes");
@@ -53,11 +55,13 @@ router.use("/admin/reviewer-links", reviewerLinkRoutes);
 router.use("/admin/students", studentRoutes); // Fixed: changed from /students to /admin/students
 router.use("/students/favorite-reviewers", favoriteReviewerRoutes);
 router.use("/students", studentSelfRoutes); // Add route for students to access their own data
+router.use("/student-approval", studentApprovalRoutes); // Add student approval routes
 router.use("/lobby", lobbyRoutes);
 router.use("/duel", duelRoutes);
 router.use("/game", gameRoutes);
 router.use("/weekly-test", weeklyTestRoutes);
 router.use("/leaderboard", leaderboardRoutes);
+router.use("/pvp", pvpMatchRoutes);
 router.use("/friend-requests", friendRequestRoutes);
 router.use("/messages", messageRoutes);
 router.use("/admin/users", adminRoutes);
@@ -112,12 +116,10 @@ Respond ONLY with valid JSON in the following format, and nothing else:
       !data.candidates[0].content.parts ||
       !data.candidates[0].content.parts[0].text
     ) {
-      return res
-        .status(500)
-        .json({
-          error: "Gemini did not return content as expected",
-          details: data,
-        });
+      return res.status(500).json({
+        error: "Gemini did not return content as expected",
+        details: data,
+      });
     }
 
     let questions;
@@ -142,12 +144,10 @@ Respond ONLY with valid JSON in the following format, and nothing else:
             e,
             match[0]
           );
-          return res
-            .status(500)
-            .json({
-              error: "AI response could not be parsed as JSON (array)",
-              raw: match[0],
-            });
+          return res.status(500).json({
+            error: "AI response could not be parsed as JSON (array)",
+            raw: match[0],
+          });
         }
       } else {
         // Try to parse as JSON array directly
@@ -159,12 +159,10 @@ Respond ONLY with valid JSON in the following format, and nothing else:
             questions = [JSON.parse(content)];
           } catch (e2) {
             console.error("Failed to parse JSON from content:", e2, content);
-            return res
-              .status(500)
-              .json({
-                error: "AI response could not be parsed as JSON (content)",
-                raw: content,
-              });
+            return res.status(500).json({
+              error: "AI response could not be parsed as JSON (content)",
+              raw: content,
+            });
           }
         }
       }
@@ -174,13 +172,11 @@ Respond ONLY with valid JSON in the following format, and nothing else:
       }
     } catch (err) {
       console.error("Gemini parsing error:", err, data);
-      return res
-        .status(500)
-        .json({
-          error: "Failed to parse Gemini response",
-          details: err.message,
-          raw: data,
-        });
+      return res.status(500).json({
+        error: "Failed to parse Gemini response",
+        details: err.message,
+        raw: data,
+      });
     }
     res.json(questions);
   } catch (err) {
@@ -239,12 +235,10 @@ You are Alreria, an expert assistant for the GLEAS admin system. Answer admin qu
     res.json({ answer });
   } catch (err) {
     console.error("Alreria error:", err);
-    res
-      .status(500)
-      .json({
-        error: "Failed to get response from Alreria",
-        details: err.message,
-      });
+    res.status(500).json({
+      error: "Failed to get response from Alreria",
+      details: err.message,
+    });
   }
 });
 

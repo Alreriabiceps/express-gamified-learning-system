@@ -1,35 +1,36 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const matchQueue = require('../services/matchQueue');
+const matchQueue = require("../services/matchQueue");
 
 // Add to queue
-router.post('/queue', (req, res) => {
+router.post("/queue", (req, res) => {
   const { studentId } = req.body;
-  if (!studentId) return res.status(400).json({ error: 'studentId required' });
+  if (!studentId) return res.status(400).json({ error: "studentId required" });
   const result = matchQueue.addToQueue(studentId);
   res.json(result);
 });
 
 // Remove from queue
-router.post('/cancel', (req, res) => {
+router.post("/cancel", (req, res) => {
   const { studentId } = req.body;
-  if (!studentId) return res.status(400).json({ error: 'studentId required' });
+  if (!studentId) return res.status(400).json({ error: "studentId required" });
   matchQueue.removeFromQueue(studentId);
   res.json({ success: true });
 });
 
 // Get match status
-router.get('/status', (req, res) => {
+router.get("/status", (req, res) => {
   const { studentId } = req.query;
-  if (!studentId) return res.status(400).json({ error: 'studentId required' });
+  if (!studentId) return res.status(400).json({ error: "studentId required" });
   const result = matchQueue.getMatchStatus(studentId);
   res.json(result);
 });
 
 // Accept match
-router.post('/accept', (req, res) => {
+router.post("/accept", async (req, res) => {
   const { studentId, lobbyId, timeout } = req.body;
-  if (!studentId || !lobbyId) return res.status(400).json({ error: 'studentId and lobbyId required' });
+  if (!studentId || !lobbyId)
+    return res.status(400).json({ error: "studentId and lobbyId required" });
   if (timeout) {
     matchQueue.setBan(studentId);
     matchQueue.removeFromQueue(studentId);
@@ -37,21 +38,34 @@ router.post('/accept', (req, res) => {
   }
   matchQueue.setAccept(lobbyId, studentId);
   const accepts = matchQueue.getAccept(lobbyId);
-  // If both accepted, return ready
-  if (Object.keys(accepts).length >= 2 && Object.values(accepts).every(Boolean)) {
-    // Optionally: clear accept state here
+
+  // If both accepted, emit match_ready event and return ready
+  if (
+    Object.keys(accepts).length >= 2 &&
+    Object.values(accepts).every(Boolean)
+  ) {
+    // Get the opponent's ID from the lobby
+    const lobbyAccepts = matchQueue.getAccept(lobbyId);
+    const playerIds = Object.keys(lobbyAccepts);
+
+    if (playerIds.length >= 2) {
+      const [player1Id, player2Id] = playerIds;
+      // Emit match_ready event to both players
+      await matchQueue.emitMatchReady(player1Id, player2Id, lobbyId);
+    }
+
     return res.json({ ready: true });
   }
   res.json({ accepted: true });
 });
 
 // Get ban status
-router.get('/ban-status', (req, res) => {
+router.get("/ban-status", (req, res) => {
   const { studentId } = req.query;
-  if (!studentId) return res.status(400).json({ error: 'studentId required' });
+  if (!studentId) return res.status(400).json({ error: "studentId required" });
   const ban = matchQueue.getBan(studentId);
   if (ban) return res.json({ banned: true, ban });
   res.json({ banned: false });
 });
 
-module.exports = router; 
+module.exports = router;

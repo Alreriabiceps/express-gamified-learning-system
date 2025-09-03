@@ -84,6 +84,11 @@ exports.getLobbies = async (req, res) => {
 
 exports.joinLobby = async (req, res) => {
   try {
+    console.log("🚪 JOIN LOBBY REQUEST RECEIVED!");
+    console.log("👤 User ID:", req.user.id);
+    console.log("🏠 Lobby ID:", req.params.lobbyId);
+    console.log("🔐 Password provided:", !!req.body.password);
+
     const { lobbyId } = req.params;
     const { password } = req.body;
     const userId = req.user.id;
@@ -133,10 +138,22 @@ exports.joinLobby = async (req, res) => {
       });
     }
     lobby.players.push(userId);
+    console.log("🏠 LOBBY AFTER PLAYER JOIN:");
+    console.log("👥 Players count:", lobby.players.length);
+    console.log("🎯 Max players:", lobby.maxPlayers);
+    console.log("📊 Current status:", lobby.status);
+
     if (lobby.players.length === lobby.maxPlayers) {
+      console.log("🚀 LOBBY IS FULL! Setting status to in-progress");
       lobby.status = "in-progress";
       // Don't create game here - let the frontend handle game initialization
       // when it receives the game:start event
+    } else {
+      console.log(
+        "⏳ Lobby not full yet, need",
+        lobby.maxPlayers - lobby.players.length,
+        "more players"
+      );
     }
     await lobby.save();
     await lobby.populate("players", "firstName lastName");
@@ -149,12 +166,53 @@ exports.joinLobby = async (req, res) => {
             "[LobbyController] Emitting game:start with players:",
             lobby.players
           );
+          console.log("🔍 Detailed player data for game:start:", {
+            playersCount: lobby.players.length,
+            players: lobby.players.map((p) => ({
+              _id: p._id,
+              firstName: p.firstName,
+              lastName: p.lastName,
+              type: typeof p,
+              keys: typeof p === "object" ? Object.keys(p) : "N/A",
+            })),
+          });
+          // Format players data properly for the frontend
+          const formattedPlayers = lobby.players.map((player) => {
+            // Handle both populated and unpopulated player data
+            if (player._id && typeof player === "object") {
+              // Populated player data from populate("players", "firstName lastName")
+              return {
+                userId: player._id.toString(),
+                name:
+                  player.firstName && player.lastName
+                    ? `${player.firstName} ${player.lastName}`
+                    : player.firstName || player.lastName || "Player",
+                username:
+                  player.firstName && player.lastName
+                    ? `${player.firstName} ${player.lastName}`
+                    : player.firstName || player.lastName || "Player",
+                firstName: player.firstName,
+                lastName: player.lastName,
+              };
+            } else {
+              // Unpopulated player data (just ObjectId)
+              return {
+                userId: player.toString(),
+                name: "Player",
+                username: "Player",
+              };
+            }
+          });
+
+          console.log("🎮 Formatted players for game:start:", formattedPlayers);
+
+          // Send the same player data to all players (frontend will handle the logic)
           lobby.players.forEach((player) => {
             io.to(player._id ? player._id.toString() : player.toString()).emit(
               "game:start",
               {
                 lobbyId: lobby._id,
-                players: lobby.players,
+                players: formattedPlayers,
               }
             );
           });

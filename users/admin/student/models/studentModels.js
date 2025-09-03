@@ -41,6 +41,10 @@ const studentSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    isApproved: {
+      type: Boolean,
+      default: false,
+    },
     lastLogin: {
       type: Date,
       default: null,
@@ -49,6 +53,12 @@ const studentSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       min: 0,
+    },
+    pvpStars: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 500,
     },
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date },

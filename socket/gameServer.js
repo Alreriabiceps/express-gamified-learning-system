@@ -5,6 +5,8 @@ const messageController = require("../users/students/chats/controllers/messageCo
 const Question = require("../users/admin/question/models/questionModels");
 const gameEngine = require("../services/gameEngine");
 const GameRoom = require("../models/GameRoom");
+const PvPMatch = require("../users/students/pvp/models/pvpMatchModel");
+const Student = require("../users/admin/student/models/studentModels");
 
 class GameServer {
   constructor(server) {
@@ -32,7 +34,6 @@ class GameServer {
 
     this.games = new Map();
     this.players = new Map();
-    this.rpsGames = new Map();
 
     // Add detailed connection logging
     this.io.engine.on("connection_error", (err) => {
@@ -108,90 +109,179 @@ class GameServer {
         }
       });
 
-      // Game event handlers
-      socket.on("createGame", async ({ numPlayers }) => {
-        try {
-          const gameId = Date.now().toString();
-          const game = {
-            id: gameId,
-            players: [socket.userId],
-            numPlayers,
-            status: "waiting",
-            currentPlayerIndex: 0,
-            drawPile: [],
-            playerHands: [],
-            playerHP: [],
-          };
+      // Removed old game creation handlers - using new PvP system instead
 
-          this.games.set(gameId, game);
-          this.players.set(socket.userId, gameId);
-          socket.join(gameId);
+      // Card selection and answer submission events
+      socket.on(
+        "game:card_selected",
+        async ({ roomId, gameId, playerId, card, targetPlayerId }) => {
+          console.log("🎴 Card selected event received:", {
+            roomId,
+            gameId,
+            playerId,
+            targetPlayerId,
+            cardId: card?.id,
+            cardType: card?.type,
+          });
 
-          this.io.to(gameId).emit("gameStateUpdate", game);
-        } catch (error) {
-          console.error("Error creating game:", error);
-          socket.emit("error", { message: "Failed to create game" });
+          try {
+            // Process the card selection through the game engine
+            const result = await gameEngine.processAction(roomId, playerId, {
+              type: "select_card",
+              cardId: card.id,
+              card: card,
+            });
+
+            console.log("✅ Card selection processed:", result);
+
+            // Send personalized game state to each player
+            result.gameState.players.forEach((player) => {
+              // Create a filtered game state for this player
+              const playerGameState = {
+                ...result.gameState,
+                players: result.gameState.players.map((p) => ({
+                  ...p,
+                  // Only show cards to the player themselves, hide opponent's cards
+                  cards: p.userId === player.userId ? p.cards : [],
+                })),
+              };
+
+              this.io.to(player.userId).emit("game_state_update", {
+                gameState: playerGameState,
+                timestamp: Date.now(),
+              });
+            });
+
+            // Forward the card selection to the target player for UI updates
+            this.io.to(targetPlayerId).emit("question_challenge", {
+              playerId,
+              card,
+              targetPlayerId,
+              roomId,
+              gameId,
+              gameState: result.gameState,
+            });
+
+            console.log(
+              `📡 Card selection processed and forwarded to player ${targetPlayerId}`
+            );
+          } catch (error) {
+            console.error("❌ Error processing card selection:", error);
+            socket.emit("error", {
+              message: "Failed to process card selection",
+              error: error.message,
+            });
+          }
         }
-      });
+      );
 
-      socket.on("joinGame", async ({ gameId }) => {
-        try {
-          const game = this.games.get(gameId);
-          if (!game) {
-            socket.emit("error", { message: "Game not found" });
-            return;
+      socket.on(
+        "game:submit_answer",
+        async ({
+          roomId,
+          gameId,
+          playerId,
+          challengerId,
+          card,
+          answer,
+          isCorrect,
+          damage,
+        }) => {
+          console.log("📝 Answer submitted event received:", {
+            roomId,
+            gameId,
+            playerId,
+            challengerId,
+            isCorrect,
+            damage,
+          });
+
+          try {
+            // Process the answer through the game engine
+            const result = await gameEngine.processAction(roomId, playerId, {
+              type: "answer_question",
+              answer: answer,
+            });
+
+            console.log("✅ Answer processed:", result);
+
+            // Game engine has already processed the answer and updated the game state
+
+            // Game engine has already applied damage and updated the game state
+
+            console.log(
+              "📤 Sending game state update after answer processing:",
+              {
+                hpValues: result.gameState.players.map((p) => ({
+                  userId: p.userId,
+                  name: p.name,
+                  hp: p.hp,
+                  maxHp: p.maxHp,
+                })),
+              }
+            );
+
+            // Send personalized game state to each player
+            result.gameState.players.forEach((player) => {
+              // Create a filtered game state for this player
+              const playerGameState = {
+                ...result.gameState,
+                players: result.gameState.players.map((p) => ({
+                  ...p,
+                  // Only show cards to the player themselves, hide opponent's cards
+                  cards: p.userId === player.userId ? p.cards : [],
+                })),
+              };
+
+              this.io.to(player.userId).emit("game_state_update", {
+                gameState: playerGameState,
+                timestamp: Date.now(),
+              });
+            });
+
+            // Send answer result to both players
+            this.io.to(roomId).emit("game:answer_submitted", {
+              playerId,
+              challengerId,
+              isCorrect: result.isCorrect,
+              damage: result.damage,
+              answer: result.answer,
+              gameOver: result.gameState.gameState === "finished",
+              winner: result.gameState.winner,
+              gameState: result.gameState,
+              selectedCard: result.selectedCard, // Include the selected card data
+            });
+
+            // If game is over, create PvP match record
+            if (result.gameState.gameState === "finished") {
+              try {
+                await this.createAndCompletePvPMatch({
+                  roomId,
+                  gameId,
+                  player1Id: result.gameState.players[0].userId,
+                  player2Id: result.gameState.players[1].userId,
+                  winnerId: result.gameState.winner,
+                  player1Score: result.gameState.players[0].hp,
+                  player2Score: result.gameState.players[1].hp,
+                });
+              } catch (pvpError) {
+                console.error("❌ Error creating PvP match record:", pvpError);
+              }
+            }
+
+            console.log("✅ Answer processed and broadcasted");
+          } catch (error) {
+            console.error("❌ Error processing answer submission:", error);
+            this.io.to(roomId).emit("game:error", {
+              message: "Failed to process answer submission",
+              roomId,
+              gameId,
+            });
           }
-
-          if (game.players.includes(socket.userId)) {
-            // Player is already in the game, just join the socket room
-            this.players.set(socket.userId, gameId);
-            socket.join(gameId);
-          } else if (game.players.length < game.numPlayers) {
-            game.players.push(socket.userId);
-            this.players.set(socket.userId, gameId);
-            socket.join(gameId);
-          } else {
-            socket.emit("error", { message: "Game is full" });
-            return;
-          }
-
-          if (game.players.length === game.numPlayers) {
-            game.status = "in-progress";
-            // Initialize game state here
-          }
-
-          this.io.to(gameId).emit("gameStateUpdate", game);
-        } catch (error) {
-          console.error("Error joining game:", error);
-          socket.emit("error", { message: "Failed to join game" });
         }
-      });
+      );
 
-      socket.on("playCard", ({ gameId, cardIndex }) => {
-        const game = this.games.get(gameId);
-        if (!game || game.status !== "in-progress") return;
-
-        // Handle card play logic here
-        this.io.to(gameId).emit("gameStateUpdate", game);
-      });
-
-      socket.on("drawCard", ({ gameId }) => {
-        const game = this.games.get(gameId);
-        if (!game || game.status !== "in-progress") return;
-
-        // Handle draw card logic here
-        this.io.to(gameId).emit("gameStateUpdate", game);
-      });
-
-      socket.on("surrender", ({ gameId }) => {
-        const game = this.games.get(gameId);
-        if (!game || game.status !== "in-progress") return;
-
-        // Handle surrender logic here
-        this.io.to(gameId).emit("gameStateUpdate", game);
-      });
-
-      // Real-time game event handlers
+      // Join game room for real-time PvP
       socket.on("join_game_room", async ({ roomId }) => {
         try {
           console.log(`Player ${socket.userId} joining game room: ${roomId}`);
@@ -202,14 +292,167 @@ class GameServer {
           // Get game state from database
           const gameRoom = await GameRoom.findOne({ roomId });
           if (gameRoom) {
+            console.log(`📋 Found game state in database for room: ${roomId}`);
+
             // Store in memory for quick access
             gameEngine.games.set(roomId, gameRoom.toObject());
 
+            const gameState = gameRoom.toObject();
+
+            console.log(`📊 Game state found:`, {
+              players: gameState.players?.length || 0,
+              currentTurn: gameState.currentTurn,
+              deck: gameState.deck?.length || 0,
+              gamePhase: gameState.gamePhase,
+            });
+
             // Broadcast updated game state to all players in room
+            console.log(`🔄 Broadcasting game state to room: ${roomId}`);
             this.io.to(roomId).emit("game_state_update", {
-              gameState: gameRoom.toObject(),
+              gameState: gameState,
               timestamp: Date.now(),
             });
+
+            // Also send to this player's personal room as backup
+            this.io.to(socket.userId).emit("game_state_update", {
+              gameState: gameState,
+              timestamp: Date.now(),
+            });
+
+            console.log(
+              `📡 Game state sent to player ${socket.userId} and room ${roomId}`
+            );
+          } else {
+            console.warn(
+              `❌ No game state found in database for room: ${roomId}`
+            );
+            console.log(
+              `🔍 Available rooms in database:`,
+              await GameRoom.find({}).select("roomId gameId").limit(5)
+            );
+
+            // Fallback: if both players are in the socket room, initialize the game server-side
+            try {
+              const room = this.io.sockets.adapter.rooms.get(roomId);
+              const connectedCount = room ? room.size : 0;
+              console.log(
+                `🛟 Fallback initializer check for ${roomId} — connected players: ${connectedCount}`
+              );
+
+              if (room && connectedCount >= 2) {
+                // Build players array from connected sockets (take first two)
+                const playerSockets = Array.from(room.values())
+                  .slice(0, 2)
+                  .map((sid) => this.io.sockets.sockets.get(sid))
+                  .filter(Boolean);
+
+                const players = playerSockets.map((s, idx) => ({
+                  userId: String(s.userId || `temp_${idx}`),
+                  username: String(s.userName || `Player ${idx + 1}`),
+                }));
+
+                // Use a generated lobbyId; gameEngine will coerce to ObjectId
+                const generatedLobbyId = `fallback_${Date.now()}`;
+                console.log(
+                  `🛠️ Running fallback initializeGame for ${roomId} with players:`,
+                  players
+                );
+
+                const initializedState = await gameEngine.initializeGame(
+                  roomId,
+                  players,
+                  generatedLobbyId
+                );
+
+                if (initializedState) {
+                  // Keep in memory
+                  gameEngine.games.set(roomId, initializedState);
+
+                  // Broadcast the freshly created state
+                  this.io.to(roomId).emit("game_state_update", {
+                    gameState: initializedState,
+                    timestamp: Date.now(),
+                  });
+
+                  // Also send directly to each player's personal room
+                  players.forEach((p) => {
+                    this.io.to(p.userId).emit("game_state_update", {
+                      gameState: initializedState,
+                      timestamp: Date.now(),
+                    });
+                  });
+
+                  // Emit game start notification
+                  if (
+                    initializedState &&
+                    initializedState.currentTurn &&
+                    Array.isArray(initializedState.players) &&
+                    initializedState.players.length === 2
+                  ) {
+                    const firstPlayer = initializedState.players.find(
+                      (p) => p.userId === initializedState.currentTurn
+                    );
+                    const secondPlayer = initializedState.players.find(
+                      (p) => p.userId !== initializedState.currentTurn
+                    );
+
+                    if (firstPlayer && secondPlayer) {
+                      const firstPlayerName =
+                        firstPlayer.username || firstPlayer.name || "Player";
+                      const gameStartData = {
+                        firstPlayer: {
+                          name: firstPlayerName,
+                          userId: firstPlayer.userId,
+                        },
+                        secondPlayer: {
+                          name:
+                            secondPlayer.username ||
+                            secondPlayer.name ||
+                            "Player",
+                          userId: secondPlayer.userId,
+                        },
+                        message: `🎮 ${firstPlayerName} goes first!`,
+                        timestamp: Date.now(),
+                      };
+
+                      // Personalize for each player
+                      players.forEach((p) => {
+                        const isFirstPlayer = p.userId === firstPlayer.userId;
+                        const personalized = {
+                          ...gameStartData,
+                          isFirstPlayer,
+                          message: isFirstPlayer
+                            ? `🎮 You go first!`
+                            : `🎮 ${firstPlayerName} goes first!`,
+                        };
+                        this.io.to(p.userId).emit("game_start", personalized);
+                      });
+                    }
+                  }
+
+                  console.log(
+                    `✅ Fallback game initialization completed for room: ${roomId}`
+                  );
+                } else {
+                  console.warn(
+                    `⚠️ Fallback initialization returned no state for room: ${roomId}`
+                  );
+                  socket.emit("error", {
+                    message: "Game not found. Please create a new game.",
+                  });
+                }
+              } else {
+                // Not enough players connected to safely initialize — instruct client
+                socket.emit("error", {
+                  message: "Game not found. Please create a new game.",
+                });
+              }
+            } catch (fallbackErr) {
+              console.error("❌ Fallback initialization failed:", fallbackErr);
+              socket.emit("error", {
+                message: "Failed to auto-initialize game room.",
+              });
+            }
           }
         } catch (error) {
           console.error("Error joining game room:", error);
@@ -217,138 +460,13 @@ class GameServer {
         }
       });
 
-      socket.on("select_card", async ({ roomId, cardId }) => {
-        try {
-          const result = await gameEngine.processAction(roomId, socket.userId, {
-            type: "select_card",
-            cardId,
-          });
+      // Removed duplicate select_card handler - using game:card_selected instead
 
-          // Broadcast action to all players in room
-          this.io.to(roomId).emit("opponent_action", {
-            playerId: socket.userId,
-            action: { type: "select_card", cardId },
-            timestamp: Date.now(),
-          });
+      // Removed duplicate answer_question handler - using game:submit_answer instead
 
-          // Broadcast updated game state
-          this.io.to(roomId).emit("game_state_update", {
-            gameState: result.gameState,
-            timestamp: Date.now(),
-          });
-        } catch (error) {
-          console.error("Error selecting card:", error);
-          socket.emit("error", { message: error.message });
-        }
-      });
+      // Removed use_powerup handler - not currently implemented in frontend
 
-      socket.on("answer_question", async ({ roomId, answer }) => {
-        try {
-          const result = await gameEngine.processAction(roomId, socket.userId, {
-            type: "answer_question",
-            answer,
-          });
-
-          // Broadcast action to all players in room
-          this.io.to(roomId).emit("opponent_action", {
-            playerId: socket.userId,
-            action: { type: "answer_question", answer },
-            timestamp: Date.now(),
-          });
-
-          // Broadcast updated game state
-          this.io.to(roomId).emit("game_state_update", {
-            gameState: result.gameState,
-            timestamp: Date.now(),
-          });
-
-          // If game is finished, emit game end event
-          if (result.gameState.gameState === "finished") {
-            this.io.to(roomId).emit("game_end", {
-              winner: result.gameState.winner,
-              gameState: result.gameState,
-            });
-          }
-        } catch (error) {
-          console.error("Error answering question:", error);
-          socket.emit("error", { message: error.message });
-        }
-      });
-
-      socket.on("use_powerup", async ({ roomId, powerUpType }) => {
-        try {
-          const result = await gameEngine.processAction(roomId, socket.userId, {
-            type: "use_powerup",
-            powerUpType,
-          });
-
-          // Broadcast action to all players in room
-          this.io.to(roomId).emit("opponent_action", {
-            playerId: socket.userId,
-            action: { type: "use_powerup", powerUpType },
-            timestamp: Date.now(),
-          });
-
-          // Broadcast updated game state
-          this.io.to(roomId).emit("game_state_update", {
-            gameState: result.gameState,
-            timestamp: Date.now(),
-          });
-        } catch (error) {
-          console.error("Error using power-up:", error);
-          socket.emit("error", { message: error.message });
-        }
-      });
-
-      socket.on("activate_spell", async ({ roomId, spellCard }) => {
-        try {
-          const result = await gameEngine.processAction(roomId, socket.userId, {
-            type: "activate_spell",
-            spellCard,
-          });
-
-          // Broadcast action to all players in room
-          this.io.to(roomId).emit("opponent_action", {
-            playerId: socket.userId,
-            action: { type: "activate_spell", spellCard },
-            timestamp: Date.now(),
-          });
-
-          // Broadcast updated game state
-          this.io.to(roomId).emit("game_state_update", {
-            gameState: result.gameState,
-            timestamp: Date.now(),
-          });
-        } catch (error) {
-          console.error("Error activating spell:", error);
-          socket.emit("error", { message: error.message });
-        }
-      });
-
-      // Rock Paper Scissors events
-      socket.on("start_rps", ({ roomId }) => {
-        try {
-          console.log(`Starting RPS for room: ${roomId}`);
-
-          // Initialize RPS game state for this room
-          if (!this.rpsGames) {
-            this.rpsGames = new Map();
-          }
-
-          this.rpsGames.set(roomId, {
-            players: {},
-            phase: "selecting",
-          });
-
-          // Notify all players in room that RPS phase started
-          this.io.to(roomId).emit("rps_phase_start");
-        } catch (error) {
-          console.error("Error starting RPS:", error);
-          socket.emit("error", {
-            message: "Failed to start Rock Paper Scissors",
-          });
-        }
-      });
+      // Removed activate_spell handler - not currently implemented in frontend
 
       socket.on("rps_choice", async ({ roomId, choice, playerId }) => {
         try {
@@ -416,6 +534,21 @@ class GameServer {
             // Fallback to in-memory state if DB not available
             if (!playersArray) {
               const memState = gameEngine.getGameState(roomId);
+              console.log(`Checking in-memory state for roomId ${roomId}:`, {
+                hasMemState: !!memState,
+                hasPlayers: !!(memState && memState.players),
+                playersIsArray: !!(memState && Array.isArray(memState.players)),
+                playersLength:
+                  memState && memState.players ? memState.players.length : 0,
+                players:
+                  memState && memState.players
+                    ? memState.players.map((p) => ({
+                        userId: p.userId,
+                        username: p.username,
+                      }))
+                    : [],
+              });
+
               if (
                 memState &&
                 Array.isArray(memState.players) &&
@@ -426,9 +559,37 @@ class GameServer {
                   `Using in-memory game state with ${playersArray.length} players`
                 );
               } else {
-                console.error(`Unable to resolve players for roomId ${roomId}`);
-                socket.emit("error", { message: "Game room not found" });
-                return;
+                // Last resort: create players array from RPS participants
+                console.log(
+                  `Creating temporary players array from RPS participants`
+                );
+                const tempPlayers = playerIds.map((playerId, index) => ({
+                  userId: playerId,
+                  username: `Player ${index + 1}`,
+                  hp: 100,
+                  maxHp: 100,
+                }));
+
+                if (tempPlayers.length >= 2) {
+                  playersArray = tempPlayers;
+                  console.log(
+                    `Using temporary players array:`,
+                    playersArray.map((p) => ({
+                      userId: p.userId,
+                      username: p.username,
+                    }))
+                  );
+                } else {
+                  console.error(
+                    `Unable to resolve players for roomId ${roomId}`
+                  );
+                  console.error(
+                    `Available game states:`,
+                    Object.keys(gameEngine.games || {})
+                  );
+                  socket.emit("error", { message: "Game room not found" });
+                  return;
+                }
               }
             }
 
@@ -478,11 +639,16 @@ class GameServer {
 
             // Map the winner to the actual game player index
             let actualWinner = null;
+            let winnerUserId = null;
             if (!rpsResult.isDraw) {
               if (rpsResult.winner === 0) {
-                actualWinner = player1GameIndex; // Use the actual game index of player1
+                // Player 1 (first in playerIds array) wins
+                winnerUserId = playerIds[0];
+                actualWinner = player1GameIndex;
               } else {
-                actualWinner = player2GameIndex; // Use the actual game index of player2
+                // Player 2 (second in playerIds array) wins
+                winnerUserId = playerIds[1];
+                actualWinner = player2GameIndex;
               }
             }
 
@@ -499,14 +665,14 @@ class GameServer {
 
             // Send results to all players with correct player indices and userIds
             console.log(`Emitting rps_result to room ${roomId}`);
+            console.log(
+              `Winner userId: ${winnerUserId}, Winner game index: ${actualWinner}`
+            );
             this.io.to(roomId).emit("rps_result", {
               player1Choice,
               player2Choice,
               winner: actualWinner, // index in playersArray (0 or 1)
-              winnerUserId:
-                !rpsResult.isDraw && actualWinner != null
-                  ? playersUserIds[actualWinner]
-                  : null,
+              winnerUserId: winnerUserId, // Use the calculated winnerUserId
               playersUserIds, // [player at index 0 userId, player at index 1 userId]
               choicesByUserId, // { userId: choice }
               isDraw: rpsResult.isDraw,
@@ -518,22 +684,22 @@ class GameServer {
             if (!rpsResult.isDraw) {
               try {
                 const memState = gameEngine.getGameState(roomId);
-                if (memState && Array.isArray(playersArray)) {
-                  const winnerUserId = playersArray[actualWinner]?.userId;
-                  if (winnerUserId) {
-                    memState.currentTurn = winnerUserId;
-                    memState.gamePhase = "cardSelection";
-                    memState.selectedCard = null;
-                    // Persist best-effort
-                    if (typeof gameEngine.updateGameInDatabase === "function") {
-                      gameEngine.updateGameInDatabase(memState);
-                    }
-                    // Broadcast sync state so clients update their turn/phase
-                    this.io.to(roomId).emit("game_state_update", {
-                      gameState: memState,
-                      timestamp: Date.now(),
-                    });
+                if (memState && winnerUserId) {
+                  memState.currentTurn = winnerUserId;
+                  memState.gamePhase = "cardSelection";
+                  memState.selectedCard = null;
+                  console.log(
+                    `Updated game state: currentTurn = ${winnerUserId}`
+                  );
+                  // Persist best-effort
+                  if (typeof gameEngine.updateGameInDatabase === "function") {
+                    gameEngine.updateGameInDatabase(memState);
                   }
+                  // Broadcast sync state so clients update their turn/phase
+                  this.io.to(roomId).emit("game_state_update", {
+                    gameState: memState,
+                    timestamp: Date.now(),
+                  });
                 }
               } catch (stateErr) {
                 console.warn(
@@ -601,119 +767,86 @@ class GameServer {
     });
   }
 
-  async initializeGame(gameId) {
-    try {
-      const game = this.games.get(gameId);
-      if (!game) return;
-
-      // Fetch questions from database
-      const questions = await Question.find().limit(20);
-
-      // Create question cards
-      const questionCards = questions.map((q) => ({
-        id: q._id,
-        type: "QUESTION",
-        questionData: q,
-      }));
-
-      // Create draw pile
-      game.drawPile = this.shuffleArray([...questionCards]);
-
-      // Deal initial hands
-      game.players.forEach((player) => {
-        player.hand = game.drawPile.splice(0, 7);
-      });
-
-      game.status = "playing";
-      game.currentPlayerIndex = 0;
-
-      // Broadcast initial game state
-      this.broadcastGameState(gameId);
-    } catch (error) {
-      console.error("Error initializing game:", error);
-      this.io
-        .to(gameId)
-        .emit("error", { message: "Failed to initialize game" });
-    }
-  }
-
-  broadcastGameState(gameId) {
-    const game = this.games.get(gameId);
-    if (!game) return;
-
-    const gameState = {
-      drawPile: game.drawPile,
-      playerHands: game.players.map((p) => p.hand),
-      currentPlayerIndex: game.currentPlayerIndex,
-      playerHP: game.players.map((p) => p.hp),
-      message: this.getGameMessage(game),
-      gameOver: game.status === "finished",
-    };
-
-    this.io.to(gameId).emit("gameStateUpdate", gameState);
-  }
-
-  getGameMessage(game) {
-    if (game.status === "finished") {
-      const winner = game.players.find((p) => p.id === game.winner);
-      return `Game Over! ${
-        winner ? "Player " + (game.players.indexOf(winner) + 1) : "Unknown"
-      } wins!`;
-    }
-    return `Player ${game.currentPlayerIndex + 1}'s turn`;
-  }
-
-  handlePlayerDisconnect(socket) {
-    // Find and handle games where the player was participating
-    for (const [gameId, game] of this.games.entries()) {
-      const playerIndex = game.players.findIndex(
-        (p) => p.socketId === socket.id
-      );
-      if (playerIndex !== -1) {
-        // Handle player disconnection
-        game.status = "finished";
-        game.winner = game.players.find((p) => p.socketId !== socket.id)?.id;
-        this.broadcastGameState(gameId);
-
-        // Clean up game after a delay
-        setTimeout(() => {
-          this.games.delete(gameId);
-        }, 5000);
-      }
-    }
-  }
-
-  generateGameId() {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
-  }
-
-  shuffleArray(array) {
-    const newArray = [...array];
-    for (let i = newArray.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-    }
-    return newArray;
-  }
+  // Removed old game initialization methods - using gameEngine service instead
 
   // Game initialization is now handled by the gameEngine service
   // when the frontend calls /api/game/initialize
 
-  determineRpsWinner(choice1, choice2) {
-    if (choice1 === choice2) {
-      return { winner: null, isDraw: true };
-    }
+  // Create and complete PvP match record
+  async createAndCompletePvPMatch(matchData) {
+    try {
+      const {
+        roomId,
+        gameId,
+        player1Id,
+        player2Id,
+        winnerId,
+        player1Score,
+        player2Score,
+        player1CorrectAnswers,
+        player2CorrectAnswers,
+        totalQuestions,
+        matchDuration,
+      } = matchData;
 
-    const winConditions = {
-      rock: "scissors",
-      paper: "rock",
-      scissors: "paper",
-    };
+      // Create match record
+      const match = new PvPMatch({
+        player1: player1Id,
+        player2: player2Id,
+        winner: winnerId,
+        player1Score,
+        player2Score,
+        player1CorrectAnswers,
+        player2CorrectAnswers,
+        totalQuestions,
+        matchDuration,
+        gameMode: "versus",
+        roomId,
+        gameId,
+        status: "completed",
+        completedAt: new Date(),
+      });
 
-    if (winConditions[choice1] === choice2) {
-      return { winner: 0, isDraw: false }; // Player 1 wins
-    } else {
-      return { winner: 1, isDraw: false }; // Player 2 wins
+      // Calculate points changes
+      match.calculatePointsChange();
+
+      // Update player PvP stars
+      const [player1, player2] = await Promise.all([
+        Student.findById(player1Id),
+        Student.findById(player2Id),
+      ]);
+
+      if (player1 && player2) {
+        // Initialize pvpStars if not exists
+        if (player1.pvpStars === undefined) player1.pvpStars = 0;
+        if (player2.pvpStars === undefined) player2.pvpStars = 0;
+
+        // Update stars with bounds checking
+        player1.pvpStars = Math.max(
+          0,
+          Math.min(500, player1.pvpStars + match.player1PointsChange)
+        );
+        player2.pvpStars = Math.max(
+          0,
+          Math.min(500, player2.pvpStars + match.player2PointsChange)
+        );
+
+        await Promise.all([player1.save(), player2.save()]);
+      }
+
+      await match.save();
+
+      console.log(
+        `📊 PvP match recorded: ${player1Id} vs ${player2Id}, Winner: ${winnerId}`
+      );
+      console.log(
+        `⭐ Points: ${match.player1PointsChange} vs ${match.player2PointsChange}`
+      );
+
+      return match;
+    } catch (error) {
+      console.error("❌ Error creating PvP match:", error);
+      throw error;
     }
   }
 }

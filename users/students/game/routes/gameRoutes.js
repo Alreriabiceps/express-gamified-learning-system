@@ -7,7 +7,10 @@ const { verifyToken } = require("../../../../auth/authMiddleware");
 // Initialize game from lobby
 router.post("/initialize", verifyToken, async (req, res) => {
   try {
-    console.log("Game initialization request:", req.body);
+    console.log("🎮🎮🎮 GAME INITIALIZATION ROUTE HIT! 🎮🎮🎮");
+    console.log("📦 Request body:", JSON.stringify(req.body, null, 2));
+    console.log("🧑 User from token:", req.user);
+    console.log("⏰ Timestamp:", new Date().toISOString());
     const { lobbyId, players } = req.body;
 
     if (!lobbyId || !players || players.length !== 2) {
@@ -90,6 +93,83 @@ router.post("/initialize", verifyToken, async (req, res) => {
         console.log(`📡 Emitting game:initialized to player ${player.userId}`);
         io.to(player.userId).emit("game:initialized", responseData);
       });
+
+      // Broadcast game state update to all players first
+      console.log("🔄 Broadcasting game state update to players...");
+      console.log("📊 Game state being sent:", {
+        currentTurn: gameState.currentTurn,
+        players: gameState.players?.length || 0,
+        deck: gameState.deck?.length || 0,
+        gamePhase: gameState.gamePhase,
+      });
+
+      players.forEach((player) => {
+        console.log(`📡 Emitting game_state_update to player ${player.userId}`);
+        io.to(player.userId).emit("game_state_update", {
+          gameState: gameState,
+        });
+      });
+
+      // Broadcast coin flip result to all players
+      if (
+        gameState &&
+        gameState.currentTurn &&
+        gameState.players.length === 2
+      ) {
+        const winner = gameState.players.find(
+          (p) => p.userId === gameState.currentTurn
+        );
+        const loser = gameState.players.find(
+          (p) => p.userId !== gameState.currentTurn
+        );
+
+        if (winner && loser) {
+          const winnerName = winner.username || winner.name || "Player";
+          const loserName = loser.username || loser.name || "Player";
+
+          const coinFlipData = {
+            winner: { name: winnerName, userId: winner.userId },
+            loser: { name: loserName, userId: loser.userId },
+            message: `🪙 ${winnerName} won the coin toss and goes first!`,
+            timestamp: Date.now(),
+          };
+
+          console.log(
+            `🪙 Broadcasting coin flip result:`,
+            coinFlipData.message
+          );
+          console.log(`Winner data:`, {
+            username: winner.username,
+            name: winner.name,
+            userId: winner.userId,
+          });
+          console.log(`Loser data:`, {
+            username: loser.username,
+            name: loser.name,
+            userId: loser.userId,
+          });
+
+          // Send to all players in this game with a slight delay to ensure game is loaded
+          setTimeout(() => {
+            players.forEach((player) => {
+              // Personalize message for each player
+              const isWinner = player.userId === winner.userId;
+              const personalizedData = {
+                ...coinFlipData,
+                isWinner: isWinner,
+                message: isWinner
+                  ? `🪙 You won the coin toss and go first!`
+                  : `🪙 ${winnerName} won the coin toss and goes first!`,
+              };
+
+              console.log(
+                `📡 Emitting coin_flip_result to player ${player.userId} (isWinner: ${isWinner})`
+              );
+              io.to(player.userId).emit("coin_flip_result", personalizedData);
+            });
+          }, 1500); // 1.5 second delay to ensure game UI is ready
+        }
+      }
 
       // Add a slight delay and then check if both players are in the same room
       setTimeout(() => {

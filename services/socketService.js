@@ -2,10 +2,18 @@ let io = null;
 
 const initializeSocket = (socketIo) => {
   io = socketIo;
-  console.log("Socket.IO service initialized");
+  console.log("Socket.IO service initialized with io instance:", !!io);
+  if (io) {
+    console.log("Socket.IO io instance details:", {
+      hasEngine: !!io.engine,
+      hasSockets: !!io.sockets,
+      hasRooms: !!io.sockets?.adapter?.rooms,
+    });
+  }
 };
 
 const getIo = () => {
+  console.log("🔍 getIo called, io exists:", !!io);
   if (!io) {
     console.error("Socket.IO not initialized!");
     // Optionally throw an error or handle appropriately

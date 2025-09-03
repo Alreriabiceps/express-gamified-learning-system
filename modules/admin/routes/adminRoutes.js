@@ -1,9 +1,9 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const dashboardController = require('../controllers/dashboard');
-const { verifyToken } = require('../../auth/middleware/authMiddleware');
+const dashboardController = require("../controllers/dashboard");
+const { verifyToken } = require("../../auth/middleware/authMiddleware");
 
-// Dashboard routes
-router.get('/dashboard', verifyToken, dashboardController.getDashboardData);
+// Get current admin profile (for refreshing user data)
+router.get("/profile", verifyToken, dashboardController.getCurrentAdminProfile);
 
-module.exports = router; 
+module.exports = router;
