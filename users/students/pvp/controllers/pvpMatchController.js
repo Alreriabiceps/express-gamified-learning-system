@@ -142,6 +142,10 @@ exports.getPlayerMatches = async (req, res) => {
     const { playerId } = req.params;
     const { days = 3, limit = 50 } = req.query;
 
+    console.log(
+      `🔍 Fetching PvP matches for player ${playerId}, days: ${days}, limit: ${limit}`
+    );
+
     // Calculate date range
     const endDate = new Date();
     const startDate = new Date(endDate.getTime() - days * 24 * 60 * 60 * 1000);
@@ -158,29 +162,41 @@ exports.getPlayerMatches = async (req, res) => {
       .sort({ completedAt: -1 })
       .limit(parseInt(limit));
 
+    console.log(
+      `📊 Found ${matches.length} PvP matches for player ${playerId}`
+    );
+
     // Transform matches to include player performance
     const transformedMatches = matches.map((match) => {
-      const playerPerformance = match.getPlayerPerformance(playerId);
+      const isPlayer1 = match.player1._id.toString() === playerId;
+      const opponent = isPlayer1 ? match.player2 : match.player1;
+      const won = match.winner && match.winner._id.toString() === playerId;
+
       return {
         id: match._id,
         date: match.completedAt,
-        opponent: playerPerformance.opponent,
-        result: playerPerformance.won ? "win" : "loss",
-        myScore: playerPerformance.score,
-        opponentScore: playerPerformance.won
-          ? match.player1.toString() === playerId
-            ? match.player2Score
-            : match.player1Score
-          : match.player1.toString() === playerId
-          ? match.player2Score
-          : match.player1Score,
-        pointsChange: playerPerformance.pointsChange,
-        correctAnswers: playerPerformance.correctAnswers,
+        opponent: {
+          firstName: opponent.firstName,
+          lastName: opponent.lastName,
+        },
+        result: won ? "win" : "loss",
+        myScore: isPlayer1 ? match.player1Score : match.player2Score,
+        opponentScore: isPlayer1 ? match.player2Score : match.player1Score,
+        pointsChange: isPlayer1
+          ? match.player1PointsChange
+          : match.player2PointsChange,
+        correctAnswers: isPlayer1
+          ? match.player1CorrectAnswers
+          : match.player2CorrectAnswers,
         totalQuestions: match.totalQuestions,
         matchDuration: match.matchDuration,
         gameMode: match.gameMode,
       };
     });
+
+    console.log(
+      `✅ Transformed ${transformedMatches.length} matches for API response`
+    );
 
     res.json({
       success: true,
@@ -191,6 +207,7 @@ exports.getPlayerMatches = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error("❌ Error fetching player matches:", error);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -332,5 +349,3 @@ exports.getMatchByRoom = async (req, res) => {
     });
   }
 };
-
-

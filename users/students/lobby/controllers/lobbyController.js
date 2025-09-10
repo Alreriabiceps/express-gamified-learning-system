@@ -208,13 +208,14 @@ exports.joinLobby = async (req, res) => {
 
           // Send the same player data to all players (frontend will handle the logic)
           lobby.players.forEach((player) => {
-            io.to(player._id ? player._id.toString() : player.toString()).emit(
-              "game:start",
-              {
-                lobbyId: lobby._id,
-                players: formattedPlayers,
-              }
-            );
+            const playerId = player._id
+              ? player._id.toString()
+              : player.toString();
+            console.log(`🎮 Emitting game:start to player ${playerId}`);
+            io.to(playerId).emit("game:start", {
+              lobbyId: lobby._id,
+              players: formattedPlayers,
+            });
           });
           console.log(
             "[LobbyController] Emitted game:start for lobby:",

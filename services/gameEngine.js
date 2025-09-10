@@ -1,30 +1,23 @@
-const Question = require("../users/admin/question/models/questionModels");
 const GameRoom = require("../models/GameRoom");
 const PvPMatch = require("../users/students/pvp/models/pvpMatchModel");
 const Student = require("../users/admin/student/models/studentModels");
 const mongoose = require("mongoose");
 
+// Import new modular components
+const GameState = require("./core/GameState");
+const CardManager = require("./cards/CardManager");
+const EffectProcessor = require("./effects/EffectProcessor");
+
 // Import constants and utilities
 const {
   GAME_CONFIG,
   BLOOM_CONFIG,
-  SPELL_CARDS_CONFIG,
-  RARITY_WEIGHTS,
   GAME_STATES,
   GAME_PHASES,
   ACTION_TYPES,
 } = require("./constants/gameConstants");
 
-const {
-  transformCardForDatabase,
-  transformSpellForDatabase,
-  shuffleArray,
-  generateRandomNumber,
-  normalizeBloomLevel,
-  getDamageByBloomLevel,
-  validateGameState,
-  validatePlayerData,
-} = require("./utils/gameUtils");
+const { transformCardForDatabase } = require("./utils/gameUtils");
 
 class GameEngine {
   constructor() {
@@ -33,54 +26,12 @@ class GameEngine {
     this.lobbyToRoom = new Map();
     // Simple per-lobby init lock to avoid double initialization
     this.initializationLocks = new Set();
+
+    // Initialize modular components
+    this.cardManager = new CardManager();
   }
 
-  // Use imported utility functions
-  shuffleArray = shuffleArray;
-  generateRandomNumber = generateRandomNumber;
-
-  // Create spell cards with server-side RNG
-  createSpellCards() {
-    const spellCards = [];
-    Object.keys(SPELL_CARDS_CONFIG).forEach((spellType, index) => {
-      spellCards.push({
-        id: `spell_${index + 1000}`,
-        spell_type: spellType,
-        type: "spell",
-        name: SPELL_CARDS_CONFIG[spellType].name,
-        description: SPELL_CARDS_CONFIG[spellType].description,
-        color: SPELL_CARDS_CONFIG[spellType].color,
-        bgColor: SPELL_CARDS_CONFIG[spellType].bgColor,
-        spellType: SPELL_CARDS_CONFIG[spellType].type,
-      });
-    });
-    return spellCards;
-  }
-
-  // Create weighted deck with improved rarity distribution
-  createWeightedDeck(questionCards, spellCards) {
-    const deck = [];
-
-    // Add question cards with weighted distribution
-    questionCards.forEach((card) => {
-      const weight = RARITY_WEIGHTS[card.bloom_level] || 5;
-      // Add multiple copies based on weight
-      for (let i = 0; i < weight; i++) {
-        deck.push({ ...card, id: `${card.id}_${i}` });
-      }
-    });
-
-    // Add spell cards with weighted distribution
-    spellCards.forEach((card) => {
-      const weight = RARITY_WEIGHTS.spell;
-      for (let i = 0; i < weight; i++) {
-        deck.push({ ...card, id: `${card.id}_${i}` });
-      }
-    });
-
-    // Shuffle the weighted deck
-    return this.shuffleArray(deck);
-  }
+  // These methods are now handled by CardManager
 
   // Initialize game with server-side deck creation
   async initializeGame(roomId, players, lobbyId) {
@@ -100,18 +51,16 @@ class GameEngine {
       // Debug: Log the exact structure of each player
       this.logPlayerData(players);
 
-      // Create deck and cards
-      const { deck, transformedQuestions, spellCards } =
-        await this.createGameDeck();
+      // Create deck and cards using CardManager
+      const { deck, transformedQuestions } =
+        await this.cardManager.createGameDeck();
 
-      // Distribute cards to players
-      const { player1Cards, player2Cards } = this.distributeCardsToPlayers(
-        deck,
-        spellCards
-      );
+      // Distribute cards to players using CardManager
+      const { player1Cards, player2Cards } =
+        this.cardManager.distributeCardsToPlayers(deck);
 
-      // Create game state
-      const gameState = this.createGameState(
+      // Create game state using GameState class
+      const gameState = new GameState(
         roomId,
         players,
         lobbyId,
@@ -139,13 +88,10 @@ class GameEngine {
         },
       });
 
-      // Draw initial card for the first player (they start with 5, draw 1 to have 6)
-      const firstPlayer = gameState.players.find(
-        (p) => String(p.userId) === String(gameState.currentTurn)
+      // First player starts with 6 cards, second player with 5 cards
+      console.log(
+        "🎮 Game initialized - First player starts with 6 cards, second player with 5 cards"
       );
-      if (firstPlayer) {
-        this.drawCardForPlayer(gameState, firstPlayer);
-      }
 
       // Save to database
       await this.saveGameStateToDatabase(gameState, lobbyId);
@@ -154,6 +100,9 @@ class GameEngine {
       this.games.set(roomId, gameState);
       this.lobbyToRoom.set(String(lobbyId), roomId);
       console.log("Game state stored in memory");
+
+      // Clean up the lobby since the game has started
+      await this.cleanupLobby(lobbyId);
 
       return gameState;
     } catch (error) {
@@ -167,35 +116,7 @@ class GameEngine {
     }
   }
 
-  // Add spell card with server-side RNG
-  addSpellCard(playerCards, spellCards) {
-    if (Math.random() < GAME_CONFIG.SPELL_CARD_CHANCE) {
-      const randomSpell =
-        spellCards[Math.floor(Math.random() * spellCards.length)];
-      playerCards.push(randomSpell);
-    }
-  }
-
-  // Draw a card for a player when their turn starts
-  drawCardForPlayer(gameState, player) {
-    if (gameState.deck.length > 0) {
-      const newCard = gameState.deck.pop();
-      player.cards.push(newCard);
-      console.log("🃏 Drew new card for player:", {
-        playerId: player.userId,
-        playerName: player.name,
-        cardId: newCard.id,
-        cardType: newCard.type,
-        playerCardsCount: player.cards.length,
-        remainingDeck: gameState.deck.length,
-      });
-    } else {
-      console.log("⚠️ No cards left in deck for player:", player.name);
-    }
-  }
-
-  // Use imported normalizeBloomLevel function
-  normalizeBloomLevel = normalizeBloomLevel;
+  // These methods are now handled by CardManager and other components
 
   // Log player data for debugging
   logPlayerData(players) {
@@ -212,128 +133,29 @@ class GameEngine {
     });
   }
 
-  // Create game deck with questions and spell cards
-  async createGameDeck() {
-    // Fetch questions from database
-    let questions = await Question.find({}).lean();
-    console.log(`Found ${questions.length} questions in database`);
-
-    // Fallback: seed mock questions in dev if none exist to avoid 500
-    if (!questions || questions.length === 0) {
-      console.warn("No questions found; using mock questions for game setup");
-      questions = Array.from({ length: 12 }).map((_, idx) => ({
-        _id: `mock_${idx + 1}`,
-        questionText: `Sample question ${idx + 1}?`,
-        choices: ["A", "B", "C", "D"],
-        correctAnswer: "A",
-        bloomsLevel: "Remembering",
-      }));
-    }
-
-    // Transform questions to game format
-    const transformedQuestions = questions.map((question, index) => {
-      const bloomLevel = this.normalizeBloomLevel(question.bloomsLevel);
-      return {
-        id: String(question._id || index),
-        type: `bloom-${bloomLevel.toLowerCase()}`,
-        question: question.questionText,
-        choices: question.choices || [],
-        answer: question.correctAnswer,
-        bloom_level: bloomLevel,
-        bloomLevel: bloomLevel, // Add bloomLevel for frontend compatibility
-        damage: this.getDamageByBloomLevel(bloomLevel), // Add damage field
-        subject: "General", // Default subject since we don't have subject details in this context
-        difficulty: "medium", // Default difficulty
-      };
-    });
-
-    // Create spell cards
-    const spellCards = this.createSpellCards();
-
-    // Create weighted deck with improved rarity distribution
-    const deck = this.createWeightedDeck(transformedQuestions, spellCards);
-
-    return { deck, transformedQuestions, spellCards };
-  }
-
-  // Distribute cards to players
-  distributeCardsToPlayers(deck, spellCards) {
-    const player1Cards = [];
-    const player2Cards = [];
-
-    // Deal initial cards to each player
-    for (let i = 0; i < GAME_CONFIG.INITIAL_CARDS; i++) {
-      if (deck.length > 0) {
-        const card1 = deck.pop();
-        player1Cards.push(card1);
-      }
-      if (deck.length > 0) {
-        const card2 = deck.pop();
-        player2Cards.push(card2);
-      }
-    }
-
-    // Add spell cards with configured chance
-    this.addSpellCard(player1Cards, spellCards);
-    this.addSpellCard(player2Cards, spellCards);
-
-    return { player1Cards, player2Cards };
-  }
-
-  // Create game state object
-  createGameState(roomId, players, lobbyId, player1Cards, player2Cards, deck) {
-    return {
-      roomId,
-      gameId: `game_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      lobbyId,
-      players: [
-        {
-          userId: String(players[0].userId || ""),
-          username: String(players[0].username || players[0].name || "Player"),
-          name: String(players[0].name || players[0].username || "Player"), // Prioritize name over username
-          firstName: players[0].firstName || "",
-          lastName: players[0].lastName || "",
-          hp: GAME_CONFIG.INITIAL_HP,
-          maxHp: GAME_CONFIG.INITIAL_HP,
-          cards: player1Cards,
-          powerUps: {}, // Power-ups not currently implemented
-          activatedSpells: [],
-        },
-        {
-          userId: String(players[1].userId || ""),
-          username: String(players[1].username || players[1].name || "Player"),
-          name: String(players[1].name || players[1].username || "Player"), // Prioritize name over username
-          firstName: players[1].firstName || "",
-          lastName: players[1].lastName || "",
-          hp: GAME_CONFIG.INITIAL_HP,
-          maxHp: GAME_CONFIG.INITIAL_HP,
-          cards: player2Cards,
-          powerUps: {}, // Power-ups not currently implemented
-          activatedSpells: [],
-        },
-      ],
-      currentTurn: players[0].userId, // First player goes first
-      gamePhase: GAME_PHASES.CARD_SELECTION,
-      deck,
-      selectedCard: null,
-      gameState: GAME_STATES.PLAYING,
-      winner: null,
-      powerUpEffects: {}, // Power-up effects not currently implemented
-    };
-  }
+  // These methods are now handled by CardManager and GameState classes
 
   // Save game state to database
   async saveGameStateToDatabase(gameState, lobbyId) {
-    console.log("Saving game state to database...");
+    console.log("💾 Saving game state to database...");
+    console.log("📋 Room ID:", gameState.roomId);
+    console.log("📋 Lobby ID:", lobbyId);
 
     // Process lobbyId for database
     const processedLobbyId = this.processLobbyIdForDatabase(lobbyId);
+    console.log("📋 Processed Lobby ID:", processedLobbyId);
 
     // Prepare game state for database
     const gameStateForDB = this.prepareGameStateForDatabase(
       gameState,
       processedLobbyId
     );
+    console.log("📋 Prepared game state for DB:", {
+      roomId: gameStateForDB.roomId,
+      gameId: gameStateForDB.gameId,
+      playersCount: gameStateForDB.players?.length,
+      deckCount: gameStateForDB.deck?.length,
+    });
 
     // Validate game state structure
     this.validateGameStateStructure(gameStateForDB);
@@ -346,6 +168,18 @@ class GameEngine {
       console.log("✅ Game state saved successfully to database");
       console.log("📋 Saved room ID:", savedRoom.roomId);
       console.log("📋 Saved game ID:", savedRoom.gameId);
+
+      // Verify the save by querying the database
+      const verification = await GameRoom.findOne({ roomId: gameState.roomId });
+      if (verification) {
+        console.log(
+          "✅ Verification successful - game state found in database"
+        );
+      } else {
+        console.error(
+          "❌ Verification failed - game state not found in database"
+        );
+      }
     } catch (saveError) {
       console.error("❌ CRITICAL: Game state save failed!");
       console.error("❌ Error message:", saveError?.message);
@@ -394,18 +228,47 @@ class GameEngine {
 
   // Prepare game state for database storage
   prepareGameStateForDatabase(gameState, processedLobbyId) {
+    console.log("🔍 Preparing game state for database:", {
+      roomId: gameState.roomId,
+      playersCount: gameState.players?.length,
+      firstPlayerCards: gameState.players?.[0]?.cards?.length || 0,
+      deckLength: gameState.deck?.length || 0,
+    });
+
     // Deep clone the game state to avoid mutation issues
-    return JSON.parse(
+    const preparedState = JSON.parse(
       JSON.stringify({
         ...gameState,
         lobbyId: processedLobbyId,
-        players: gameState.players.map((player) => ({
-          ...player,
-          cards: player.cards.map(transformCardForDatabase),
-        })),
-        deck: gameState.deck.map(transformCardForDatabase),
+        players: gameState.players.map((player) => {
+          const transformedCards = player.cards
+            ? player.cards.map(transformCardForDatabase)
+            : [];
+          console.log(`🔄 Transforming player ${player.userId} cards:`, {
+            originalCount: player.cards?.length || 0,
+            transformedCount: transformedCards.length,
+            firstCard: transformedCards[0] || "none",
+          });
+
+          return {
+            ...player,
+            cards: transformedCards,
+          };
+        }),
+        deck: gameState.deck
+          ? gameState.deck.map(transformCardForDatabase)
+          : [],
       })
     );
+
+    console.log("✅ Game state prepared for database:", {
+      roomId: preparedState.roomId,
+      playersCount: preparedState.players?.length,
+      firstPlayerCards: preparedState.players?.[0]?.cards?.length || 0,
+      deckLength: preparedState.deck?.length || 0,
+    });
+
+    return preparedState;
   }
 
   // Validate game state structure before saving
@@ -541,296 +404,535 @@ class GameEngine {
 
   // Process game action
   async processAction(roomId, playerId, action) {
-    const gameState = this.games.get(roomId);
-    if (!gameState) {
-      throw new Error("Game not found");
-    }
+    try {
+      console.log("🔄 Processing action:", { roomId, playerId, action });
 
-    // Validate action
-    const validation = this.validateAction(gameState, playerId, action);
-    if (!validation.valid) {
-      throw new Error(validation.error);
-    }
+      const gameState = this.games.get(roomId);
+      if (!gameState) {
+        throw new Error("Game not found");
+      }
 
-    // Process action based on type
-    switch (action.type) {
-      case ACTION_TYPES.SELECT_CARD:
-        return this.processSelectCard(
-          gameState,
-          playerId,
-          action.cardId,
-          action.card || null
-        );
-      case ACTION_TYPES.ANSWER_QUESTION:
-        return await this.processAnswerQuestion(
-          gameState,
-          playerId,
-          action.answer
-        );
-      default:
-        throw new Error("Unknown action type");
+      console.log("🎮 Game state found:", {
+        roomId: gameState.roomId,
+        currentTurn: gameState.currentTurn,
+        gamePhase: gameState.gamePhase,
+        playersCount: gameState.players?.length,
+        playerIds: gameState.players?.map((p) => ({
+          userId: p.userId,
+          name: p.name,
+        })),
+      });
+
+      // Validate action
+      const validation = this.validateAction(gameState, playerId, action);
+      if (!validation.valid) {
+        throw new Error(validation.error);
+      }
+
+      // Process action based on type
+      switch (action.type) {
+        case ACTION_TYPES.SELECT_CARD:
+          return this.processSelectCard(
+            gameState,
+            playerId,
+            action.cardId,
+            action.card || null
+          );
+        case ACTION_TYPES.ANSWER_QUESTION:
+          return await this.processAnswerQuestion(
+            gameState,
+            playerId,
+            action.answer
+          );
+        default:
+          throw new Error("Unknown action type");
+      }
+    } catch (error) {
+      console.error("❌ Error in processAction:", error);
+      console.error("❌ Action details:", { roomId, playerId, action });
+      throw error;
     }
   }
 
   // Process card selection
   processSelectCard(gameState, playerId, cardId, cardData = null) {
-    console.log("🔍 processSelectCard called with:", {
-      roomId: gameState.roomId,
-      playerId,
-      cardId,
-      cardData: cardData
-        ? {
-            id: cardData.id,
-            name: cardData.name,
-            question: cardData.question,
-            bloom_level: cardData.bloom_level,
-            type: cardData.type,
-          }
-        : null,
-    });
-
-    const player = gameState.players.find(
-      (p) => String(p.userId) === String(playerId)
-    );
-
-    if (!player) {
-      console.error("❌ Player not found:", {
+    try {
+      console.log("🔍 processSelectCard called with:", {
+        roomId: gameState.roomId,
         playerId,
-        availablePlayers: gameState.players.map((p) => ({
-          userId: p.userId,
-          name: p.name,
-        })),
-      });
-      throw new Error("Player not found in game");
-    }
-
-    console.log("👤 Found player:", {
-      userId: player.userId,
-      name: player.name,
-      cardsCount: player.cards?.length || 0,
-      cardIds:
-        player.cards?.map((c) => ({
-          id: c.id,
-          type: c.type,
-          name: c.name || c.question,
-        })) || [],
-    });
-
-    let card = player.cards.find((c) => String(c.id) === String(cardId));
-    console.log("🎯 Direct ID match result:", {
-      found: !!card,
-      cardId,
-      matchedCard: card ? { id: card.id, type: card.type } : null,
-    });
-
-    // Fallback semantic matching if IDs don't align perfectly
-    if (!card && cardData) {
-      console.log("🔄 Attempting semantic fallback match...");
-      const targetName = String(cardData.name || "").trim();
-      const targetQuestion = String(cardData.question || "").trim();
-      const targetBloom = String(cardData.bloom_level || "").trim();
-
-      console.log("🎯 Target card data:", {
-        targetName,
-        targetQuestion,
-        targetBloom,
+        cardId,
+        cardData: cardData
+          ? {
+              id: cardData.id,
+              name: cardData.name,
+              question: cardData.question,
+              bloom_level: cardData.bloom_level,
+              type: cardData.type,
+            }
+          : null,
       });
 
-      card = player.cards.find((c) => {
-        const cName = String(c.name || "").trim();
-        const cQuestion = String(c.question || "").trim();
-        const cBloom = String(c.bloom_level || "").trim();
+      const player = gameState.players.find(
+        (p) => String(p.userId) === String(playerId)
+      );
 
-        const nameMatch = targetName && cName && cName === targetName;
-        const questionMatch =
-          targetQuestion && cQuestion && cQuestion === targetQuestion;
-        const bloomMatch = !targetBloom || (cBloom && cBloom === targetBloom);
-
-        console.log("🔍 Checking card:", {
-          cardId: c.id,
-          cName,
-          cQuestion: cQuestion.substring(0, 50) + "...",
-          cBloom,
-          nameMatch,
-          questionMatch,
-          bloomMatch,
+      if (!player) {
+        console.error("❌ Player not found:", {
+          playerId,
+          availablePlayers: gameState.players.map((p) => ({
+            userId: p.userId,
+            name: p.name,
+          })),
         });
+        throw new Error("Player not found in game");
+      }
 
-        return (nameMatch || questionMatch) && bloomMatch;
-      });
-
-      console.log("🔄 Semantic fallback result:", {
-        found: !!card,
-        card: card ? { id: card.id, type: card.type } : null,
-      });
-    }
-
-    if (!card) {
-      console.error("❌ Card not found after all matching attempts:", {
-        requestedCardId: cardId,
-        requestedCardData: cardData,
-        playerCards:
+      console.log("👤 Found player:", {
+        userId: player.userId,
+        name: player.name,
+        cardsCount: player.cards?.length || 0,
+        cardIds:
           player.cards?.map((c) => ({
             id: c.id,
             type: c.type,
             name: c.name || c.question,
           })) || [],
       });
-      throw new Error("Card not found");
+
+      let card = player.cards.find((c) => String(c.id) === String(cardId));
+      console.log("🎯 Direct ID match result:", {
+        found: !!card,
+        cardId,
+        matchedCard: card ? { id: card.id, type: card.type } : null,
+      });
+
+      // Fallback semantic matching if IDs don't align perfectly
+      if (!card && cardData) {
+        console.log("🔄 Attempting semantic fallback match...");
+        const targetName = String(cardData.name || "").trim();
+        const targetQuestion = String(cardData.question || "").trim();
+        const targetBloom = String(cardData.bloom_level || "").trim();
+
+        console.log("🎯 Target card data:", {
+          targetName,
+          targetQuestion,
+          targetBloom,
+        });
+
+        card = player.cards.find((c) => {
+          const cName = String(c.name || "").trim();
+          const cQuestion = String(c.question || "").trim();
+          const cBloom = String(c.bloom_level || "").trim();
+
+          const nameMatch = targetName && cName && cName === targetName;
+          const questionMatch =
+            targetQuestion && cQuestion && cQuestion === targetQuestion;
+          const bloomMatch = !targetBloom || (cBloom && cBloom === targetBloom);
+
+          console.log("🔍 Checking card:", {
+            cardId: c.id,
+            cName,
+            cQuestion: cQuestion.substring(0, 50) + "...",
+            cBloom,
+            nameMatch,
+            questionMatch,
+            bloomMatch,
+          });
+
+          return (nameMatch || questionMatch) && bloomMatch;
+        });
+
+        console.log("🔄 Semantic fallback result:", {
+          found: !!card,
+          card: card ? { id: card.id, type: card.type } : null,
+        });
+      }
+
+      if (!card) {
+        // Graceful fallback: if client provided the full card data, use it
+        if (cardData) {
+          console.warn(
+            "⚠️ Card id not found; falling back to provided card data.",
+            {
+              requestedCardId: cardId,
+              providedCardId: cardData.id,
+              providedType: cardData.type,
+            }
+          );
+
+          // Normalize minimal fields we need
+          card = {
+            id: String(cardData.id || cardId || `client_${Date.now()}`),
+            type: cardData.type || "question",
+            question:
+              cardData.question || cardData.questionText || cardData.name || "",
+            choices: cardData.choices || [],
+            answer: cardData.answer || cardData.correctAnswer || "",
+            bloom_level:
+              cardData.bloom_level ||
+              cardData.bloomLevel ||
+              cardData.bloomsLevel ||
+              "",
+            name: cardData.name,
+            damage: cardData.damage,
+          };
+        } else {
+          console.error("❌ Card not found after all matching attempts:", {
+            requestedCardId: cardId,
+            requestedCardData: cardData,
+            playerCards:
+              player.cards?.map((c) => ({
+                id: c.id,
+                type: c.type,
+                name: c.name || c.question,
+              })) || [],
+          });
+          throw new Error("Card not found");
+        }
+      }
+
+      console.log("✅ Card found successfully:", {
+        cardId: card.id,
+        type: card.type,
+      });
+
+      // Remove the card from player's hand (tolerant by id or by question/name)
+      const initialCount = player.cards.length;
+      let removed = false;
+      // Try strict id removal
+      const afterIdRemoval = player.cards.filter(
+        (c) => String(c.id) !== String(cardId)
+      );
+      if (afterIdRemoval.length !== initialCount) {
+        player.cards = afterIdRemoval;
+        removed = true;
+      } else {
+        // Try by question/name match as fallback
+        const idx = player.cards.findIndex(
+          (c) =>
+            (c.question && card.question && c.question === card.question) ||
+            (c.name && card.name && c.name === card.name)
+        );
+        if (idx >= 0) {
+          player.cards.splice(idx, 1);
+          removed = true;
+        }
+      }
+      console.log("🗑️ Card removal status:", {
+        playerId,
+        attemptedId: cardId,
+        removed,
+        remainingCards: player.cards.length,
+      });
+
+      gameState.selectedCard = card;
+      gameState.gamePhase = GAME_PHASES.ANSWERING;
+
+      // Draw a card for the opponent when current player uses a card
+      const opponent = gameState.players.find(
+        (p) => String(p.userId) !== String(playerId)
+      );
+      if (opponent && gameState.deck.length > 0) {
+        this.cardManager.drawCardForPlayer(gameState, opponent);
+        console.log(
+          `🃏 Drew card for opponent ${opponent.name} after ${player.name} used a card`
+        );
+      }
+
+      // Update database
+      this.updateGameInDatabase(gameState);
+
+      return {
+        type: "card_selected",
+        card,
+        gameState,
+      };
+    } catch (error) {
+      console.error("❌ Error in processSelectCard:", error);
+      console.error("❌ Card selection details:", {
+        roomId: gameState.roomId,
+        playerId,
+        cardId,
+        cardData: cardData ? { id: cardData.id, type: cardData.type } : null,
+      });
+      throw error;
     }
-
-    console.log("✅ Card found successfully:", {
-      cardId: card.id,
-      type: card.type,
-    });
-
-    // Remove the card from player's hand
-    player.cards = player.cards.filter((c) => String(c.id) !== String(cardId));
-    console.log("🗑️ Removed card from player's hand:", {
-      playerId,
-      cardId,
-      remainingCards: player.cards.length,
-    });
-
-    gameState.selectedCard = card;
-    gameState.gamePhase = GAME_PHASES.ANSWERING;
-
-    // Update database
-    this.updateGameInDatabase(gameState);
-
-    return {
-      type: "card_selected",
-      card,
-      gameState,
-    };
   }
 
   // Process answer to question
   async processAnswerQuestion(gameState, playerId, answer) {
-    console.log("🔄 processAnswerQuestion called:", {
-      playerId,
-      currentTurn: gameState.currentTurn,
-      selectedCard: gameState.selectedCard
-        ? {
-            id: gameState.selectedCard.id,
-            question: gameState.selectedCard.question,
-          }
-        : null,
-    });
-
-    const selectedCard = gameState.selectedCard;
-    const isCorrect = answer === selectedCard.answer;
-
-    console.log("📊 Answer result:", {
-      isCorrect,
-      answer,
-      correctAnswer: selectedCard.answer,
-    });
-
-    // Calculate damage
-    const damage = this.calculateDamage(selectedCard, isCorrect, gameState);
-
-    // Apply damage - ALWAYS to the opponent (player who didn't answer)
-    const answeringPlayer = gameState.players.find(
-      (p) => String(p.userId) === String(playerId)
-    );
-    const opponentPlayer = gameState.players.find(
-      (p) => String(p.userId) !== String(playerId)
-    );
-
-    if (!answeringPlayer || !opponentPlayer) {
-      console.error("❌ Players not found for damage application");
-      throw new Error("Players not found");
-    }
-
-    // If answer is correct, opponent takes damage. If wrong, answering player takes damage.
-    const targetPlayer = isCorrect ? opponentPlayer : answeringPlayer;
-
-    targetPlayer.hp = Math.max(0, targetPlayer.hp - damage);
-    console.log("💥 Damage applied:", {
-      targetPlayer: targetPlayer.name,
-      damage,
-      newHp: targetPlayer.hp,
-      isCorrect,
-      answeringPlayer: answeringPlayer.name,
-      opponentPlayer: opponentPlayer.name,
-    });
-
-    console.log("🎯 Current game state HP values:", {
-      player1: { name: gameState.players[0].name, hp: gameState.players[0].hp },
-      player2: { name: gameState.players[1].name, hp: gameState.players[1].hp },
-    });
-
-    // Check for game end
-    if (targetPlayer.hp <= 0) {
-      gameState.gameState = GAME_STATES.FINISHED;
-      gameState.winner = gameState.players.find(
-        (p) => String(p.userId) !== String(targetPlayer.userId)
-      ).userId;
-      console.log("🏁 Game finished! Winner:", gameState.winner);
-
-      // Process star rewards/penalties
-      await this.processGameEndRewards(gameState);
-    } else {
-      // Switch turns after answering - the player who just answered gets the next turn
-      const nextPlayer = answeringPlayer; // The answerer gets to challenge next
-
-      const oldTurn = gameState.currentTurn;
-      gameState.currentTurn = nextPlayer.userId;
-      gameState.gamePhase = GAME_PHASES.CARD_SELECTION;
-      gameState.selectedCard = null;
-
-      console.log("🔄 Turn switched:", {
-        from: oldTurn,
-        to: nextPlayer.userId,
-        playerName: nextPlayer.name,
-        gamePhase: gameState.gamePhase,
-        reason: "After answering question - answerer gets next turn",
+    try {
+      console.log("🔄 processAnswerQuestion called:", {
+        playerId,
+        currentTurn: gameState.currentTurn,
+        selectedCard: gameState.selectedCard
+          ? {
+              id: gameState.selectedCard.id,
+              question: gameState.selectedCard.question,
+            }
+          : null,
       });
 
-      // Draw a card for the next player when their turn starts
-      this.drawCardForPlayer(gameState, nextPlayer);
+      const selectedCard = gameState.selectedCard;
+      const isCorrect = answer === selectedCard.answer;
+
+      console.log("📊 Answer result:", {
+        isCorrect,
+        answer,
+        correctAnswer: selectedCard.answer,
+      });
+
+      // Increment total questions counter
+      gameState.totalQuestions += 1;
+
+      // Track correct answers for the answering player
+      const answeringPlayer = gameState.players.find(
+        (p) => String(p.userId) === String(playerId)
+      );
+      if (answeringPlayer && isCorrect) {
+        answeringPlayer.correctAnswers += 1;
+        console.log(
+          `✅ ${answeringPlayer.name} answered correctly! Total correct: ${answeringPlayer.correctAnswers}`
+        );
+      }
+
+      // Calculate damage
+      const baseDamage = this.calculateDamage(
+        selectedCard,
+        isCorrect,
+        gameState
+      );
+      const opponentPlayer = gameState.players.find(
+        (p) => String(p.userId) !== String(playerId)
+      );
+
+      console.log("🔍 Damage calculation details:", {
+        selectedCard: {
+          id: selectedCard.id,
+          bloom_level: selectedCard.bloom_level,
+          bloomLevel: selectedCard.bloomLevel,
+          damage: selectedCard.damage,
+        },
+        baseDamage,
+        isCorrect,
+      });
+
+      const damage = EffectProcessor.processDamageEffects(
+        gameState,
+        playerId,
+        opponentPlayer.userId,
+        baseDamage
+      ).damage;
+
+      console.log("💥 Final damage after effects:", damage);
+
+      // If answer is correct, opponent takes damage. If wrong, answering player takes damage.
+      const targetPlayer = isCorrect ? opponentPlayer : answeringPlayer;
+
+      const oldHp = targetPlayer.hp;
+      targetPlayer.hp = Math.max(0, targetPlayer.hp - damage);
+
+      // Validate HP values
+      if (targetPlayer.hp < 0 || targetPlayer.hp > targetPlayer.maxHp) {
+        console.error(
+          `❌ Invalid HP value for ${targetPlayer.name}: ${targetPlayer.hp}`
+        );
+        targetPlayer.hp = Math.max(
+          0,
+          Math.min(targetPlayer.hp, targetPlayer.maxHp)
+        );
+      }
+
+      console.log("💥 Damage applied:", {
+        targetPlayer: targetPlayer.name,
+        damage,
+        oldHp,
+        newHp: targetPlayer.hp,
+        isCorrect,
+        answeringPlayer: answeringPlayer.name,
+        opponentPlayer: opponentPlayer.name,
+      });
+
+      console.log("🎯 Current game state HP values:", {
+        player1: {
+          name: gameState.players[0].name,
+          hp: gameState.players[0].hp,
+        },
+        player2: {
+          name: gameState.players[1].name,
+          hp: gameState.players[1].hp,
+        },
+      });
+
+      // Check for game end
+      if (targetPlayer.hp <= 0) {
+        gameState.gameState = GAME_STATES.FINISHED;
+        gameState.winner = gameState.players.find(
+          (p) => String(p.userId) !== String(targetPlayer.userId)
+        ).userId;
+        console.log("🏁 Game finished! Winner:", gameState.winner);
+
+        // Process star rewards/penalties
+        await this.processGameEndRewards(gameState);
+      } else {
+        // Switch turns after answering - the player who just answered gets the next turn
+        const nextPlayer = answeringPlayer; // The answerer gets to challenge next
+
+        const oldTurn = gameState.currentTurn;
+        gameState.currentTurn = nextPlayer.userId;
+        gameState.gamePhase = GAME_PHASES.CARD_SELECTION;
+        gameState.selectedCard = null;
+
+        console.log("🔄 Turn switched:", {
+          from: oldTurn,
+          to: nextPlayer.userId,
+          playerName: nextPlayer.name,
+          gamePhase: gameState.gamePhase,
+          reason: "After answering question - answerer gets next turn",
+        });
+
+        // Note: Card drawing is now handled when cards are selected, not when turns switch
+      }
+
+      // Update database
+      await this.updateGameInDatabase(gameState);
+
+      return {
+        type: "answer_processed",
+        isCorrect,
+        damage,
+        answer,
+        gameState,
+        selectedCard: selectedCard, // Preserve the selected card data for the result popup
+      };
+    } catch (error) {
+      console.error("❌ Error in processAnswerQuestion:", error);
+      console.error("❌ Answer processing details:", {
+        playerId,
+        answer,
+        selectedCard: gameState.selectedCard
+          ? {
+              id: gameState.selectedCard.id,
+              question: gameState.selectedCard.question,
+            }
+          : null,
+        gameState: {
+          roomId: gameState.roomId,
+          currentTurn: gameState.currentTurn,
+          gamePhase: gameState.gamePhase,
+        },
+      });
+      throw error;
     }
-
-    // Update database
-    this.updateGameInDatabase(gameState);
-
-    return {
-      type: "answer_processed",
-      isCorrect,
-      damage,
-      answer,
-      gameState,
-      selectedCard: selectedCard, // Preserve the selected card data for the result popup
-    };
   }
 
   // Calculate damage based on Bloom's level
   calculateDamage(card, isCorrect, gameState) {
-    return BLOOM_CONFIG[card.bloom_level]?.damage || 5;
+    console.log("🔍 Calculating damage for card:", {
+      cardId: card.id,
+      bloom_level: card.bloom_level,
+      bloomLevel: card.bloomLevel,
+      cardDamage: card.damage,
+      availableBloomLevels: Object.keys(BLOOM_CONFIG),
+      damageFromConfig: BLOOM_CONFIG[card.bloom_level]?.damage,
+      damageFromBloomLevel: BLOOM_CONFIG[card.bloomLevel]?.damage,
+    });
+
+    // Use the damage that was already calculated and stored in the card
+    // This ensures consistency with the card creation process
+    const damage = card.damage || 5;
+
+    console.log("💥 Final damage calculated:", damage);
+    return damage;
   }
 
-  // Removed unused power-up and spell processing methods - not currently implemented
+  // Removed unused power-up processing methods - not currently implemented
 
   // Update game in database
   async updateGameInDatabase(gameState) {
     try {
-      // Only update specific fields that match the schema
+      // Update each player individually to ensure proper HP and cards update
+      const updatePromises = gameState.players.map((player, index) => {
+        // Ensure cards are properly transformed
+        console.log(`🔍 Player ${index} cards before transformation:`, {
+          cardsType: typeof player.cards,
+          isArray: Array.isArray(player.cards),
+          length: player.cards?.length,
+          firstCard: player.cards?.[0],
+          firstCardType: typeof player.cards?.[0],
+        });
+
+        const transformedCards = player.cards
+          ? player.cards
+              .map((card) => {
+                console.log(`🔍 Processing card:`, {
+                  card,
+                  cardType: typeof card,
+                  isObject: typeof card === "object" && card !== null,
+                });
+
+                // Ensure card is an object and transform it
+                if (typeof card === "object" && card !== null) {
+                  const transformed = transformCardForDatabase(card);
+                  console.log(`✅ Transformed card:`, transformed);
+                  return transformed;
+                } else {
+                  console.warn(
+                    `⚠️ Invalid card data for player ${index}:`,
+                    card
+                  );
+                  return null;
+                }
+              })
+              .filter((card) => card !== null)
+          : [];
+
+        console.log(`🔄 Updating player ${index} cards:`, {
+          originalCardsCount: player.cards?.length || 0,
+          transformedCardsCount: transformedCards.length,
+          firstCard: transformedCards[0] || "none",
+          cardTypes: transformedCards.map((c) => typeof c),
+        });
+
+        return GameRoom.updateOne(
+          { roomId: gameState.roomId },
+          {
+            $set: {
+              [`players.${index}.hp`]: player.hp,
+              [`players.${index}.maxHp`]: player.maxHp,
+              [`players.${index}.cards`]: transformedCards,
+              [`players.${index}.correctAnswers`]: player.correctAnswers || 0,
+            },
+          }
+        ).catch((error) => {
+          console.error(
+            `❌ Error updating player ${index} in database:`,
+            error
+          );
+          console.error(`❌ Player data:`, {
+            userId: player.userId,
+            hp: player.hp,
+            cardsCount: transformedCards.length,
+            firstCard: transformedCards[0],
+          });
+          throw error;
+        });
+      });
+
+      // Wait for all player updates to complete
+      await Promise.all(updatePromises);
+
+      // Update other game state fields
       const updateData = {
         currentTurn: gameState.currentTurn,
         gamePhase: gameState.gamePhase,
         gameState: gameState.gameState,
         winner: gameState.winner,
         lastActivity: new Date(),
-        "players.$[].hp": gameState.players.map((p) => p.hp),
-        "players.$[].cards": gameState.players.map((p) =>
-          p.cards.map(transformCardForDatabase)
-        ),
-        "players.$[].powerUps": gameState.players.map((p) => p.powerUps),
-        "players.$[].activatedSpells": gameState.players.map((p) =>
-          p.activatedSpells.map(transformSpellForDatabase)
-        ),
         deck: gameState.deck.map(transformCardForDatabase),
+        totalQuestions: gameState.totalQuestions,
+        matchStartTime: gameState.matchStartTime,
+        matchDuration: gameState.matchDuration,
       };
 
       // Only add selectedCard if it exists and is valid
@@ -846,8 +948,6 @@ class GameEngine {
         };
 
         // Only add optional fields if they have values
-        if (gameState.selectedCard.spell_type)
-          selectedCardData.spell_type = gameState.selectedCard.spell_type;
         if (gameState.selectedCard.name)
           selectedCardData.name = gameState.selectedCard.name;
         if (gameState.selectedCard.description)
@@ -862,30 +962,27 @@ class GameEngine {
         updateData.selectedCard = selectedCardData;
       }
 
-      await GameRoom.findOneAndUpdate(
+      // Update the remaining game state fields
+      await GameRoom.updateOne(
         { roomId: gameState.roomId },
-        { $set: updateData },
-        { new: true }
+        { $set: updateData }
       );
 
-      console.log(
-        "✅ Database updated successfully for room:",
-        gameState.roomId
-      );
+      console.log("✅ Game state updated in database successfully");
     } catch (error) {
-      console.error("Error updating game in database:", error);
-      console.error("❌ Game data that failed to save:", {
+      console.error("❌ Error updating game in database:", error);
+      console.error("❌ Error details:", {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
         roomId: gameState.roomId,
-        selectedCard: gameState.selectedCard
-          ? { id: gameState.selectedCard.id, type: gameState.selectedCard.type }
-          : null,
-        error: error.message,
+        playersCount: gameState.players?.length,
       });
+      throw error;
     }
   }
 
-  // Use imported getDamageByBloomLevel function
-  getDamageByBloomLevel = getDamageByBloomLevel;
+  // getDamageByBloomLevel is now handled by CardManager
 
   // Process star rewards/penalties when game ends
   async processGameEndRewards(gameState) {
@@ -904,9 +1001,23 @@ class GameEngine {
         return;
       }
 
+      // Calculate match duration
+      const matchDuration = Date.now() - gameState.matchStartTime;
+      gameState.matchDuration = matchDuration;
+
       console.log("🏆 Game results:", {
-        winner: { id: winner.userId, name: winner.name },
-        loser: { id: loser.userId, name: loser.name },
+        winner: {
+          id: winner.userId,
+          name: winner.name,
+          correctAnswers: winner.correctAnswers,
+        },
+        loser: {
+          id: loser.userId,
+          name: loser.name,
+          correctAnswers: loser.correctAnswers,
+        },
+        totalQuestions: gameState.totalQuestions,
+        matchDuration: Math.round(matchDuration / 1000) + " seconds",
       });
 
       // Create PvP match record
@@ -916,12 +1027,12 @@ class GameEngine {
         player1Id: gameState.players[0].userId,
         player2Id: gameState.players[1].userId,
         winnerId: gameState.winner,
-        player1Score: gameState.players[0].hp, // Final HP as score
-        player2Score: gameState.players[1].hp,
-        player1CorrectAnswers: 0, // We don't track this in the current system
-        player2CorrectAnswers: 0,
-        totalQuestions: 1, // We don't track total questions in current system
-        matchDuration: 0, // We don't track duration in current system
+        player1Score: gameState.players[0].correctAnswers, // Use correct answers as score
+        player2Score: gameState.players[1].correctAnswers, // Use correct answers as score
+        player1CorrectAnswers: gameState.players[0].correctAnswers,
+        player2CorrectAnswers: gameState.players[1].correctAnswers,
+        totalQuestions: gameState.totalQuestions,
+        matchDuration: matchDuration,
       };
 
       // Create and save the match record
@@ -1025,6 +1136,15 @@ class GameEngine {
     return null;
   }
 
+  // Clear all games (for testing purposes)
+  clearAllGames() {
+    console.log("🧹 Clearing all games from memory...");
+    this.games.clear();
+    this.lobbyToRoom.clear();
+    this.initializationLocks.clear();
+    console.log("✅ All games cleared from memory");
+  }
+
   // Acquire a simple lock for a lobby to avoid double init
   async withInitializationLock(lobbyId, fn) {
     while (this.initializationLocks.has(String(lobbyId))) {
@@ -1036,6 +1156,37 @@ class GameEngine {
       return await fn();
     } finally {
       this.initializationLocks.delete(String(lobbyId));
+    }
+  }
+
+  // Clean up lobby when game starts
+  async cleanupLobby(lobbyId) {
+    try {
+      const Lobby = require("../users/students/lobby/models/lobbyModel");
+      const socketService = require("../services/socketService");
+
+      console.log("🧹 Cleaning up lobby:", lobbyId);
+
+      // Delete the lobby from database
+      const deletedLobby = await Lobby.findByIdAndDelete(lobbyId);
+
+      if (deletedLobby) {
+        console.log("✅ Lobby deleted successfully:", lobbyId);
+
+        // Emit lobby deletion event to notify all clients
+        socketService.emitEvent("lobby:deleted", {
+          lobbyId: lobbyId,
+          reason: "game_started",
+        });
+
+        // Also emit to specific lobby room if it exists
+        // Note: Socket emission will be handled by the socketService
+      } else {
+        console.log("⚠️ Lobby not found for cleanup:", lobbyId);
+      }
+    } catch (error) {
+      console.error("❌ Error cleaning up lobby:", error);
+      // Don't throw error - game should continue even if lobby cleanup fails
     }
   }
 

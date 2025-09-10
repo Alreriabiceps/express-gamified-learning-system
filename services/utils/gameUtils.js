@@ -1,5 +1,33 @@
 // Utility function to transform card data for database storage
-const transformCardForDatabase = (card) => ({
+const transformCardForDatabase = (card) => {
+  if (!card || typeof card !== "object") {
+    console.warn("⚠️ Invalid card data for transformation:", card);
+    return null;
+  }
+
+  return {
+    id: String(card.id || ""),
+    type: String(card.type || ""),
+    // Question card fields
+    question: String(card.question || ""),
+    choices: Array.isArray(card.choices)
+      ? card.choices.map((c) => String(c))
+      : [],
+    answer: String(card.answer || ""),
+    bloom_level: String(card.bloom_level || card.bloomLevel || ""),
+    name: String(card.name || ""),
+    description: String(card.description || ""),
+    // Common fields
+    icon: String(card.icon || ""),
+    color: String(card.color || ""),
+    bgColor: String(card.bgColor || ""),
+    // Additional fields
+    damage: Number(card.damage || 0),
+  };
+};
+
+// Utility function to transform card data from database back to frontend format
+const transformCardFromDatabase = (card) => ({
   id: String(card.id),
   type: String(card.type),
   question: String(card.question || ""),
@@ -7,25 +35,27 @@ const transformCardForDatabase = (card) => ({
     ? card.choices.map((c) => String(c))
     : [],
   answer: String(card.answer || ""),
-  bloom_level: String(card.bloom_level || ""),
-  spell_type: String(card.spell_type || ""),
+  correctAnswer: String(card.answer || ""), // Add correctAnswer alias
+  bloomLevel: String(card.bloom_level || card.bloomLevel || ""), // Convert bloom_level back to bloomLevel
   name: String(card.name || ""),
   description: String(card.description || ""),
   icon: String(card.icon || ""),
   color: String(card.color || ""),
   bgColor: String(card.bgColor || ""),
-});
-
-// Utility function to transform spell data for database storage
-const transformSpellForDatabase = (spell) => ({
-  id: String(spell.id),
-  spell_type: String(spell.spell_type || ""),
-  name: String(spell.name || ""),
-  description: String(spell.description || ""),
-  icon: String(spell.icon || ""),
-  color: String(spell.color || ""),
-  bgColor: String(spell.bgColor || ""),
-  type: String(spell.type || ""),
+  // Use the damage that was already calculated and stored in the card
+  damage:
+    Number(card.damage) ||
+    getDamageByBloomLevel(card.bloom_level || card.bloomLevel || "Remembering"),
+  // Add questionData structure for frontend compatibility
+  questionData: {
+    _id: String(card.id),
+    questionText: String(card.question || ""),
+    choices: Array.isArray(card.choices)
+      ? card.choices.map((c) => String(c))
+      : [],
+    correctAnswer: String(card.answer || ""),
+    bloomsLevel: String(card.bloom_level || card.bloomLevel || "Remembering"),
+  },
 });
 
 // Server-side RNG utilities
@@ -46,14 +76,35 @@ const generateRandomNumber = (min, max) => {
 const normalizeBloomLevel = (level) => {
   if (!level) return "Remembering";
 
-  const levelStr = level.toString().toLowerCase();
-  if (levelStr.includes("remember")) return "Remembering";
-  if (levelStr.includes("understand")) return "Understanding";
-  if (levelStr.includes("apply")) return "Applying";
-  if (levelStr.includes("analyze")) return "Analyzing";
-  if (levelStr.includes("evaluate")) return "Evaluating";
-  if (levelStr.includes("create")) return "Creating";
+  const levelStr = level.toString().trim();
 
+  // Direct exact matches first
+  if (levelStr === "Remembering") return "Remembering";
+  if (levelStr === "Understanding") return "Understanding";
+  if (levelStr === "Applying") return "Applying";
+  if (levelStr === "Analyzing") return "Analyzing";
+  if (levelStr === "Evaluating") return "Evaluating";
+  if (levelStr === "Creating") return "Creating";
+
+  // Case-insensitive exact matches
+  const lowerLevel = levelStr.toLowerCase();
+  if (lowerLevel === "remembering") return "Remembering";
+  if (lowerLevel === "understanding") return "Understanding";
+  if (lowerLevel === "applying") return "Applying";
+  if (lowerLevel === "analyzing") return "Analyzing";
+  if (lowerLevel === "evaluating") return "Evaluating";
+  if (lowerLevel === "creating") return "Creating";
+
+  // Partial matches as fallback
+  if (lowerLevel.includes("remember")) return "Remembering";
+  if (lowerLevel.includes("understand")) return "Understanding";
+  if (lowerLevel.includes("apply")) return "Applying";
+  if (lowerLevel.includes("analyze")) return "Analyzing";
+  if (lowerLevel.includes("evaluate")) return "Evaluating";
+  if (lowerLevel.includes("create")) return "Creating";
+
+  // Default fallback
+  console.warn(`Unknown Bloom's level: "${level}" - defaulting to Remembering`);
   return "Remembering";
 };
 
@@ -88,7 +139,7 @@ const validatePlayerData = (player) => {
 
 module.exports = {
   transformCardForDatabase,
-  transformSpellForDatabase,
+  transformCardFromDatabase,
   shuffleArray,
   generateRandomNumber,
   normalizeBloomLevel,
@@ -96,5 +147,3 @@ module.exports = {
   validateGameState,
   validatePlayerData,
 };
-
-

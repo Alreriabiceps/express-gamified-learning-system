@@ -2,7 +2,6 @@
 const GAME_CONFIG = {
   INITIAL_HP: 100,
   INITIAL_CARDS: 5,
-  SPELL_CARD_CHANCE: 0.18, // 18% chance
   DECK_SIZE_LIMIT: 20,
   MAX_PLAYERS: 2,
 };
@@ -41,121 +40,15 @@ const BLOOM_CONFIG = {
   },
 };
 
-// Spell Cards Configuration
-const SPELL_CARDS_CONFIG = {
-  chain_lightning: {
-    name: "Chain Lightning",
-    description: "If you answer correctly, opponent loses an extra 5 HP",
-    color: "#ef4444",
-    bgColor: "rgba(239, 68, 68, 0.2)",
-    type: "offensive",
-    damage: 5,
-  },
-  damage_boost: {
-    name: "Damage Boost",
-    description: "Next correct answer deals +10 extra damage",
-    color: "#dc2626",
-    bgColor: "rgba(220, 38, 38, 0.2)",
-    type: "offensive",
-    damage: 10,
-  },
-  critical_strike: {
-    name: "Critical Strike",
-    description: "25% chance your next attack deals 3x damage",
-    color: "#dc2626",
-    bgColor: "rgba(220, 38, 38, 0.2)",
-    type: "offensive",
-    multiplier: 3,
-  },
-  card_burn: {
-    name: "Card Burn",
-    description: "Opponent discards 2 random cards from their hand",
-    color: "#ea580c",
-    bgColor: "rgba(234, 88, 12, 0.2)",
-    type: "offensive",
-  },
-  heal: {
-    name: "Heal",
-    description: "Restore 20 HP instantly",
-    color: "#059669",
-    bgColor: "rgba(5, 150, 105, 0.2)",
-    type: "defensive",
-    healing: 20,
-  },
-  reflect: {
-    name: "Reflect",
-    description: "Next wrong answer damages the questioner instead",
-    color: "#0891b2",
-    bgColor: "rgba(8, 145, 178, 0.2)",
-    type: "defensive",
-  },
-  immunity: {
-    name: "Immunity",
-    description: "Can't take damage for one turn",
-    color: "#0284c7",
-    bgColor: "rgba(2, 132, 199, 0.2)",
-    type: "defensive",
-  },
-  damage_reduction: {
-    name: "Damage Reduction",
-    description: "Next incoming damage is reduced by 50%",
-    color: "#0891b2",
-    bgColor: "rgba(8, 145, 178, 0.2)",
-    type: "defensive",
-  },
-  card_swap: {
-    name: "Card Swap",
-    description: "Exchange your hand with opponent's hand",
-    color: "#7c3aed",
-    bgColor: "rgba(124, 58, 237, 0.2)",
-    type: "utility",
-  },
-  question_reroll: {
-    name: "Question Reroll",
-    description: "Get a new question card instead of current one",
-    color: "#059669",
-    bgColor: "rgba(5, 150, 105, 0.2)",
-    type: "utility",
-  },
-  turn_skip: {
-    name: "Turn Skip",
-    description: "Skip opponent's next turn completely",
-    color: "#8b5cf6",
-    bgColor: "rgba(139, 92, 246, 0.2)",
-    type: "utility",
-  },
-  second_chance: {
-    name: "Second Chance",
-    description: "Retry the same question after getting it wrong",
-    color: "#dc2626",
-    bgColor: "rgba(220, 38, 38, 0.2)",
-    type: "utility",
-  },
-  freeze: {
-    name: "Freeze",
-    description: "Opponent loses one turn",
-    color: "#0891b2",
-    bgColor: "rgba(8, 145, 178, 0.2)",
-    type: "utility",
-  },
-  time_pressure: {
-    name: "Time Pressure",
-    description: "Cut opponent's timer in half for their next turn",
-    color: "#f59e0b",
-    bgColor: "rgba(245, 158, 11, 0.2)",
-    type: "utility",
-  },
-};
-
-// Rarity Weights for Card Distribution
+// Rarity Weights for Card Distribution (Exact percentages as specified)
 const RARITY_WEIGHTS = {
-  Remembering: 15, // Most common
-  Understanding: 12, // Common
-  Applying: 10, // Uncommon
-  Analyzing: 7, // Rare
-  Evaluating: 4, // Very rare
-  Creating: 2, // Legendary
-  spell: 8, // Spell cards
+  Remembering: 20, // Most Common (28.6%) • 5 HP
+  Understanding: 15, // Common (21.4%) • 10 HP
+  Applying: 12, // Uncommon (17.1%) • 15 HP
+  Analyzing: 10, // Rare (14.3%) • 20 HP
+  Evaluating: 8, // Very Rare (11.4%) • 25 HP
+  Creating: 5, // Extremely Rare (7.1%) • 30 HP
+  // Total: 70
 };
 
 // Game States
@@ -169,7 +62,6 @@ const GAME_STATES = {
 const GAME_PHASES = {
   CARD_SELECTION: "cardSelection",
   ANSWERING: "answering",
-  RESULT: "result",
 };
 
 // Action Types
@@ -181,11 +73,8 @@ const ACTION_TYPES = {
 module.exports = {
   GAME_CONFIG,
   BLOOM_CONFIG,
-  SPELL_CARDS_CONFIG,
   RARITY_WEIGHTS,
   GAME_STATES,
   GAME_PHASES,
   ACTION_TYPES,
 };
-
-

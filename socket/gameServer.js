@@ -7,6 +7,7 @@ const gameEngine = require("../services/gameEngine");
 const GameRoom = require("../models/GameRoom");
 const PvPMatch = require("../users/students/pvp/models/pvpMatchModel");
 const Student = require("../users/admin/student/models/studentModels");
+const { transformCardFromDatabase } = require("../services/utils/gameUtils");
 
 class GameServer {
   constructor(server) {
@@ -34,6 +35,7 @@ class GameServer {
 
     this.games = new Map();
     this.players = new Map();
+    this.playerRooms = new Map(); // Track which room each player is in
 
     // Add detailed connection logging
     this.io.engine.on("connection_error", (err) => {
@@ -55,7 +57,21 @@ class GameServer {
 
         const decoded = jwt.verify(token, jwtConfig.secret);
         socket.userId = decoded.id;
-        socket.userName = decoded.firstName || "Player";
+
+        // Get full player name from database
+        try {
+          const student = await Student.findById(decoded.id);
+          if (student) {
+            socket.userName =
+              `${student.firstName} ${student.lastName}`.trim() || "Player";
+          } else {
+            socket.userName = decoded.firstName || "Player";
+          }
+        } catch (error) {
+          console.error("Error fetching student name:", error);
+          socket.userName = decoded.firstName || "Player";
+        }
+
         console.log(
           "Socket authenticated:",
           socket.id,
@@ -76,6 +92,20 @@ class GameServer {
   }
 
   initializeSocketHandlers() {
+    // Add global error handler to prevent crashes
+    this.io.engine.on("connection_error", (err) => {
+      console.error("❌ Socket.IO connection error:", err);
+    });
+
+    // Add global error handler for unhandled promise rejections
+    process.on("unhandledRejection", (reason, promise) => {
+      console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
+    });
+
+    process.on("uncaughtException", (error) => {
+      console.error("❌ Uncaught Exception:", error);
+    });
+
     this.io.on("connection", (socket) => {
       console.log(
         "User connected:",
@@ -89,6 +119,41 @@ class GameServer {
       // Join user's personal room for private messages
       socket.join(socket.userId);
       console.log("User joined personal room:", socket.userId);
+
+      // Check if player was in a game room before disconnecting
+      const previousRoom = this.playerRooms.get(socket.userId);
+      if (previousRoom) {
+        console.log(
+          `🔄 Player ${socket.userId} was in room ${previousRoom}, checking if still active...`
+        );
+
+        // Check if the previous room still has an active game
+        const gameState = gameEngine.getGameState(previousRoom);
+        if (gameState && gameState.gameState !== "finished") {
+          console.log(
+            `✅ Previous room ${previousRoom} is still active, rejoining...`
+          );
+          socket.join(previousRoom);
+          console.log(
+            `✅ Player ${socket.userId} rejoined room ${previousRoom}`
+          );
+
+          // Send current game state to the reconnected player
+          console.log(
+            `📡 Sending game state to reconnected player ${socket.userId}`
+          );
+          socket.emit("game_state_update", {
+            gameState: gameState,
+            timestamp: Date.now(),
+          });
+        } else {
+          console.log(
+            `⚠️ Previous room ${previousRoom} is no longer active, clearing mapping`
+          );
+          // Clear the old room mapping since the game is finished or room doesn't exist
+          this.playerRooms.delete(socket.userId);
+        }
+      }
 
       // Chat event handlers
       socket.on("typing", ({ to }) => {
@@ -124,6 +189,11 @@ class GameServer {
             cardType: card?.type,
           });
 
+          console.log(
+            "🎴 Full card data received:",
+            JSON.stringify(card, null, 2)
+          );
+
           try {
             // Process the card selection through the game engine
             const result = await gameEngine.processAction(roomId, playerId, {
@@ -142,7 +212,11 @@ class GameServer {
                 players: result.gameState.players.map((p) => ({
                   ...p,
                   // Only show cards to the player themselves, hide opponent's cards
-                  cards: p.userId === player.userId ? p.cards : [],
+                  // Transform cards to frontend format
+                  cards:
+                    p.userId === player.userId
+                      ? p.cards.map((card) => transformCardFromDatabase(card))
+                      : [],
                 })),
               };
 
@@ -167,9 +241,27 @@ class GameServer {
             );
           } catch (error) {
             console.error("❌ Error processing card selection:", error);
-            socket.emit("error", {
+            console.error("❌ Error details:", {
+              message: error.message,
+              stack: error.stack,
+              roomId,
+              playerId,
+              cardId: card?.id,
+            });
+
+            // Send error to the specific player who selected the card
+            socket.emit("game:error", {
               message: "Failed to process card selection",
               error: error.message,
+              roomId,
+              gameId,
+            });
+
+            // Also send to the room for debugging
+            this.io.to(roomId).emit("game:error", {
+              message: "Card selection failed",
+              roomId,
+              gameId,
             });
           }
         }
@@ -252,18 +344,85 @@ class GameServer {
               selectedCard: result.selectedCard, // Include the selected card data
             });
 
-            // If game is over, create PvP match record
+            // Send updated game state to both players
+            console.log(
+              "🔄 Broadcasting updated game state after answer processing"
+            );
+
+            // Transform cards to frontend format before sending
+            const transformedGameState = {
+              ...result.gameState,
+              players: result.gameState.players.map((p) => ({
+                ...p,
+                cards: p.cards.map((card) => transformCardFromDatabase(card)),
+              })),
+            };
+
+            this.io.to(roomId).emit("game_state_update", {
+              gameState: transformedGameState,
+              timestamp: Date.now(),
+            });
+
+            // If game is over, emit game over event and create PvP match record
             if (result.gameState.gameState === "finished") {
+              console.log("🏁 Game finished! Emitting game over event");
+
+              // Emit game over event to all players
+              this.io.to(roomId).emit("game:game_over", {
+                winner: result.gameState.winner,
+                winnerName:
+                  result.gameState.players.find(
+                    (p) => p.userId === result.gameState.winner
+                  )?.name || "Winner",
+                finalScores: {
+                  [result.gameState.players[0].userId]:
+                    result.gameState.players[0].hp,
+                  [result.gameState.players[1].userId]:
+                    result.gameState.players[1].hp,
+                },
+                gameState: result.gameState,
+              });
+
               try {
-                await this.createAndCompletePvPMatch({
+                // Get correct answers from game state
+                const player1CorrectAnswers =
+                  result.gameState.players[0].correctAnswers || 0;
+                const player2CorrectAnswers =
+                  result.gameState.players[1].correctAnswers || 0;
+                const totalQuestions = result.gameState.totalQuestions || 0;
+                const matchDuration = result.gameState.matchDuration || 0;
+
+                console.log("📊 Creating PvP match record with data:", {
                   roomId,
                   gameId,
                   player1Id: result.gameState.players[0].userId,
                   player2Id: result.gameState.players[1].userId,
                   winnerId: result.gameState.winner,
-                  player1Score: result.gameState.players[0].hp,
-                  player2Score: result.gameState.players[1].hp,
+                  player1Score: player1CorrectAnswers, // Correct answers as score
+                  player2Score: player2CorrectAnswers, // Correct answers as score
+                  player1HP: result.gameState.players[0].hp, // HP for reference
+                  player2HP: result.gameState.players[1].hp, // HP for reference
+                  player1CorrectAnswers,
+                  player2CorrectAnswers,
+                  totalQuestions,
+                  matchDuration: Math.round(matchDuration / 1000) + " seconds",
                 });
+
+                const pvpMatch = await this.createAndCompletePvPMatch({
+                  roomId,
+                  gameId,
+                  player1Id: result.gameState.players[0].userId,
+                  player2Id: result.gameState.players[1].userId,
+                  winnerId: result.gameState.winner,
+                  player1Score: player1CorrectAnswers, // Use correct answers as score
+                  player2Score: player2CorrectAnswers, // Use correct answers as score
+                  player1CorrectAnswers,
+                  player2CorrectAnswers,
+                  totalQuestions,
+                  matchDuration,
+                });
+
+                console.log("✅ PvP match created successfully:", pvpMatch._id);
               } catch (pvpError) {
                 console.error("❌ Error creating PvP match record:", pvpError);
               }
@@ -272,8 +431,33 @@ class GameServer {
             console.log("✅ Answer processed and broadcasted");
           } catch (error) {
             console.error("❌ Error processing answer submission:", error);
-            this.io.to(roomId).emit("game:error", {
+            console.error("❌ Error details:", {
+              message: error.message,
+              stack: error.stack,
+              roomId,
+              playerId,
+              answer,
+              errorName: error.name,
+              errorCode: error.code,
+            });
+
+            // Send detailed error to the specific player who submitted the answer
+            socket.emit("game:error", {
               message: "Failed to process answer submission",
+              error: error.message,
+              errorDetails: {
+                name: error.name,
+                code: error.code,
+                stack: error.stack,
+              },
+              roomId,
+              gameId,
+            });
+
+            // Also send to the room for debugging
+            this.io.to(roomId).emit("game:error", {
+              message: "Answer submission failed",
+              error: error.message,
               roomId,
               gameId,
             });
@@ -286,36 +470,68 @@ class GameServer {
         try {
           console.log(`Player ${socket.userId} joining game room: ${roomId}`);
 
+          // Track player's room membership
+          this.playerRooms.set(socket.userId, roomId);
+
           // Join the socket room
           socket.join(roomId);
 
+          // Ensure the room exists in Socket.IO adapter
+          const room = this.io.sockets.adapter.rooms.get(roomId);
+          console.log(
+            `🏠 Room ${roomId} has ${room ? room.size : 0} members after join`
+          );
+
+          // Confirm join to the client
+          socket.emit("server:joined_room", { roomId });
+
           // Get game state from database
+          console.log(
+            `🔍 Looking for game state in database for room: ${roomId}`
+          );
+
+          // First, let's check if the database is working
+          const totalRooms = await GameRoom.countDocuments();
+          console.log(`📊 Total rooms in database: ${totalRooms}`);
+
           const gameRoom = await GameRoom.findOne({ roomId });
           if (gameRoom) {
             console.log(`📋 Found game state in database for room: ${roomId}`);
 
-            // Store in memory for quick access
-            gameEngine.games.set(roomId, gameRoom.toObject());
+            // Transform the game state to frontend format
+            const {
+              transformCardFromDatabase,
+            } = require("../services/utils/gameUtils");
 
-            const gameState = gameRoom.toObject();
+            const transformedGameState = {
+              ...gameRoom.toObject(),
+              players: gameRoom.players.map((player) => ({
+                ...player.toObject(),
+                cards: player.cards.map(transformCardFromDatabase),
+              })),
+              deck: gameRoom.deck.map(transformCardFromDatabase),
+            };
+
+            // Store in memory for quick access
+            gameEngine.games.set(roomId, transformedGameState);
 
             console.log(`📊 Game state found:`, {
-              players: gameState.players?.length || 0,
-              currentTurn: gameState.currentTurn,
-              deck: gameState.deck?.length || 0,
-              gamePhase: gameState.gamePhase,
+              players: transformedGameState.players?.length || 0,
+              currentTurn: transformedGameState.currentTurn,
+              deck: transformedGameState.deck?.length || 0,
+              gamePhase: transformedGameState.gamePhase,
             });
 
             // Broadcast updated game state to all players in room
             console.log(`🔄 Broadcasting game state to room: ${roomId}`);
             this.io.to(roomId).emit("game_state_update", {
-              gameState: gameState,
+              gameState: transformedGameState,
               timestamp: Date.now(),
             });
 
             // Also send to this player's personal room as backup
             this.io.to(socket.userId).emit("game_state_update", {
-              gameState: gameState,
+              gameState: transformedGameState,
               timestamp: Date.now(),
             });
 
@@ -331,7 +547,7 @@ class GameServer {
               await GameRoom.find({}).select("roomId gameId").limit(5)
             );
 
-            // Fallback: if both players are in the socket room, initialize the game server-side
+            // Fallback: check if we have room membership data
             try {
               const room = this.io.sockets.adapter.rooms.get(roomId);
               const connectedCount = room ? room.size : 0;
@@ -339,11 +555,31 @@ class GameServer {
                 `🛟 Fallback initializer check for ${roomId} — connected players: ${connectedCount}`
               );
 
-              if (room && connectedCount >= 2) {
-                // Build players array from connected sockets (take first two)
-                const playerSockets = Array.from(room.values())
-                  .slice(0, 2)
-                  .map((sid) => this.io.sockets.sockets.get(sid))
+              // Check if we have players tracked for this room
+              const trackedPlayers = Array.from(this.playerRooms.entries())
+                .filter(([_, trackedRoomId]) => trackedRoomId === roomId)
+                .map(([playerId, _]) => playerId);
+
+              console.log(
+                `👥 Tracked players for room ${roomId}:`,
+                trackedPlayers
+              );
+
+              if (trackedPlayers.length >= 2) {
+                // Build players array from tracked players
+                const playerSockets = trackedPlayers
+                  .map((playerId) => {
+                    // Find socket by userId
+                    for (const [
+                      socketId,
+                      socket,
+                    ] of this.io.sockets.sockets.entries()) {
+                      if (socket.userId === playerId) {
+                        return socket;
+                      }
+                    }
+                    return null;
+                  })
                   .filter(Boolean);
 
                 const players = playerSockets.map((s, idx) => ({
@@ -465,8 +701,6 @@ class GameServer {
       // Removed duplicate answer_question handler - using game:submit_answer instead
 
       // Removed use_powerup handler - not currently implemented in frontend
-
-      // Removed activate_spell handler - not currently implemented in frontend
 
       socket.on("rps_choice", async ({ roomId, choice, playerId }) => {
         try {
@@ -727,6 +961,9 @@ class GameServer {
         try {
           console.log(`Player ${socket.userId} leaving game room: ${roomId}`);
 
+          // Remove from room tracking
+          this.playerRooms.delete(socket.userId);
+
           // Leave the socket room
           socket.leave(roomId);
 
@@ -749,6 +986,8 @@ class GameServer {
           socket.id
         );
 
+        // Do NOT delete playerRooms entry here; keep it for auto-rejoin on reconnect
+
         // Handle game cleanup if player was in a game
         const gameId = this.players.get(socket.userId);
         if (gameId) {
@@ -764,6 +1003,15 @@ class GameServer {
           this.players.delete(socket.userId);
         }
       });
+    });
+  }
+
+  // Update player room mappings when a new game starts
+  updatePlayerRoomMappings(roomId, players) {
+    console.log(`🔄 Updating player room mappings for room ${roomId}`);
+    players.forEach((player) => {
+      this.playerRooms.set(player.userId, roomId);
+      console.log(`📍 Player ${player.userId} mapped to room ${roomId}`);
     });
   }
 

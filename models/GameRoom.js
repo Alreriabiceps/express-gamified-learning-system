@@ -37,40 +37,27 @@ const gameRoomSchema = new mongoose.Schema(
         },
         cards: [
           {
-            id: String,
-            type: String, // "question" or "spell"
-            question: String,
-            choices: [String],
-            answer: String,
-            bloom_level: String,
-            spell_type: String,
-            name: String,
-            description: String,
-            icon: String,
-            color: String,
-            bgColor: String,
+            id: { type: String, required: true },
+            type: { type: String, required: true }, // "question"
+            // Question card fields (optional)
+            question: { type: String, default: "" },
+            choices: { type: [String], default: [] },
+            answer: { type: String, default: "" },
+            bloom_level: { type: String, default: "" },
+            name: { type: String, default: "" },
+            description: { type: String, default: "" },
+            // Common fields
+            icon: { type: String, default: "" },
+            color: { type: String, default: "" },
+            bgColor: { type: String, default: "" },
+            // Additional fields
+            damage: { type: Number, default: 0 },
           },
         ],
-        powerUps: {
-          double_damage: { available: Boolean, used: Boolean },
-          shield: { available: Boolean, used: Boolean },
-          hint_reveal: { available: Boolean, used: Boolean },
-          extra_turn: { available: Boolean, used: Boolean },
-          card_draw: { available: Boolean, used: Boolean },
-          fifty_fifty: { available: Boolean, used: Boolean },
+        correctAnswers: {
+          type: Number,
+          default: 0,
         },
-        activatedSpells: [
-          {
-            id: String,
-            spell_type: String,
-            name: String,
-            description: String,
-            icon: String,
-            color: String,
-            bgColor: String,
-            type: String,
-          },
-        ],
       },
     ],
     currentTurn: {
@@ -84,33 +71,39 @@ const gameRoomSchema = new mongoose.Schema(
     },
     deck: [
       {
-        id: String,
-        type: String,
-        question: String,
-        choices: [String],
-        answer: String,
-        bloom_level: String,
-        spell_type: String,
-        name: String,
-        description: String,
-        icon: String,
-        color: String,
-        bgColor: String,
+        id: { type: String, required: true },
+        type: { type: String, required: true },
+        // Question card fields (optional)
+        question: { type: String, default: "" },
+        choices: { type: [String], default: [] },
+        answer: { type: String, default: "" },
+        bloom_level: { type: String, default: "" },
+        name: { type: String, default: "" },
+        description: { type: String, default: "" },
+        // Common fields
+        icon: { type: String, default: "" },
+        color: { type: String, default: "" },
+        bgColor: { type: String, default: "" },
+        // Additional fields
+        damage: { type: Number, default: 0 },
       },
     ],
     selectedCard: {
-      id: String,
-      type: String,
-      question: String,
-      choices: [String],
-      answer: String,
-      bloom_level: String,
-      spell_type: String,
-      name: String,
-      description: String,
-      icon: String,
-      color: String,
-      bgColor: String,
+      id: { type: String, default: "" },
+      type: { type: String, default: "" },
+      // Question card fields (optional)
+      question: { type: String, default: "" },
+      choices: { type: [String], default: [] },
+      answer: { type: String, default: "" },
+      bloom_level: { type: String, default: "" },
+      name: { type: String, default: "" },
+      description: { type: String, default: "" },
+      // Common fields
+      icon: { type: String, default: "" },
+      color: { type: String, default: "" },
+      bgColor: { type: String, default: "" },
+      // Additional fields
+      damage: { type: Number, default: 0 },
     },
     gameState: {
       type: String,
@@ -121,12 +114,17 @@ const gameRoomSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    powerUpEffects: {
-      doubleDamage: { type: Boolean, default: false },
-      shield: { type: Boolean, default: false },
-      hintReveal: { type: Boolean, default: false },
-      extraTurn: { type: Boolean, default: false },
-      fiftyFifty: { type: Boolean, default: false },
+    totalQuestions: {
+      type: Number,
+      default: 0,
+    },
+    matchStartTime: {
+      type: Number,
+      default: Date.now,
+    },
+    matchDuration: {
+      type: Number,
+      default: 0,
     },
     createdAt: {
       type: Date,
