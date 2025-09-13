@@ -717,12 +717,18 @@ class GameEngine {
         isCorrect,
       });
 
-      const damage = EffectProcessor.processDamageEffects(
+      // Determine which player is the attacker for effect processing:
+      // - If the answer is correct, the answering player (playerId) deals damage
+      // - If the answer is wrong, the challenger (opponentPlayer) deals damage
+      const attackerIdForEffects = isCorrect ? playerId : opponentPlayer.userId;
+
+      const damageResult = EffectProcessor.processDamageEffects(
         gameState,
-        playerId,
-        opponentPlayer.userId,
+        attackerIdForEffects,
+        isCorrect ? opponentPlayer.userId : playerId,
         baseDamage
-      ).damage;
+      );
+      const damage = damageResult.damage;
 
       console.log("💥 Final damage after effects:", damage);
 
@@ -731,6 +737,35 @@ class GameEngine {
 
       const oldHp = targetPlayer.hp;
       targetPlayer.hp = Math.max(0, targetPlayer.hp - damage);
+
+      // Defensive trap post-processing (safety_net and mirror_shield reflection)
+      const defender = targetPlayer;
+      const attacker = isCorrect ? answeringPlayer : opponentPlayer;
+      if (
+        defender &&
+        defender.defenseTrap &&
+        defender.defenseTrap.usesLeft > 0
+      ) {
+        const trap = defender.defenseTrap;
+        if (trap.type === "safety_net" && defender.hp <= 0) {
+          defender.hp = 1; // prevent death once
+          trap.usesLeft -= 1;
+          defender.defenseTrap = trap.usesLeft > 0 ? trap : null;
+        }
+        if (trap.type === "mirror_shield") {
+          const reflected = Math.max(
+            8,
+            Math.floor(damage * (trap.percent || 0.5))
+          );
+          attacker.hp = Math.max(0, attacker.hp - reflected);
+          trap.usesLeft -= 1;
+          defender.defenseTrap = trap.usesLeft > 0 ? trap : null;
+          console.log("🪞 Mirror Shield reflected:", {
+            reflected,
+            attackerHp: attacker.hp,
+          });
+        }
+      }
 
       // Validate HP values
       if (targetPlayer.hp < 0 || targetPlayer.hp > targetPlayer.maxHp) {
@@ -751,6 +786,7 @@ class GameEngine {
         isCorrect,
         answeringPlayer: answeringPlayer.name,
         opponentPlayer: opponentPlayer.name,
+        barrierAbsorbed: damageResult.barrierAbsorbed || 0,
       });
 
       console.log("🎯 Current game state HP values:", {
@@ -782,6 +818,20 @@ class GameEngine {
         gameState.currentTurn = nextPlayer.userId;
         gameState.gamePhase = GAME_PHASES.CARD_SELECTION;
         gameState.selectedCard = null;
+
+        // Reset per-turn power-up usage flags and expire untriggered defense traps
+        gameState.players.forEach((p) => {
+          p.usedPowerUpThisTurn = false;
+          // Expire defense trap if it's the start of this player's turn
+          if (
+            p.userId === nextPlayer.userId &&
+            p.defenseTrap &&
+            p.defenseTrap.usesLeft > 0
+          ) {
+            // one-turn lifespan; if it belongs to this player and didn't trigger, clear it
+            p.defenseTrap = null;
+          }
+        });
 
         console.log("🔄 Turn switched:", {
           from: oldTurn,

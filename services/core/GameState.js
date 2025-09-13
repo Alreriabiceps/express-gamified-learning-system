@@ -39,6 +39,9 @@ class GameState {
         maxHp: GAME_CONFIG.INITIAL_HP,
         cards: player1Cards,
         correctAnswers: 0, // Track correct answers for this player
+        availablePowerUps: [], // Power-ups available to use
+        activePowerUps: [], // Currently active power-up effects
+        usedPowerUpThisTurn: false,
       },
       {
         userId: String(players[1].userId || ""),
@@ -50,6 +53,9 @@ class GameState {
         maxHp: GAME_CONFIG.INITIAL_HP,
         cards: player2Cards,
         correctAnswers: 0, // Track correct answers for this player
+        availablePowerUps: [], // Power-ups available to use
+        activePowerUps: [], // Currently active power-up effects
+        usedPowerUpThisTurn: false,
       },
     ];
   }

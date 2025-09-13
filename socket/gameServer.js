@@ -454,13 +454,9 @@ class GameServer {
               gameId,
             });
 
-            // Also send to the room for debugging
-            this.io.to(roomId).emit("game:error", {
-              message: "Answer submission failed",
-              error: error.message,
-              roomId,
-              gameId,
-            });
+            // Do NOT broadcast answer submission errors to the whole room,
+            // as this can incorrectly show a global error UI to both players.
+            // Keep the error scoped to the submitting socket only.
           }
         }
       );
@@ -700,7 +696,122 @@ class GameServer {
 
       // Removed duplicate answer_question handler - using game:submit_answer instead
 
-      // Removed use_powerup handler - not currently implemented in frontend
+      // Power-up usage handler
+      socket.on("use_powerup", async ({ roomId, powerUpId }) => {
+        try {
+          console.log(
+            `⚡ Player ${socket.userId} using power-up: ${powerUpId} in room ${roomId}`
+          );
+
+          // Get game state (in-memory)
+          const gameState = gameEngine.games.get(roomId);
+          if (!gameState) {
+            console.error(`Game not found for room ${roomId}`);
+            socket.emit("error", { message: "Game not found" });
+            return;
+          }
+
+          // Check if it's the player's turn
+          if (String(gameState.currentTurn) !== String(socket.userId)) {
+            console.error(`Not player's turn: ${socket.userId}`);
+            socket.emit("error", { message: "Not your turn" });
+            return;
+          }
+
+          // Prevent multiple power-ups per turn
+          const currentPlayer = (gameState.players || []).find(
+            (p) => String(p.userId) === String(socket.userId)
+          );
+          if (currentPlayer?.usedPowerUpThisTurn) {
+            socket.emit("error", {
+              message: "Power-up already used this turn",
+            });
+            return;
+          }
+
+          // Apply power-up effect
+          const effectResult = await this.applyPowerUpEffect(
+            gameState,
+            socket.userId,
+            powerUpId
+          );
+
+          // Mark usage for this turn
+          if (currentPlayer) {
+            currentPlayer.usedPowerUpThisTurn = true;
+            // Clamp hand size defensively after any power-up resolution
+            const MAX_HAND = 6;
+            if (
+              Array.isArray(currentPlayer.cards) &&
+              currentPlayer.cards.length > MAX_HAND
+            ) {
+              currentPlayer.cards = currentPlayer.cards.slice(
+                currentPlayer.cards.length - MAX_HAND
+              );
+            }
+          }
+
+          // Save updated game state
+          await gameEngine.saveGameStateToDatabase(
+            gameState,
+            gameState.lobbyId
+          );
+
+          // Emit power-up events
+          // For defensive traps, don't reveal the exact type to the room.
+          const defensiveTypes = new Set([
+            "mirror_shield",
+            "barrier",
+            "safety_net",
+          ]);
+          if (defensiveTypes.has(powerUpId)) {
+            // Private ack to the user who armed it
+            this.io.to(socket.userId).emit("powerup_armed", {
+              playerId: socket.userId,
+              name:
+                powerUpId === "mirror_shield"
+                  ? "Mirror Shield"
+                  : powerUpId === "barrier"
+                  ? "Barrier"
+                  : "Safety Net",
+            });
+            // Optional vague hint to room (comment out to hide completely)
+            // this.io.to(roomId).emit("powerup_armed_hint", { playerId: socket.userId });
+          } else {
+            // Non-defensive: broadcast normally
+            this.io.to(roomId).emit("powerup_used", {
+              playerId: socket.userId,
+              powerUpId: powerUpId,
+              effect: effectResult,
+            });
+          }
+
+          // Send personalized game state to each player (preserve own cards, hide opponent cards)
+          gameState.players.forEach((p) => {
+            const personalizedState = {
+              ...gameState,
+              players: gameState.players.map((pl) => ({
+                ...pl,
+                cards:
+                  String(pl.userId) === String(p.userId)
+                    ? (pl.cards || []).map((c) => transformCardFromDatabase(c))
+                    : [],
+              })),
+            };
+            this.io.to(p.userId).emit("game_state_update", {
+              gameState: personalizedState,
+              timestamp: Date.now(),
+            });
+          });
+
+          console.log(
+            `✅ Power-up ${powerUpId} used successfully by ${socket.userId}`
+          );
+        } catch (error) {
+          console.error("Error using power-up:", error);
+          socket.emit("error", { message: "Failed to use power-up" });
+        }
+      });
 
       socket.on("rps_choice", async ({ roomId, choice, playerId }) => {
         try {
@@ -1095,6 +1206,172 @@ class GameServer {
     } catch (error) {
       console.error("❌ Error creating PvP match:", error);
       throw error;
+    }
+  }
+  // Apply power-up effects
+  async applyPowerUpEffect(gameState, playerId, powerUpId) {
+    const player = (gameState.players || []).find(
+      (p) => String(p.userId) === String(playerId)
+    );
+    const opponent = (gameState.players || []).find(
+      (p) => String(p.userId) !== String(playerId)
+    );
+    if (!player || !opponent) {
+      console.error("❌ applyPowerUpEffect: player or opponent not found", {
+        playerId,
+        players: (gameState.players || []).map((p) => p.userId),
+      });
+      return { type: "error", message: "Player not found" };
+    }
+
+    console.log(
+      `⚡ Applying power-up effect: ${powerUpId} for player ${playerId}`
+    );
+
+    // Defensive initialization for missing fields on older game states
+    if (!Array.isArray(player.activePowerUps)) {
+      player.activePowerUps = [];
+    }
+    if (typeof player.usedPowerUpThisTurn !== "boolean") {
+      player.usedPowerUpThisTurn = false;
+    }
+
+    switch (powerUpId) {
+      case "mirror_shield": {
+        player.defenseTrap = {
+          type: "mirror_shield",
+          percent: 0.5,
+          usesLeft: 1,
+        };
+        console.log(`🛡️ Mirror Shield armed for ${player.userId}`);
+        return { type: "armed_defense", name: "Mirror Shield" };
+      }
+      case "barrier": {
+        player.defenseTrap = {
+          type: "barrier",
+          absorb: 15,
+          usesLeft: 1,
+        };
+        console.log(`🛡️ Barrier armed for ${player.userId}`);
+        return { type: "armed_defense", name: "Barrier" };
+      }
+      case "safety_net": {
+        player.defenseTrap = {
+          type: "safety_net",
+          usesLeft: 1,
+        };
+        console.log(`🛡️ Safety Net armed for ${player.userId}`);
+        return { type: "armed_defense", name: "Safety Net" };
+      }
+      case "discard_draw_5": {
+        const deck = gameState.deck || [];
+        const hand = Array.isArray(player.cards) ? player.cards : [];
+
+        if (hand.length > 0) {
+          // Place discarded cards to the bottom (front) of deck
+          deck.unshift(...hand.map((c) => ({ ...c })));
+          player.cards = [];
+        }
+
+        let drawn = 0;
+        const MAX_HAND = 6;
+        while (deck.length > 0 && player.cards.length < MAX_HAND) {
+          const newCard = deck.pop();
+          player.cards.push(newCard);
+          drawn++;
+        }
+
+        console.log(
+          `🔄 Discard & Draw 5: ${player.name} now has ${player.cards.length} cards (deck: ${deck.length})`
+        );
+        return {
+          type: "discard_draw",
+          drawn,
+          handSize: player.cards.length,
+          deckSize: deck.length,
+          message: `${player.name} discarded all cards and drew ${drawn} new cards!`,
+        };
+      }
+
+      case "emoji_taunt": {
+        // Cosmetic only: broadcast a taunt event to the room
+        const payload = {
+          playerId: playerId,
+          emoji: "😜",
+          message: `${player.name || "Player"} sent a taunt!`,
+          durationMs: 3000,
+        };
+        this.io.to(gameState.roomId).emit("cosmetic:taunt", payload);
+        console.log(`🎭 Emoji Taunt sent by ${playerId}`);
+        return { type: "cosmetic", message: payload.message };
+      }
+      case "health_potion":
+        const healAmount = 20;
+        const oldHp = player.hp;
+        player.hp = Math.min(player.hp + healAmount, player.maxHp);
+        const actualHeal = player.hp - oldHp;
+        console.log(
+          `💚 Health Potion: ${player.name} healed ${actualHeal} HP (${oldHp} → ${player.hp})`
+        );
+        return {
+          type: "heal",
+          amount: actualHeal,
+          newHp: player.hp,
+          message: `${player.name} used Health Potion and restored ${actualHeal} HP!`,
+        };
+
+      // triple_damage removed per balance pass
+
+      case "double_damage":
+        player.activePowerUps.push({
+          type: "damage_multiplier",
+          multiplier: 2,
+          usesLeft: 1,
+        });
+        console.log(
+          `⚡ Double Damage: ${player.name} next attack will deal 2x damage`
+        );
+        return {
+          type: "damage_multiplier",
+          multiplier: 2,
+          message: `${player.name} activated Double Damage! Next attack deals 2x damage!`,
+        };
+
+      case "damage_roulette":
+        const damage = Math.floor(Math.random() * 15) + 1; // 1-15 damage
+        const oldOpponentHp = opponent.hp;
+        opponent.hp = Math.max(0, opponent.hp - damage);
+        console.log(
+          `🎲 Damage Roulette: ${damage} damage dealt to ${opponent.name} (${oldOpponentHp} → ${opponent.hp})`
+        );
+        return {
+          type: "direct_damage",
+          damage: damage,
+          targetHp: opponent.hp,
+          message: `${player.name} used Damage Roulette and dealt ${damage} damage to ${opponent.name}!`,
+        };
+
+      case "hp_swap":
+        const playerOldHp = player.hp;
+        const opponentOldHp = opponent.hp;
+        player.hp = opponentOldHp;
+        opponent.hp = playerOldHp;
+        console.log(
+          `🔄 HP Swap: ${player.name} (${playerOldHp} → ${player.hp}) swapped with ${opponent.name} (${opponentOldHp} → ${opponent.hp})`
+        );
+        return {
+          type: "hp_swap",
+          playerNewHp: player.hp,
+          opponentNewHp: opponent.hp,
+          message: `${player.name} swapped HP with ${opponent.name}!`,
+        };
+
+      default:
+        console.error(`Unknown power-up: ${powerUpId}`);
+        return {
+          type: "error",
+          message: "Unknown power-up effect",
+        };
     }
   }
 }
