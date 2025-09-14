@@ -50,3 +50,4 @@ const teamWeeklyAttemptSchema = new mongoose.Schema(
 
 module.exports = mongoose.model("TeamWeeklyAttempt", teamWeeklyAttemptSchema);
 
+

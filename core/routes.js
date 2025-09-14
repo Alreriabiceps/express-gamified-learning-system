@@ -5,6 +5,8 @@ const fetch = require("node-fetch");
 const {
   generateQuestionsChat,
 } = require("../users/admin/question/controllers/questionController");
+const { authenticateAdmin } = require("../auth/authMiddleware");
+const analyticsController = require("../users/admin/dashboard/controllers/analyticsController");
 
 // Core routes
 const authRoutes = require("../auth/authRoutes");
@@ -68,6 +70,13 @@ router.use("/friend-requests", friendRequestRoutes);
 router.use("/messages", messageRoutes);
 router.use("/admin/users", adminRoutes);
 router.use("/match", matchRoutes);
+
+// Admin Analytics (top-level to match frontend path /api/admin/analytics)
+router.get(
+  "/admin/analytics",
+  authenticateAdmin,
+  analyticsController.getAnalytics
+);
 
 // Add AI question generation endpoint
 router.post("/generate-questions", async (req, res) => {
@@ -189,19 +198,61 @@ Respond ONLY with valid JSON in the following format, and nothing else:
   }
 });
 
-// Admin Chatbot endpoint (Alreria)
+// Enhanced Admin Chatbot endpoint (Alreria)
 router.post("/admin-chatbot", async (req, res) => {
-  const { question } = req.body;
+  const { question, originalQuestion, currentPath } = req.body;
+
+  // Enhanced system prompt with better context
   const systemPrompt = `
-You are a helpful assistant for a software system. 
-Only answer questions related to how the system works, its features, and how to use it. 
-Do not answer any questions that are not directly related to the system. 
-Do not perform or suggest any modifications, deletions, updates, or administrative changes. 
-If asked anything outside your scope, politely respond that you can only help with system-related questions.
+You are Alreria, an expert AI assistant for the GLEAS (Gamified Learning Environment and Assessment System) admin panel.
+
+SYSTEM OVERVIEW:
+- GLEAS is a comprehensive educational platform combining gamification with learning management
+- It includes student management, question banks, AI-powered generation, test scheduling, and analytics
+- The admin panel provides tools for managing all aspects of the educational system
+
+CORE ADMIN FEATURES:
+1. Dashboard - Real-time insights, metrics, and quick actions
+2. Question Management - Create, edit, organize questions with AI generation
+3. Student Management - Add, manage, and track student accounts
+4. Subject Management - Organize academic subjects and content
+5. Test Scheduling - Schedule and manage weekly tests and assessments
+6. Analytics - Comprehensive reporting and performance tracking
+7. Gamification - Points, badges, leaderboards, and engagement features
+
+AI QUESTION GENERATION:
+- Three methods: Topic-based, File upload (PDF/DOCX/PPTX), Chat-style
+- Supports all Bloom's Taxonomy levels (Remembering to Creating)
+- Generates 1-15 questions per batch
+- Custom prompts and validation
+
+STUDENT MANAGEMENT:
+- Required fields: First Name, Last Name, Student ID, Grade, Section, Track, Password
+- Tracks: Academic Track, Technical-Professional Track
+- Grades: 11, 12
+- Bulk operations: CSV import/export, password reset
+
+QUESTION VALIDATION:
+- Required: Question text, correct answer, subject, Bloom's level
+- Multiple choice: 2-6 options
+- Student ID must be unique
+- Password minimum 6 characters
+
+RESPONSE GUIDELINES:
+1. Be specific about GLEAS features and functionality
+2. Provide step-by-step instructions with UI references
+3. Include validation rules and requirements
+4. Suggest related features or next steps
+5. Be helpful, concise, and professional
+6. If unsure, ask for clarification
+7. Focus on admin-specific tasks and workflows
+
+Current context: ${currentPath || "General admin panel"}
+Original question: ${originalQuestion || question}
 `;
-  const prompt = `
-${systemPrompt}
-You are Alreria, an expert assistant for the GLEAS admin system. Answer admin questions about using the dashboard, managing users, adding questions, generating AI questions, and other admin features. Be concise, clear, and friendly.\n\nAdmin: ${question}\nAlreria:`;
+
+  const prompt = `${systemPrompt}\n\nAdmin: ${question}\n\nAlreria:`;
+
   try {
     const response = await fetch(
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" +
@@ -213,11 +264,19 @@ You are Alreria, an expert assistant for the GLEAS admin system. Answer admin qu
         },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 1024,
+          },
         }),
       }
     );
+
     const data = await response.json();
     let answer = "";
+
     if (
       data &&
       data.candidates &&
@@ -227,14 +286,31 @@ You are Alreria, an expert assistant for the GLEAS admin system. Answer admin qu
       data.candidates[0].content.parts[0].text
     ) {
       answer = data.candidates[0].content.parts[0].text.trim();
-      // Remove markdown if present
+
+      // Clean up response
       if (answer.startsWith("```")) {
         answer = answer.replace(/^```[a-z]*|```$/g, "").trim();
       }
+
+      // Ensure response is helpful and relevant
+      if (answer.length < 10) {
+        answer =
+          "I'd be happy to help you with that! Could you please provide more details about what you'd like to know about the GLEAS admin system?";
+      }
     } else {
-      answer = "Sorry, Alreria could not generate a response.";
+      console.error(
+        "Gemini API response structure:",
+        JSON.stringify(data, null, 2)
+      );
+      answer =
+        "I apologize, but I'm having trouble processing your request right now. Please try rephrasing your question or contact support if the issue persists.";
     }
-    res.json({ answer });
+
+    res.json({
+      answer,
+      context: currentPath,
+      timestamp: new Date().toISOString(),
+    });
   } catch (err) {
     console.error("Alreria error:", err);
     res.status(500).json({

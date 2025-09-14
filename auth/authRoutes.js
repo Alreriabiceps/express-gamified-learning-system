@@ -45,6 +45,76 @@ router.get("/confirm-email", authController.confirmEmail);
 // Finalize registration route
 router.get("/finalize-registration", authController.finalizeRegistration);
 
+// Debug route to check pending students (remove in production)
+router.get("/debug-pending-students", async (req, res) => {
+  try {
+    const PendingStudent = require("../users/admin/student/models/pendingStudentModel");
+    const pendingStudents = await PendingStudent.find({}).select(
+      "email studentId confirmationToken confirmationExpires createdAt"
+    );
+    res.json({
+      success: true,
+      count: pendingStudents.length,
+      students: pendingStudents,
+    });
+  } catch (error) {
+    console.error("Debug pending students error:", error);
+    res.status(500).json({
+      error: "Error fetching pending students",
+      details: error.message,
+    });
+  }
+});
+
+// Debug route to test token validation (remove in production)
+router.get("/debug-token/:token", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const PendingStudent = require("../users/admin/student/models/pendingStudentModel");
+
+    console.log("Debug token validation for:", token);
+    console.log("Token length:", token ? token.length : 0);
+
+    const pending = await PendingStudent.findOne({
+      confirmationToken: token,
+      confirmationExpires: { $gt: new Date() },
+    });
+
+    if (pending) {
+      res.json({
+        success: true,
+        found: true,
+        student: {
+          email: pending.email,
+          studentId: pending.studentId,
+          tokenLength: pending.confirmationToken.length,
+          expires: pending.confirmationExpires,
+          isExpired: pending.confirmationExpires <= new Date(),
+        },
+      });
+    } else {
+      // Check if expired
+      const expired = await PendingStudent.findOne({
+        confirmationToken: token,
+        confirmationExpires: { $lte: new Date() },
+      });
+
+      res.json({
+        success: true,
+        found: false,
+        expired: !!expired,
+        message: expired ? "Token found but expired" : "Token not found",
+      });
+    }
+  } catch (error) {
+    console.error("Debug token validation error:", error);
+    res.status(500).json({
+      error: "Error validating token",
+      details: error.message,
+    });
+  }
+});
+
 // Password reset routes
 router.post("/request-password-reset", authController.requestPasswordReset);
 router.post("/reset-password", authController.resetPassword);

@@ -7,6 +7,9 @@ const nodemailer = require("nodemailer");
 const PendingStudent = require("../users/admin/student/models/pendingStudentModel");
 const bcrypt = require("bcryptjs");
 
+// In-memory cache to track processed tokens (prevents duplicate processing)
+const processedTokens = new Set();
+
 // Admin login logic
 const adminLogin = async (req, res) => {
   try {
@@ -499,7 +502,12 @@ const studentRegister = async (req, res) => {
 
     // Generate confirmation token
     const confirmationToken = crypto.randomBytes(32).toString("hex");
-    const confirmationExpires = Date.now() + 1000 * 60 * 60 * 24; // 24 hours
+    const confirmationExpires = new Date(Date.now() + 1000 * 60 * 60 * 24); // 24 hours
+
+    console.log("=== REGISTRATION DEBUG ===");
+    console.log("Generated token:", confirmationToken);
+    console.log("Token length:", confirmationToken.length);
+    console.log("Token expires:", confirmationExpires);
 
     // Save to PendingStudent
     const pendingStudent = new PendingStudent({
@@ -518,6 +526,13 @@ const studentRegister = async (req, res) => {
     await pendingStudent.save();
 
     // Send confirmation email
+    console.log("Sending confirmation email to:", email);
+    console.log(
+      "Confirmation URL will be:",
+      `${
+        process.env.BACKEND_URL || "http://localhost:5000"
+      }/api/auth/confirm-email?token=${confirmationToken}`
+    );
     await sendConfirmationEmail(email, confirmationToken, {
       firstName,
       lastName,
@@ -544,14 +559,24 @@ const studentRegister = async (req, res) => {
 const confirmEmail = async (req, res) => {
   try {
     const { token } = req.query;
+    console.log("=== EMAIL CONFIRMATION DEBUG ===");
+    console.log("Token received in confirmEmail:", token);
+    console.log("Token length:", token ? token.length : 0);
+    console.log("Query params:", req.query);
+
     // Use FRONTEND_URL, fallback to CLIENT_URL, then localhost
     const frontendUrl =
       process.env.FRONTEND_URL ||
       process.env.CLIENT_URL ||
       "http://localhost:5173";
+
+    const redirectUrl = `${frontendUrl}/registration-success?token=${token}`;
+    console.log("Redirecting to:", redirectUrl);
+
     // Always redirect to frontend, regardless of token validity
-    res.redirect(`${frontendUrl}/registration-success?token=${token}`);
+    res.redirect(redirectUrl);
   } catch (error) {
+    console.error("Email confirmation error:", error);
     // On error, also redirect to frontend
     const fallbackUrl =
       process.env.FRONTEND_URL ||
@@ -567,24 +592,133 @@ const confirmEmail = async (req, res) => {
 const finalizeRegistration = async (req, res) => {
   try {
     const { token } = req.query;
+    console.log("=== FINALIZE REGISTRATION DEBUG ===");
+    console.log("Token received:", token);
+    console.log("Token length:", token ? token.length : 0);
+    console.log("Query params:", req.query);
+    console.log("Full URL:", req.url);
+
     if (!token) {
+      console.log("ERROR: No token provided");
       return res.status(400).json({ error: "No token provided." });
     }
+
+    // Check if token was already processed recently (within last 5 minutes)
+    if (processedTokens.has(token)) {
+      console.log(
+        "Token already processed recently, returning cached response"
+      );
+      // Find the most recent student (likely created by this token)
+      const recentStudent = await Student.findOne({
+        createdAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) },
+      }).sort({ createdAt: -1 });
+
+      if (recentStudent) {
+        try {
+          const publicProfile = recentStudent.getPublicProfile();
+          return res.json({ success: true, student: publicProfile });
+        } catch (profileError) {
+          return res.json({
+            success: true,
+            student: {
+              id: recentStudent._id,
+              studentId: recentStudent.studentId,
+              firstName: recentStudent.firstName,
+              lastName: recentStudent.lastName,
+            },
+          });
+        }
+      }
+    }
+
+    console.log("Looking for pending student with token:", token);
+
+    // First, let's see all pending students and their tokens
+    const allPending = await PendingStudent.find({}).select(
+      "email studentId confirmationToken confirmationExpires createdAt"
+    );
+    console.log("All pending students:", allPending.length);
+    allPending.forEach((p, index) => {
+      console.log(`Pending ${index + 1}:`, {
+        email: p.email,
+        studentId: p.studentId,
+        tokenLength: p.confirmationToken ? p.confirmationToken.length : 0,
+        tokenStart: p.confirmationToken
+          ? p.confirmationToken.substring(0, 10) + "..."
+          : "none",
+        expires: p.confirmationExpires,
+        isExpired: p.confirmationExpires <= new Date(),
+      });
+    });
+
     const pending = await PendingStudent.findOne({
       confirmationToken: token,
-      confirmationExpires: { $gt: Date.now() },
+      confirmationExpires: { $gt: new Date() },
     });
-    if (!pending) {
-      // Try to find the student in the database (already finalized)
-      const student = await Student.findOne({
-        $or: [{ email: req.query.email }, { studentId: req.query.studentId }],
+
+    console.log("Pending student found:", pending ? "Yes" : "No");
+    if (pending) {
+      console.log("Pending student details:", {
+        id: pending._id,
+        email: pending.email,
+        studentId: pending.studentId,
+        confirmationExpires: pending.confirmationExpires,
+        currentTime: new Date(),
+        isExpired: pending.confirmationExpires <= new Date(),
       });
-      if (student) {
-        return res.json({ success: true, student: student.getPublicProfile() });
+    }
+
+    if (!pending) {
+      console.log("No pending student found, checking if already finalized...");
+
+      // Since we don't have email/studentId in query params, let's check if there are any recent students
+      // that might have been created with this token (within the last 5 minutes)
+      const recentStudents = await Student.find({
+        createdAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) }, // Last 5 minutes
+      })
+        .sort({ createdAt: -1 })
+        .limit(5);
+
+      console.log("Recent students found:", recentStudents.length);
+
+      // If we find recent students, it's likely the registration was just completed
+      if (recentStudents.length > 0) {
+        console.log(
+          "Found recent student, assuming registration was just completed"
+        );
+        const recentStudent = recentStudents[0];
+
+        // Add token to processed set to prevent duplicate processing
+        processedTokens.add(token);
+
+        try {
+          const publicProfile = recentStudent.getPublicProfile();
+          console.log("Returning recent student profile");
+          return res.json({ success: true, student: publicProfile });
+        } catch (profileError) {
+          console.error(
+            "Error generating recent student profile:",
+            profileError
+          );
+          return res.json({
+            success: true,
+            student: {
+              id: recentStudent._id,
+              studentId: recentStudent.studentId,
+              firstName: recentStudent.firstName,
+              lastName: recentStudent.lastName,
+            },
+          });
+        }
       }
+
+      console.log(
+        "ERROR: Invalid or expired token - no pending or recent student found"
+      );
       return res.status(400).json({ error: "Invalid or expired token." });
     }
     // Password is already hashed in PendingStudent, do NOT hash again
+    console.log("Creating new student from pending data...");
     const student = new Student({
       firstName: pending.firstName,
       middleName: pending.middleName,
@@ -598,11 +732,40 @@ const finalizeRegistration = async (req, res) => {
       isEmailConfirmed: true,
       isApproved: false, // Students need admin approval by default
     });
+
+    console.log("Saving student to database...");
     await student.save();
+    console.log("Student saved successfully, deleting pending record...");
     await PendingStudent.deleteOne({ _id: pending._id });
-    res.json({ success: true, student: student.getPublicProfile() });
+    console.log("Registration finalized successfully!");
+
+    try {
+      const publicProfile = student.getPublicProfile();
+      console.log("Public profile generated:", publicProfile);
+
+      // Add token to processed set to prevent duplicate processing
+      processedTokens.add(token);
+
+      res.json({ success: true, student: publicProfile });
+    } catch (profileError) {
+      console.error("Error generating public profile:", profileError);
+
+      // Add token to processed set to prevent duplicate processing
+      processedTokens.add(token);
+
+      res.json({
+        success: true,
+        student: {
+          id: student._id,
+          studentId: student.studentId,
+          firstName: student.firstName,
+          lastName: student.lastName,
+        },
+      });
+    }
   } catch (error) {
     console.error("Finalize registration error:", error);
+    console.error("Error stack:", error.stack);
     res
       .status(500)
       .json({ error: "Error finalizing registration", details: error.message });
