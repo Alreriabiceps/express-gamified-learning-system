@@ -14,7 +14,7 @@ setInterval(cleanupExpiredLobbies, 60 * 1000);
 
 exports.createLobby = async (req, res) => {
   try {
-    const { name, isPrivate, password } = req.body;
+    const { name, isPrivate, password, maxPlayers } = req.body;
     const userId = req.user.id;
     const existingLobby = await Lobby.findOne({
       $or: [
@@ -41,6 +41,7 @@ exports.createLobby = async (req, res) => {
       isPrivate,
       password: isPrivate ? password : undefined,
       players: [userId],
+      maxPlayers: Math.max(2, Math.min(5, Number(maxPlayers) || 2)),
       status: "waiting",
       expiresAt: new Date(Date.now() + 3 * 60 * 1000),
     });

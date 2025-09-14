@@ -107,6 +107,19 @@ class GameServer {
     });
 
     this.io.on("connection", (socket) => {
+      // Team test rooms: allow client to join a specific attempt room
+      socket.on("teamtest:join", ({ attemptId }) => {
+        if (!attemptId) return;
+        const room = `teamtest:${attemptId}`;
+        socket.join(room);
+        socket.emit("teamtest:joined", { room });
+      });
+
+      socket.on("teamtest:leave", ({ attemptId }) => {
+        if (!attemptId) return;
+        const room = `teamtest:${attemptId}`;
+        socket.leave(room);
+      });
       console.log(
         "User connected:",
         socket.userId,
