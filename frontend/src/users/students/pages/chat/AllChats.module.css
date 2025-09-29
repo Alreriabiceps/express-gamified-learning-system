@@ -1,0 +1,576 @@
+/* f/src/users/students/pages/chat/AllChats.module.css */
+
+.allChatsContainer {
+  /* Theme variables scoped to this component */
+  --chat-bg: #0D131A;
+  --chat-panel-bg: #18202b;
+  --chat-panel-border: #232c3a;
+  --chat-text: #E0F2F7;
+  --chat-accent: #f1c40f;
+  --chat-font-body: 'Montserrat', sans-serif;
+  --chat-font-header: 'Bangers', cursive;
+  --chat-bubble-dark-text: #0D131A;
+  --chat-input-bg: #0D131A; /* Or var(--chat-bg) */
+  --chat-unread-bg: #ef4444;
+  --chat-unread-text: #fff;
+  --chat-friend-hover-bg: #232c3a; /* Same as panel-border for subtlety */
+  --chat-placeholder-text: #aaa;
+
+  width: 100vw;
+  height: 100vh;
+  box-sizing: border-box;
+  background: var(--chat-bg);
+  display: flex;
+  font-family: var(--chat-font-body);
+  color: var(--chat-text);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Sidebar - Friends List Panel */
+.sidebar {
+  width: 280px;
+  height: 100vh;
+  background: var(--chat-panel-bg);
+  border-right: 1px solid var(--chat-panel-border);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  box-sizing: border-box;
+  transition: width 0.3s ease;
+}
+
+.sidebarHeader {
+  padding: 15px 20px;
+  font-family: var(--chat-font-header);
+  font-size: 2rem;
+  color: var(--chat-accent);
+  letter-spacing: 1.5px;
+  border-bottom: 1px solid var(--chat-panel-border);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.friendSearchContainer {
+  padding: 12px 18px;
+  flex-shrink: 0;
+}
+
+.friendSearchInput {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--chat-panel-border);
+  background: var(--chat-input-bg);
+  color: var(--chat-text);
+  font-size: 0.85rem;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.friendSearchInput:focus {
+  border-color: var(--chat-accent);
+}
+
+.friendList {
+  flex: 1;
+  overflow-y: auto;
+  padding-top: 0;
+}
+
+.noFriendsMessage {
+  color: var(--chat-placeholder-text);
+  text-align: center;
+  margin-top: 30px;
+  padding: 0 15px;
+  font-size: 0.9rem;
+}
+
+.friendItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--chat-text);
+  border-bottom: 1px solid var(--chat-panel-border);
+  transition: background 0.18s, color 0.18s;
+  font-weight: 500;
+}
+
+.friendItem:hover {
+  background: var(--chat-friend-hover-bg);
+}
+
+.friendItemSelected {
+  background: var(--chat-accent);
+  color: var(--chat-bubble-dark-text);
+  font-weight: 700;
+}
+
+.friendItemAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  flex-shrink: 0;
+}
+
+.friendItemAvatarSelected {
+  background: var(--chat-bubble-dark-text);
+  color: var(--chat-accent);
+}
+
+.friendItemAvatarUnselected {
+  background: var(--chat-accent);
+  color: var(--chat-bubble-dark-text);
+}
+
+.friendInfo {
+  flex: 1;
+  overflow: hidden;
+}
+
+.friendName {
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.friendStudentId {
+  font-size: 0.75rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.7;
+}
+
+.friendStudentIdSelected {
+  opacity: 0.9;
+}
+
+.unreadBadge {
+  background: var(--chat-unread-bg);
+  color: var(--chat-unread-text);
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 5px;
+  min-width: 18px;
+  height: 18px;
+  line-height: 14px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  margin-left: auto;
+}
+
+/* Main Chat Area Panel */
+.chatArea {
+  flex: 1;
+  height: 100vh;
+  background: var(--chat-bg);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.chatAreaPlaceholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 15px;
+  text-align: center;
+}
+
+.chatAreaPlaceholderIcon {
+  font-family: var(--chat-font-header);
+  font-size: 2.5rem;
+  color: var(--chat-accent);
+  opacity: 0.5;
+}
+
+.chatAreaPlaceholderText {
+  font-size: 0.95rem;
+  color: var(--chat-text);
+  opacity: 0.7;
+}
+
+/* Styles for ChatPanel (to be used by ChatPanel component) */
+.chatPanelHeader {
+  padding: 12px 20px;
+  background: var(--chat-panel-bg);
+  border-bottom: 1px solid var(--chat-panel-border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.chatPanelAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--chat-accent);
+  color: var(--chat-bubble-dark-text);
+  font-weight: 700;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  flex-shrink: 0;
+}
+
+.chatPanelFriendName {
+  font-family: var(--chat-font-header);
+  font-size: 1.4rem;
+  color: var(--chat-text);
+  letter-spacing: 0.5px;
+}
+
+.messagesContainer {
+  flex: 1;
+  overflow-y: auto;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.messageBubble {
+  padding: 8px 12px;
+  border-radius: 15px;
+  max-width: 65%;
+  word-wrap: break-word;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  position: relative;
+}
+
+.messageSent {
+  background-color: var(--chat-accent);
+  color: var(--chat-bubble-dark-text);
+  align-self: flex-end;
+  border-bottom-right-radius: 6px;
+}
+
+.messageReceived {
+  background-color: var(--chat-panel-border);
+  color: var(--chat-text);
+  align-self: flex-start;
+  border-bottom-left-radius: 6px;
+}
+
+.messageInfo {
+  font-size: 0.65rem;
+  opacity: 0.6;
+  margin-top: 3px;
+}
+
+.messageSent .messageInfo {
+  text-align: right;
+}
+
+.messageReceived .messageInfo {
+  text-align: left;
+}
+
+.chatInputArea {
+  padding: 12px 18px;
+  border-top: 1px solid var(--chat-panel-border);
+  background: var(--chat-panel-bg);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.chatInput {
+  flex: 1;
+  padding: 10px 15px;
+  border-radius: 18px;
+  border: 1px solid var(--chat-panel-border);
+  background: var(--chat-input-bg);
+  color: var(--chat-text);
+  font-size: 0.95rem;
+  outline: none;
+  resize: none;
+  min-height: 24px;
+  max-height: 100px;
+}
+
+.chatInput:focus {
+  border-color: var(--chat-accent);
+}
+
+.emojiButton, .sendButton {
+  background: transparent;
+  border: none;
+  color: var(--chat-accent);
+  font-size: 1.6rem;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.emojiButton:hover, .sendButton:hover {
+  background-color: var(--chat-panel-border);
+}
+
+.emojiPickerContainer {
+  position: absolute;
+  bottom: 70px;
+  right: 18px;
+  z-index: 10;
+  background: var(--chat-panel-bg);
+  border: 1px solid var(--chat-panel-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.emojiCell {
+  font-size: 1.4rem;
+  padding: 4px;
+  cursor: pointer;
+  border-radius: 4px;
+  text-align: center;
+  transition: background-color 0.15s;
+}
+
+.emojiCell:hover {
+  background-color: var(--chat-friend-hover-bg);
+}
+
+.typingIndicator {
+  font-style: italic;
+  color: var(--chat-placeholder-text);
+  font-size: 0.8rem;
+  padding: 0 18px 6px;
+  text-align: left;
+  height: 18px;
+}
+
+/* ------------- Mobile Responsive Styles ------------- */
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 240px;
+  }
+
+  .sidebarHeader {
+    font-size: 1.6rem;
+    padding: 12px 18px;
+  }
+
+  .friendItemAvatar {
+    width: 38px;
+    height: 38px;
+    font-size: 15px;
+  }
+
+  .chatPanelAvatar {
+    width: 38px;
+    height: 38px;
+    font-size: 15px;
+  }
+
+  .chatPanelFriendName {
+    font-size: 1.3rem;
+  }
+  
+  .messageBubble {
+    font-size: 0.85rem;
+  }
+
+  .chatInput {
+    font-size: 0.9rem;
+  }
+
+  .emojiButton, .sendButton {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .allChatsContainer {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    height: auto;
+    max-height: 100vh;
+    border-right: none;
+    border-bottom: 1px solid var(--chat-panel-border);
+    overflow-y: auto;
+  }
+
+  .sidebar.sidebarHiddenMobile {
+    display: none !important;
+  }
+
+  .chatArea {
+  }
+
+  .chatArea.chatAreaHiddenMobile {
+    display: none !important;
+  }
+
+  .chatArea.chatAreaFullScreenMobile {
+    width: 100vw !important;
+    height: 100vh !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 1000 !important;
+    border-left: none !important;
+    background: var(--chat-bg);
+  }
+
+  .sidebarHeader {
+    font-size: 1.4rem;
+    padding: 10px 15px;
+  }
+
+  .friendSearchContainer {
+    padding: 10px 12px;
+  }
+
+  .friendSearchInput {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+
+  .friendList {
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+  }
+
+  .friendItem {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .friendItemAvatar {
+    width: 32px;
+    height: 32px;
+    font-size: 13px;
+  }
+
+  .friendName {
+    font-size: 0.85rem;
+  }
+
+  .friendStudentId {
+    font-size: 0.7rem;
+  }
+
+  .unreadBadge {
+    font-size: 10px;
+    padding: 2px 5px;
+    min-width: 18px;
+    height: 18px;
+    line-height: 14px;
+  }
+
+  .chatAreaPlaceholderIcon {
+    font-size: 2.2rem;
+  }
+
+  .chatAreaPlaceholderText {
+    font-size: 0.85rem;
+  }
+
+  .chatPanelHeader {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .backButtonMobile {
+    background: transparent;
+    border: none;
+    color: var(--chat-accent);
+    font-size: 1.6rem;
+    cursor: pointer;
+    padding: 0 8px 0 0;
+    display: flex;
+    align-items: center;
+    line-height: 1;
+  }
+
+  .chatPanelAvatar {
+    width: 32px;
+    height: 32px;
+    font-size: 13px;
+  }
+
+  .chatPanelFriendName {
+    font-size: 1rem;
+  }
+
+  .messagesContainer {
+    padding: 8px;
+  }
+
+  .messageBubble {
+    max-width: 85%;
+    padding: 7px 10px;
+    font-size: 0.85rem;
+  }
+  
+  .messageInfo {
+    font-size: 0.65rem;
+  }
+
+  .chatInputArea {
+    padding: 6px 8px;
+    gap: 6px;
+  }
+
+  .chatInput {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+  }
+
+  .emojiButton, .sendButton {
+    font-size: 1.4rem;
+    padding: 3px;
+  }
+
+  .emojiPickerContainer {
+    bottom: 45px;
+    grid-template-columns: repeat(auto-fill, minmax(30px, 1fr));
+    gap: 5px;
+    padding: 8px;
+  }
+  .emojiCell {
+    font-size: 1.3rem;
+  }
+  
+  .typingIndicator {
+    font-size: 0.75rem;
+    padding: 0 10px 5px;
+    height: 18px;
+  }
+} 

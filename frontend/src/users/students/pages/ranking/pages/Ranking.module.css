@@ -1,0 +1,998 @@
+/* Enhanced Ranking Styles with Modern Features */
+
+/* Container and Layout */
+.rankingContainer {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0f1c 0%, #1a202c 50%, #0a0f1c 100%);
+  color: #fff;
+  position: relative;
+  overflow-x: hidden;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Header Section */
+.rankingHeader {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto 30px;
+  background: rgba(30, 45, 60, 0.85);
+  border: 2px solid #f1c40f;
+  border-radius: 20px;
+  padding: 20px 30px;
+  backdrop-filter: blur(10px);
+}
+
+.headerContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.titleSection {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.rankingTitle {
+  font-family: "Bangers", cursive;
+  font-size: 2.5rem;
+  color: #f1c40f;
+  text-shadow: 2px 2px 0 #000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+}
+
+.myRankBadge {
+  background: linear-gradient(45deg, #f1c40f, #f39c12);
+  color: #000;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 15px rgba(241, 196, 15, 0.3);
+}
+
+.headerControls {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.jumpButton,
+.refreshButton {
+  font-family: "Bangers", cursive;
+  font-size: 1rem;
+  padding: 10px 20px;
+  border: 2px solid #f1c40f;
+  border-radius: 25px;
+  background: rgba(241, 196, 15, 0.1);
+  color: #f1c40f;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.jumpButton:hover,
+.refreshButton:hover {
+  background: #f1c40f;
+  color: #000;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(241, 196, 15, 0.4);
+}
+
+.jumpButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.refreshButton.active {
+  background: #f1c40f;
+  color: #000;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Layout Grid */
+.layoutGrid {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 30px;
+  max-width: 1400px;
+  margin: 0 auto;
+  align-items: start;
+}
+
+/* Left Column */
+.leftColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  position: sticky;
+  top: 20px;
+}
+
+/* Filter Section */
+.filterSection {
+  background: rgba(30, 45, 60, 0.85);
+  border: 2px solid #34495e;
+  border-radius: 15px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+}
+
+.filterHeader {
+  font-family: "Bangers", cursive;
+  font-size: 1.4rem;
+  color: #f1c40f;
+  margin: 0 0 20px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.toggleAdvanced {
+  background: none;
+  border: none;
+  color: #f1c40f;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.toggleAdvanced:hover {
+  background: rgba(241, 196, 15, 0.2);
+}
+
+.filterControls {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.filterLabel {
+  font-family: "Roboto Condensed", sans-serif;
+  font-size: 0.9rem;
+  color: #bbb;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.filterInputContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.filterInputIcon {
+  position: absolute;
+  left: 12px;
+  color: #f1c40f;
+  z-index: 2;
+}
+
+.filterSelect,
+.filterInput {
+  width: 100%;
+  padding: 10px 12px 10px 40px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid #555;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+}
+
+.filterSelect:focus,
+.filterInput:focus {
+  outline: none;
+  border-color: #f1c40f;
+  box-shadow: 0 0 10px rgba(241, 196, 15, 0.3);
+}
+
+.advancedFilters {
+  border-top: 1px solid #555;
+  padding-top: 15px;
+  margin-top: 15px;
+}
+
+.clearFiltersBtn {
+  padding: 8px 16px;
+  background: #e74c3c;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 10px;
+}
+
+.clearFiltersBtn:hover {
+  background: #c0392b;
+  transform: translateY(-1px);
+}
+
+/* Quick Actions */
+.quickActions {
+  background: rgba(30, 45, 60, 0.85);
+  border: 2px solid #34495e;
+  border-radius: 15px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+}
+
+.sectionTitle {
+  font-family: "Bangers", cursive;
+  font-size: 1.2rem;
+  color: #f1c40f;
+  margin: 0 0 15px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.actionBtn {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(52, 73, 94, 0.5);
+  border: 1px solid #555;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.actionBtn:hover {
+  background: rgba(52, 73, 94, 0.8);
+  border-color: #f1c40f;
+  transform: translateY(-1px);
+}
+
+.actionBtn.active {
+  background: rgba(241, 196, 15, 0.2);
+  border-color: #f1c40f;
+  color: #f1c40f;
+}
+
+.actionBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Tiers Section */
+.tiersSection {
+  background: rgba(30, 45, 60, 0.85);
+  border: 2px solid #34495e;
+  border-radius: 15px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+}
+
+.tiersTitle {
+  font-family: "Bangers", cursive;
+  font-size: 1.2rem;
+  color: #f1c40f;
+  margin: 0 0 15px 0;
+}
+
+.tiersContent {
+  overflow: hidden;
+  margin-top: 15px;
+}
+
+.tiersGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tierBox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.tierBox:hover {
+  background: rgba(0, 0, 0, 0.5);
+  transform: translateX(5px);
+}
+
+.tierIcon {
+  font-size: 1.2rem;
+}
+
+.tierInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tierName {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.tierMmr {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+/* Right Column */
+.rightColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+/* Trending Section */
+.trendingSection {
+  background: rgba(30, 45, 60, 0.85);
+  border: 2px solid #e74c3c;
+  border-radius: 15px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+}
+
+.trendingGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.trendingCard {
+  background: rgba(231, 76, 60, 0.1);
+  border: 1px solid #e74c3c;
+  border-radius: 10px;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.trendingCard:hover {
+  background: rgba(231, 76, 60, 0.2);
+  transform: translateY(-2px);
+}
+
+.trendingAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e74c3c;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.trendingInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.trendingName {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.trendingPoints {
+  color: #27ae60;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.trendingIcon {
+  color: #27ae60;
+  font-size: 1.2rem;
+}
+
+/* Near Rank Section */
+.nearRankSection {
+  background: rgba(30, 45, 60, 0.85);
+  border: 2px solid #3498db;
+  border-radius: 15px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+}
+
+.nearRankList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nearRankItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: rgba(52, 152, 219, 0.1);
+  border: 1px solid #3498db;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.nearRankItem.currentUser {
+  background: rgba(241, 196, 15, 0.2);
+  border-color: #f1c40f;
+}
+
+.nearRankPosition {
+  font-weight: 700;
+  color: #f1c40f;
+  min-width: 30px;
+}
+
+.nearRankAvatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #3498db;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.nearRankName {
+  flex: 1;
+  font-weight: 600;
+}
+
+.nearRankPoints {
+  color: #27ae60;
+  font-weight: 700;
+}
+
+/* Table Container */
+.tableContainer {
+  background: rgba(30, 45, 60, 0.85);
+  border: 2px solid #34495e;
+  border-radius: 15px;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+}
+
+/* Enhanced Table */
+.rankingTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.rankingTable thead {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.rankingTable th {
+  padding: 15px 20px;
+  text-align: left;
+  font-family: "Bangers", cursive;
+  font-size: 1.1rem;
+  color: #f1c40f;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.rankHeader,
+.mmrHeader,
+.rankTierHeader {
+  text-align: center;
+}
+
+/* Enhanced Student Rows */
+.studentRow {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.studentRow:hover {
+  background: rgba(241, 196, 15, 0.05);
+}
+
+.studentRow td {
+  padding: 15px 20px;
+  vertical-align: middle;
+}
+
+.currentUserRow {
+  background: rgba(241, 196, 15, 0.15) !important;
+  border: 2px solid #f1c40f;
+  box-shadow: 0 0 15px rgba(241, 196, 15, 0.3);
+}
+
+/* Rank Number */
+.rankNumber {
+  text-align: center;
+  min-width: 80px;
+}
+
+.rankContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  position: relative;
+}
+
+.rankIcon {
+  color: #f1c40f;
+  font-size: 1.2rem;
+}
+
+.position {
+  font-family: "Bangers", cursive;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.positionChange {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  font-size: 0.8rem;
+}
+
+.trendUp {
+  color: #27ae60;
+}
+.trendDown {
+  color: #e74c3c;
+}
+.trendNeutral {
+  color: #95a5a6;
+}
+
+/* Student Cell */
+.studentCell {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.avatar {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #f1c40f, #f39c12);
+  color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  border: 2px solid #000;
+  cursor: pointer;
+}
+
+.studentInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.username {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #fff;
+}
+
+.handle {
+  font-size: 0.8rem;
+  color: #bbb;
+}
+
+.yearLevel {
+  font-size: 0.7rem;
+  color: #f1c40f;
+  background: rgba(241, 196, 15, 0.2);
+  padding: 2px 6px;
+  border-radius: 10px;
+  display: inline-block;
+  margin-top: 2px;
+}
+
+.youTag {
+  background: #f1c40f;
+  color: #000;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.hotStreak {
+  color: #e74c3c;
+  font-size: 1.2rem;
+  margin-left: 5px;
+}
+
+/* MMR Value */
+.mmrValue {
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #27ae60;
+}
+
+.weeklyPoints {
+  font-size: 0.8rem;
+  color: #f39c12;
+  margin-top: 2px;
+}
+
+/* Rank Tier Value */
+.rankTierValue {
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+/* Loading States */
+.loadingSkeleton {
+  padding: 20px;
+}
+
+.skeletonRow {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.skeletonRank {
+  width: 50px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.skeletonStudent {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex: 1;
+}
+
+.skeletonAvatar {
+  width: 45px;
+  height: 45px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+}
+
+.skeletonInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+}
+
+.skeletonName {
+  width: 120px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.skeletonHandle {
+  width: 80px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.skeletonPoints {
+  width: 60px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.skeletonRankName {
+  width: 100px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+/* Error States */
+.errorContainer {
+  text-align: center;
+  padding: 40px 20px;
+  color: #e74c3c;
+}
+
+.errorContainer h3 {
+  margin: 0 0 10px 0;
+  font-family: "Bangers", cursive;
+  font-size: 1.5rem;
+}
+
+.retryBtn {
+  padding: 10px 20px;
+  background: #e74c3c;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.retryBtn:hover {
+  background: #c0392b;
+  transform: translateY(-1px);
+}
+
+/* Load More */
+.loadMoreTrigger {
+  padding: 20px;
+  text-align: center;
+}
+
+.loadingMore {
+  color: #f1c40f;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.endMessage {
+  color: #27ae60;
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding: 20px;
+}
+
+/* Weekly Progress Rank Colors */
+.rankAbsentLegend {
+  color: #888 !important;
+  font-weight: 600;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.rankTheCrammer {
+  color: #ffc107 !important;
+  font-weight: 600;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.rankSeatwarmer {
+  color: #a0522d !important;
+  font-weight: 600;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.rankGroupProjectGhost {
+  color: #b0c4de !important;
+  font-weight: 600;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.rankGoogleScholarUnofficial {
+  color: #27ae60 !important;
+  font-weight: 600;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.rankTheLowkeyGenius {
+  color: #3498db !important;
+  font-weight: 600;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.rankAlmostValedictorian {
+  color: #f1c40f !important;
+  font-weight: 600;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.rankTheValedictornator {
+  color: #e74c3c !important;
+  font-weight: 600;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* PvP Arena Rank Colors */
+.rankGrasshopper {
+  color: #27ae60 !important;
+  font-weight: 600;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.rankKnight {
+  color: #b0c4de !important;
+  font-weight: 600;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.rankGladiator {
+  color: #c0c0c0 !important;
+  font-weight: 600;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.rankElite {
+  color: #f1c40f !important;
+  font-weight: 600;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.rankLegend {
+  color: #3498db !important;
+  font-weight: 600;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.rankTitan {
+  color: #d8a2ff !important;
+  font-weight: 600;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.rankSupreme {
+  color: #e74c3c !important;
+  font-weight: 600;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .layoutGrid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .leftColumn {
+    position: static;
+  }
+
+  .headerContent {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+}
+
+@media (max-width: 768px) {
+  .rankingContainer {
+    padding: 10px;
+  }
+
+  .rankingHeader {
+    padding: 15px 20px;
+  }
+
+  .rankingTitle {
+    font-size: 2rem;
+  }
+
+  .headerControls {
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .jumpButton,
+  .refreshButton {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .trendingGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .rankingTable th,
+  .rankingTable td {
+    padding: 10px 8px;
+    font-size: 0.9rem;
+  }
+
+  .rankingTitle {
+    font-size: 1.8rem;
+  }
+
+  .avatar {
+    width: 35px;
+    height: 35px;
+    font-size: 1rem;
+  }
+
+  .username {
+    font-size: 0.9rem;
+  }
+
+  .handle {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .rankingTable {
+    font-size: 0.8rem;
+  }
+
+  .rankingTable th,
+  .rankingTable td {
+    padding: 8px 5px;
+  }
+
+  .studentCell {
+    gap: 10px;
+  }
+
+  .avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 0.9rem;
+  }
+
+  .filterSection,
+  .quickActions,
+  .tiersSection {
+    padding: 15px;
+  }
+}

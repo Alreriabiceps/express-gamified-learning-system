@@ -1,0 +1,4283 @@
+/* src/components/WeeklyTest.module.css */
+
+/* Import Fonts (Keep if needed) */
+@import url("https://fonts.googleapis.com/css2?family=Bangers&family=Roboto+Condensed:wght@700&family=Montserrat:wght@400;600;700&display=swap");
+
+/* --- Base Container and Theme Variables --- */
+.testListContainer {
+  /* Dashboard Theme Variables */
+  --dbz-orange: #f39c12;
+  --dbz-blue: #3498db;
+  --dbz-red: #e74c3c;
+  --dbz-yellow: #f1c40f;
+  --dbz-dark-blue: #2c3e50;
+  --dbz-light-gray: #ecf0f1;
+  --dbz-dark-gray: #34495e;
+  --dbz-black: #1c1c1c;
+  --dbz-black-rgb: 28, 28, 28; /* Added */
+
+  /* Blueprint Capsule Corp Theme - Plain Dark Background */
+  --blueprint-bg: #0d131a; /* Very dark blue, near black */
+  --blueprint-grid-line: rgba(173, 216, 230, 0.35);
+  --blueprint-grid-line-strong: rgba(173, 216, 230, 0.6);
+  --blueprint-text: #e0f2f7;
+  --blueprint-text-muted: rgba(224, 242, 247, 0.7); /* Added */
+  --blueprint-panel-bg: rgba(30, 45, 60, 0.85);
+  --blueprint-panel-border: var(--blueprint-grid-line-strong);
+  --blueprint-accent: var(--dbz-yellow);
+  --blueprint-accent-rgb: 241, 196, 15; /* Added */
+  --blueprint-accent-text-dark: var(--dbz-black);
+  --blueprint-shadow: rgba(0, 0, 0, 0.4);
+
+  --font-header: "Bangers", cursive;
+  --font-body: "Montserrat", sans-serif;
+  --font-accent: "Roboto Condensed", sans-serif;
+
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 15px 40px 15px; /* Reduced top/bottom padding (from 25px/50px) */
+  font-family: var(--font-body);
+  background-color: var(--blueprint-bg); /* Match dashboard background */
+  background-image: none; /* Plain background */
+  color: var(--blueprint-text); /* Match dashboard text color */
+  position: relative;
+  overflow-x: hidden;
+  animation: powerUpBg 0.7s ease-out forwards; /* Match dashboard animation */
+}
+
+@keyframes powerUpBg {
+  /* Match dashboard animation */
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Add missing keyframes if not already present, ensure they match Blueprint standard */
+@keyframes titleSmash {
+  0% {
+    opacity: 0;
+    transform: scale(1.5) translateY(-20px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(0.9) translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes fadeInSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --- Page Header --- */
+.pageHeader {
+  width: 100%;
+  max-width: 1000px;
+  margin: 10px auto 16px auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  z-index: 1;
+  position: relative;
+  opacity: 1;
+}
+.pageTitle {
+  font-family: var(--font-header);
+  font-size: 2.6rem;
+  color: var(--blueprint-text);
+  letter-spacing: 1.2px;
+  text-shadow: 2px 2px 0 var(--dbz-black);
+  margin: 0;
+  line-height: 1.1;
+  animation: none;
+}
+
+/* Centered, slightly tighter styling for Co‑op title */
+.coopTitle {
+  width: 100%;
+  text-align: center;
+}
+.pageSubtitle {
+  font-family: var(--font-accent); /* Match dashboard */
+  font-size: 1.2rem; /* Reduced from 1.3rem */
+  color: var(--blueprint-text); /* Match dashboard */
+  opacity: 0.85; /* Match dashboard */
+  text-shadow: 1px 1px 2px var(--dbz-black); /* Match dashboard */
+  margin-top: 5px; /* Match dashboard */
+  opacity: 0; /* Start hidden */
+  animation: fadeInSlideUp 0.5s ease-out 0.6s forwards; /* Stagger after title */
+}
+
+/* --- Panel Style (Applied to FilterPanel, ContentPanel, StartTestContainer, ResultsContainer etc.) --- */
+.panelStyle {
+  /* New reusable class for panel styling */
+  background: var(--blueprint-panel-bg);
+  border: 1.5px solid var(--blueprint-panel-border);
+  border-radius: 12px; /* Reduced from 15px */
+  box-shadow: 0 5px 15px var(--blueprint-shadow),
+    inset 0 0 10px rgba(0, 0, 0, 0.2); /* Reduced shadow */
+  padding: 18px 22px; /* Reduced from 20px 25px */
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(3px); /* Match dashboard panel */
+  /* animation: panelFlyIn 0.5s ease-out backwards; */ /* Default animation, will be overridden with delays */
+  transition: box-shadow 0.2s ease-out, border-color 0.2s ease-out; /* Match dashboard panel */
+  width: 100%;
+  max-width: 900px; /* Keep original max-width or adjust */
+  margin-bottom: 20px; /* Reduced from 25px */
+  opacity: 0; /* Start hidden, animation will make it visible */
+}
+.panelStyle:hover {
+  /* Match dashboard panel hover */
+  border-color: var(--blueprint-accent);
+  box-shadow: 0 8px 25px var(--blueprint-shadow),
+    0 0 15px var(--blueprint-accent);
+}
+@keyframes panelFlyIn {
+  /* Match dashboard panel animation */
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* --- Filter Panel --- */
+.filterPanel {
+  /* Apply reusable panel style */
+  composes: panelStyle;
+  /* Specific overrides if any, e.g., animation delay */
+  animation: panelFlyIn 0.5s ease-out 0.8s forwards; /* Stagger after header */
+}
+
+.panelHeader {
+  /* This class is used in FilterPanel, can be themed like dashboard's panelHeader */
+  display: flex;
+  align-items: center;
+  gap: 8px; /* Reduced from 10px */
+  color: var(--blueprint-accent); /* Yellow panel headers */
+  font-family: var(--font-header);
+  font-size: 1.6rem; /* Reduced from 1.8rem */
+  margin-bottom: 15px; /* Reduced from 18px */
+  letter-spacing: 1.5px; /* Reduced from 2px */
+  text-shadow: 1px 1px 0 var(--dbz-black); /* Match dashboard panelHeader */
+  border-bottom: 2px dashed var(--blueprint-grid-line-strong); /* Match dashboard panelHeader */
+  padding-bottom: 8px; /* Reduced from 10px */
+  text-transform: none; /* Remove uppercase from original if not matching dashboard */
+}
+
+.filterControls {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(200px, 1fr)
+  ); /* Reduced minmax */
+  gap: 12px 18px; /* Reduced gap */
+  align-items: flex-end; /* Align button nicely */
+}
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* Reduced from 5px */
+}
+.filterLabel {
+  font-size: 0.85rem; /* Reduced from 0.9rem */
+  font-weight: 700; /* Match dashboard statLabel */
+  color: var(--blueprint-text); /* Match dashboard text */
+  opacity: 0.8; /* Match dashboard statLabel */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: left;
+}
+.filterSelect {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 0.95rem; /* Reduced from 1rem */
+  padding: 9px 14px; /* Reduced from 10px 16px */
+  background: var(--dbz-dark-gray); /* Darker background for select */
+  border: 1.5px solid var(--blueprint-panel-border); /* Match panel border */
+  color: var(--blueprint-text); /* Light text */
+  border-radius: 6px; /* Reduced from 8px */
+  cursor: pointer;
+  appearance: none;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.25); /* Subtle inner shadow */
+  padding-right: 30px;
+}
+.filterSelect:focus {
+  outline: none;
+  border-color: var(--blueprint-accent); /* Accent color on focus */
+  box-shadow: 0 0 8px var(--blueprint-accent); /* Glow effect */
+}
+.filterSelect option {
+  background: var(--dbz-dark-gray); /* Dark background for options */
+  color: var(--blueprint-text); /* Light text */
+}
+.filterSelect:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--dbz-dark-gray); /* Keep dark for disabled state */
+  border-color: var(--blueprint-grid-line); /* Less prominent border */
+}
+
+/* --- THEMED Button Base Style (Dashboard Aligned) --- */
+.themedButton {
+  /* New base class for all buttons */
+  font-family: var(--font-header);
+  font-size: 1.1rem; /* Reduced from 1.2rem */
+  letter-spacing: 1.2px; /* Reduced */
+  color: var(--blueprint-accent-text-dark); /* Dark text for yellow button */
+  background: var(--blueprint-accent); /* Yellow button */
+  padding: 9px 22px; /* Reduced from 10px 25px */
+  border-radius: 22px; /* Reduced */
+  border: 2px solid var(--dbz-black); /* Black border for pop */
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out,
+    background 0.2s ease-out;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+  box-shadow: 3px 3px 0 var(--dbz-black);
+}
+.themedButton:hover {
+  background: var(--dbz-orange); /* Orange hover */
+  color: var(--blueprint-text); /* Light text on orange hover */
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 5px 5px 0 var(--dbz-black), 0 0 15px var(--dbz-orange);
+}
+.themedButton:active {
+  transform: translateY(1px) scale(1); /* Press effect */
+  box-shadow: 2px 2px 0 var(--dbz-black), inset 0 0 8px rgba(0, 0, 0, 0.3);
+}
+.themedButton:disabled {
+  background: var(--dbz-dark-gray) !important; /* Muted background */
+  color: var(--blueprint-text) !important;
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: 1px 1px 0 var(--dbz-black); /* Reduced shadow */
+  transform: none;
+  border-color: var(--dbz-dark-gray) !important;
+}
+
+/* Apply themedButton to existing button classes */
+.filterButton {
+  composes: themedButton;
+  /* Specific overrides if any, e.g., smaller padding/font if needed in context */
+  padding: 8px 18px; /* Further reduced for this specific button */
+  font-size: 0.95rem; /* Further reduced */
+}
+
+/* --- Content Panel --- */
+.contentPanel {
+  /* Apply reusable panel style */
+  composes: panelStyle;
+  align-items: center; /* Keep original alignment if needed */
+  justify-content: center; /* Keep original alignment if needed */
+  animation: panelFlyIn 0.5s ease-out 1s forwards; /* Stagger after filter */
+  overflow: hidden;
+  position: relative;
+  border-radius: 0; /* No separate border-radius */
+  box-shadow: none; /* No separate shadow */
+  background-color: #2c2c2c; /* Dark background for content */
+  color: #e0e0e0; /* Light text for readability */
+  max-width: 700px; /* Constrain content width within contentPanel */
+  margin: 20px auto; /* Center panel with some margin */
+}
+
+/* Message Container (for loading, error, info) */
+.messageContainer {
+  text-align: center;
+  padding: 20px;
+  font-family: var(--font-body);
+  width: 100%; /* Ensure it takes width for animation */
+  opacity: 0;
+  animation: fadeInSlideUp 0.5s ease-out 0.3s forwards; /* Delay relative to parent panel's appearance */
+}
+
+.loadingMessage {
+  color: var(--blueprint-accent); /* Accent color for loading */
+  font-family: var(--font-header);
+  font-size: 1.3rem; /* Slightly larger */
+  letter-spacing: 1px;
+}
+
+.errorMessage {
+  color: var(--dbz-red); /* Use a distinct error color from theme */
+  font-weight: bold;
+  background-color: rgba(231, 76, 60, 0.1); /* Subtle red background */
+  padding: 10px 15px;
+  border-radius: 8px;
+  border: 1px solid var(--dbz-red);
+}
+
+.infoMessage {
+  color: var(--blueprint-text); /* Light text */
+  opacity: 0.8; /* Slightly transparent */
+}
+
+/* --- Start Test Screen --- */
+.startTestContainer {
+  /* Apply reusable panel style */
+  composes: panelStyle;
+  /* Specific overrides if any, e.g., animation delay */
+  animation: panelFlyIn 0.5s ease-out 1s forwards; /* Example: Stagger after filter or content */
+  text-align: center;
+}
+
+.startTestContainer h3 {
+  font-family: var(--font-header);
+  font-size: 1.5rem; /* Reduced */
+  color: var(--blueprint-accent);
+  margin-bottom: 12px; /* Reduced */
+  letter-spacing: 1px; /* Added for consistency */
+}
+
+.startTestContainer p {
+  font-size: 0.9rem; /* Reduced */
+  color: var(--blueprint-text-muted); /* Ensure this variable is defined */
+  margin-bottom: 18px; /* Reduced */
+  line-height: 1.5;
+}
+
+.startButton {
+  composes: themedButton;
+  /* Retains themedButton's adjusted compact size by default. */
+  /* Specific overrides if needed for the main start button: */
+  /* padding: 10px 25px; */ /* Example: slightly larger if it's a primary CTA */
+  /* font-size: 1.15rem; */
+}
+
+/* --- Quiz Area --- */
+.quizArea {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.progressIndicator {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 20px;
+  font-family: var(--font-accent);
+  font-size: 1.1rem;
+  color: var(--blueprint-text);
+  opacity: 0.9;
+  padding: 8px;
+  background-color: rgba(0, 0, 0, 0.2); /* Darker, transparent background */
+  border-radius: 8px;
+}
+
+/* Question Container & Animation */
+.questionContainer {
+  width: 100%;
+  padding: 20px; /* Padding for question text and choices */
+  margin-bottom: 20px; /* Space before nav buttons */
+  /* background-color: rgba(var(--blueprint-text-rgb, 224, 242, 247), 0.05); /* Optional: very subtle background differentiation */
+  /* border-radius: 10px; /* Optional: slight rounding for this block */
+  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+  /* NO opacity:0 or initial transform here by default. Controlled by Visible/Hidden classes. */
+  /* Base opacity and transform removed, will be set by questionVisible/questionHidden */
+}
+
+.questionHidden {
+  opacity: 0;
+  transform: translateY(30px) scale(0.95); /* Consistent with panelFlyIn 'from' state idea */
+  pointer-events: none;
+}
+
+.questionVisible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* Question Text */
+.questionContainer h4 {
+  font-family: var(--font-header); /* Header font for question */
+  font-size: 1.8rem; /* Prominent question text */
+  color: var(--blueprint-accent); /* Accent color for question */
+  margin-bottom: 25px; /* Increased margin */
+  line-height: 1.4;
+  letter-spacing: 1px;
+  text-align: center; /* Center question text */
+}
+
+/* Added definition for styles.questionText used in QuestionDisplay.jsx */
+.questionText {
+  font-family: var(--font-header);
+  font-size: 1.8rem;
+  color: var(--blueprint-accent); /* Accent color for question text */
+  margin-bottom: 25px;
+  line-height: 1.4;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+/* --- Choices Styling --- */
+.choicesList {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: flex-start; /* Align choices to the left */
+}
+
+.choiceItem {
+  background-color: rgba(
+    var(--dbz-dark-gray-rgb, 52, 73, 94),
+    0.5
+  ); /* Darker, semi-transparent choices */
+  border: 1.5px solid var(--blueprint-grid-line); /* Subtle border */
+  padding: 15px 20px; /* More padding */
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease,
+    transform 0.15s ease;
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px; /* Spacing between choices */
+}
+.choiceItem:hover {
+  background-color: rgba(
+    var(--dbz-yellow-rgb, 241, 196, 15),
+    0.15
+  ); /* Subtle yellow tint on hover */
+  border-color: var(--blueprint-accent);
+  transform: translateX(5px);
+}
+.choiceSelected {
+  background-color: var(--blueprint-accent); /* Accent color for selected */
+  border-color: var(--blueprint-accent);
+  color: var(--blueprint-accent-text-dark); /* Dark text on accent background */
+  box-shadow: 0 0 10px var(--blueprint-accent);
+}
+.radioInput {
+  margin-right: 12px;
+  appearance: none; /* Remove default style */
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--color-primary);
+  border-radius: 50%; /* Make it round */
+  background-color: var(--color-bg-alt);
+  cursor: pointer;
+  position: relative;
+  top: -1px; /* Align better with text */
+  flex-shrink: 0; /* Prevent shrinking if label is long */
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+.radioInput:checked {
+  background-color: var(--color-primary);
+  box-shadow: 0 0 5px var(--color-primary); /* Glow when checked */
+}
+.radioInput:checked::after {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 8px;
+  background-color: var(--color-bg-alt); /* Use a dark inner color */
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+.radioLabel {
+  font-family: var(--font-body);
+  font-size: 1.1rem; /* Readable choice text */
+  color: var(--blueprint-text); /* Light text for choices */
+  margin-left: 12px;
+  flex-grow: 1;
+}
+.choiceSelected .radioLabel {
+  color: var(--blueprint-accent-text-dark); /* Dark text when selected */
+  font-weight: 700;
+}
+
+/* --- Navigation & Submit Buttons --- */
+.navigationButtons {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 15px; /* Reduced from 20px */
+  width: 100%;
+  gap: 12px; /* Reduced from 15px */
+}
+
+/* Navigation Button (Prev/Next) - Inherits from filterButton */
+.navButton {
+  composes: themedButton;
+  font-size: 1rem; /* Reduced from 1.2rem for consistency with themedButton/submitButton */
+  padding: 9px 22px;
+  background: var(--dbz-dark-blue); /* Different color for nav buttons */
+  color: var(--blueprint-text);
+  border-color: var(--blueprint-grid-line-strong);
+  box-shadow: 2px 2px 0 var(--dbz-black);
+}
+
+.navButton:hover {
+  background: var(--dbz-blue); /* Lighter blue on hover */
+  border-color: var(--blueprint-accent);
+  color: var(--blueprint-text);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 3px 3px 0 var(--dbz-black), 0 0 10px var(--dbz-blue);
+}
+
+.navButton:disabled {
+  background: var(--dbz-dark-gray) !important;
+  color: var(--blueprint-text) !important;
+  opacity: 0.5;
+  border-color: var(--dbz-dark-gray) !important;
+  box-shadow: 1px 1px 0 var(--dbz-black);
+}
+
+/* Submit Button - Inherits from startButton */
+.submitButton {
+  composes: themedButton; /* Use dashboard button style */
+  background: var(--dbz-orange); /* Distinct color for submit */
+  color: var(--blueprint-accent-text-dark);
+  font-size: 1.1rem; /* Reduced from 1.2rem */
+}
+
+.submitButton:hover {
+  background: var(--dbz-red); /* Different hover for submit */
+  color: var(--blueprint-text);
+}
+
+/* --- Keyframes --- */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+@keyframes slideDownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRightPop {
+  0% {
+    opacity: 0;
+    transform: translateX(60px) scale(0.95);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(-8px) scale(1.04);
+  }
+  80% {
+    transform: translateX(0) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --- Responsive --- */
+@media (max-width: 640px) {
+  .pageHeader {
+    text-align: center;
+  }
+  .pageTitle {
+    font-size: 2.8rem;
+    letter-spacing: 2px;
+  } /* Adjusted from 3.5rem base */
+  .pageSubtitle {
+    font-size: 1.1rem;
+  } /* Adjusted from 1.2rem base */
+
+  .panelStyle {
+    padding: 15px 18px;
+    border-radius: 10px;
+  }
+  .panelHeader {
+    font-size: 1.4rem;
+    gap: 6px;
+    padding-bottom: 6px;
+    margin-bottom: 12px;
+  }
+
+  .filterControls {
+    grid-template-columns: 1fr;
+    gap: 10px 15px;
+  }
+  .filterLabel {
+    font-size: 0.8rem;
+  }
+  .filterSelect {
+    font-size: 0.9rem;
+    padding: 8px 12px;
+    border-radius: 5px;
+  }
+
+  .contentPanel {
+    padding: 15px 12px;
+  }
+
+  .themedButton,
+  .filterButton,
+  .startButton {
+    font-size: 0.9rem; /* Smaller for mobile */
+    padding: 7px 16px; /* Smaller padding */
+    letter-spacing: 1px;
+  }
+  .startButton {
+    /* If it needs to be distinct on mobile */
+    font-size: 1rem; /* Slightly larger than other buttons */
+    padding: 8px 20px;
+  }
+
+  .testListItem {
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+  }
+  .testInfo h4 {
+    font-size: 1rem;
+    margin-bottom: 2px;
+  }
+  .testInfo p {
+    font-size: 0.75rem;
+  }
+  .testActions .startButton {
+    /* Start button within a list item */
+    font-size: 0.85rem;
+    padding: 6px 12px;
+  }
+
+  .startTestContainer h3 {
+    font-size: 1.3rem;
+    margin-bottom: 10px;
+  }
+  .startTestContainer p {
+    font-size: 0.85rem;
+    margin-bottom: 15px;
+  }
+}
+
+.resultsContainer {
+  /* Apply reusable panel style */
+  composes: panelStyle;
+  text-align: center;
+  /* animation: panelFlyIn 0.5s ease-out 0.1s backwards; */ /* Already has panelFlyIn */
+}
+
+.resultsContainer h3 {
+  font-family: var(--font-header);
+  font-size: 2.5rem;
+  color: var(--blueprint-accent);
+  margin-bottom: 20px;
+  letter-spacing: 1.5px;
+}
+
+.resultDetails {
+  margin: 1.5rem 0;
+  font-size: 1.1rem;
+}
+
+.resultDetails p {
+  margin: 0.5rem 0;
+  color: var(--blueprint-text);
+  font-family: var(--font-body);
+  line-height: 1.6;
+}
+
+.resultDetails p:last-child {
+  margin-bottom: 20px;
+}
+
+.resultDetails .rankName {
+  /* Assuming you might add a class for rank name here */
+  font-family: var(--font-header);
+  color: var(--blueprint-accent); /* Or specific rank color */
+}
+
+.resultActions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.leaderboardButton {
+  composes: themedButton;
+  background-color: var(
+    --dbz-blue
+  ); /* Differentiate from "Take Another Test" */
+  color: var(--blueprint-text);
+  border-color: var(--blueprint-grid-line-strong);
+}
+
+.leaderboardButton:hover {
+  background-color: var(--dbz-dark-blue);
+  border-color: var(--blueprint-accent);
+}
+
+/* Modal Styles */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.modalContent {
+  background-color: var(--color-panel);
+  border: 2px solid var(--color-panel-border);
+  box-shadow: 4px 4px 0 0 var(--color-shadow), 0 0 15px var(--color-shadow),
+    inset 0 0 10px rgba(0, 0, 0, 0.6);
+  padding: 30px;
+  border-radius: 0;
+  width: 90%;
+  max-width: 500px;
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Result Modal Styles */
+.resultModalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.resultModal {
+  background: linear-gradient(135deg, #1a202c 0%, #2d3748 50%, #1a202c 100%);
+  border: 3px solid var(--dbz-orange);
+  border-radius: 20px;
+  padding: 32px;
+  min-width: 340px;
+  max-width: 450px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 0 30px rgba(241, 196, 15, 0.3), 0 10px 40px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: resultModalSlideIn 0.5s ease-out;
+  color: #fff;
+  text-align: center;
+  position: relative;
+}
+
+.resultModal::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(
+    45deg,
+    var(--dbz-orange),
+    var(--dbz-yellow),
+    var(--dbz-orange)
+  );
+  z-index: -1;
+  border-radius: 22px;
+  opacity: 0.8;
+}
+
+@keyframes resultModalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Result Modal Content Styles */
+.resultTitle {
+  font-family: var(--font-header);
+  font-size: 2.2rem;
+  color: var(--dbz-orange);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin: 0 0 20px 0;
+  text-shadow: 2px 2px 0 var(--dbz-black);
+}
+
+.resultContent {
+  margin: 20px 0;
+}
+
+.resultRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 12px 0;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.resultRow:last-child {
+  border-bottom: none;
+}
+
+.closeButton {
+  font-family: var(--font-header);
+  font-size: 1.1rem;
+  padding: 12px 28px;
+  background: var(--dbz-green);
+  color: #fff;
+  border: 2px solid var(--dbz-black);
+  border-radius: 25px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  box-shadow: 3px 3px 0 var(--dbz-black);
+}
+
+.closeButton:hover {
+  background: #2ecc71;
+  transform: translateY(-2px);
+  box-shadow: 5px 5px 0 var(--dbz-black);
+}
+
+.closeButton:active {
+  transform: translateY(1px);
+  box-shadow: 2px 2px 0 var(--dbz-black);
+}
+
+.leaderboardButton {
+  font-family: var(--font-header);
+  font-size: 1rem;
+  padding: 10px 20px;
+  background: var(--dbz-blue);
+  color: #fff;
+  border: 2px solid var(--dbz-black);
+  border-radius: 20px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  box-shadow: 3px 3px 0 var(--dbz-black);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.leaderboardButton:hover {
+  background: #3498db;
+  transform: translateY(-2px);
+  box-shadow: 5px 5px 0 var(--dbz-black);
+}
+
+.leaderboardButton:active {
+  transform: translateY(1px);
+  box-shadow: 2px 2px 0 var(--dbz-black);
+}
+
+/* Loading and error states */
+.loadingMessage {
+  font-size: 1.2rem;
+  color: var(--dbz-orange);
+  font-weight: 600;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(241, 196, 15, 0.3);
+  border-top: 4px solid var(--dbz-orange);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.errorMessage {
+  color: var(--dbz-red);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.infoMessage {
+  color: #aaa;
+  font-size: 1rem;
+}
+
+.modalActions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-top: 30px;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.leaderboardList {
+  margin: 1.5rem 0;
+}
+
+.leaderboardItem {
+  display: grid;
+  grid-template-columns: 50px 1fr auto auto;
+  gap: 1rem;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--color-panel-border);
+  align-items: center;
+}
+
+.rank {
+  font-weight: bold;
+  color: var(--color-primary);
+}
+
+.name {
+  font-weight: 500;
+}
+
+.score {
+  color: var(--color-text-muted);
+}
+
+.points {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.closeButton {
+  background: var(--color-accent);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+}
+
+.closeButton:hover {
+  background: var(--color-accent);
+  transform: translateY(-2px);
+}
+
+/* Test Results Section */
+.resultSection {
+  background-color: var(--color-panel);
+  border: 2px solid var(--color-panel-border);
+  box-shadow: 4px 4px 0 0 var(--color-shadow), 0 0 15px var(--color-shadow),
+    inset 0 0 10px rgba(0, 0, 0, 0.6);
+  padding: 30px;
+  border-radius: 0;
+  text-align: center;
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.resultTitle {
+  font-size: 1.4rem;
+  color: var(--color-primary);
+  margin-bottom: 30px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-family: var(--font-header);
+}
+
+.scoreSection {
+  margin-bottom: 30px;
+}
+
+.scoreDisplay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.score {
+  font-size: 3rem;
+  font-family: var(--font-header);
+  line-height: 1;
+}
+
+.scorePercentage {
+  font-size: 1.2rem;
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+}
+
+.scoreExcellent {
+  color: var(--color-primary);
+}
+.scoreGood {
+  color: var(--color-accent);
+}
+.scoreAverage {
+  color: var(--color-primary);
+}
+.scorePoor {
+  color: var(--color-accent);
+}
+
+.pointsSection {
+  margin-bottom: 30px;
+  padding: 20px;
+  background-color: var(--color-panel);
+  border: 1px solid var(--color-panel-border);
+  border-radius: 0;
+}
+
+.pointsDisplay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.pointsLabel {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-family: var(--font-header);
+}
+
+.pointsValue {
+  font-size: 2rem;
+  font-family: var(--font-header);
+  line-height: 1;
+}
+
+.pointsPositive {
+  color: var(--color-primary);
+}
+.pointsNegative {
+  color: var(--color-accent);
+}
+.pointsNeutral {
+  color: var(--color-primary);
+}
+
+.totalPoints {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding-top: 15px;
+  border-top: 1px dashed var(--color-panel-border);
+}
+
+.totalPointsLabel {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-family: var(--font-header);
+}
+
+.totalPointsValue {
+  font-size: 1.4rem;
+  color: var(--color-text);
+  font-family: var(--font-header);
+}
+
+.rankSection {
+  margin-bottom: 30px;
+}
+
+.rankLabel {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-family: var(--font-header);
+  margin-bottom: 10px;
+}
+
+.rankValue {
+  font-size: 1.4rem;
+  font-family: var(--font-header);
+  line-height: 1;
+}
+
+.rankBronze {
+  color: var(--color-primary);
+}
+.rankSilver {
+  color: var(--color-accent);
+}
+.rankGold {
+  color: var(--color-primary);
+}
+.rankPlatinum {
+  color: var(--color-primary);
+}
+.rankDiamond {
+  color: var(--color-primary);
+}
+.rankMaster {
+  color: var(--color-primary);
+}
+.rankGrandmaster {
+  color: var(--color-primary);
+}
+
+.retakeButton {
+  font-family: var(--font-header);
+  padding: 10px 20px;
+  border: 2px solid var(--color-primary);
+  color: var(--color-primary);
+  background-color: transparent;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-radius: 0;
+  user-select: none;
+  box-shadow: 3px 3px 0 0 var(--color-shadow);
+}
+
+.retakeButton:hover {
+  background-color: var(--color-primary);
+  color: var(--color-bg-alt);
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 0 var(--color-shadow);
+}
+
+.retakeButton:active {
+  transform: translate(0, 0);
+  box-shadow: 2px 2px 0 var(--color-shadow);
+}
+
+.answerOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px; /* Reduced from 12px */
+}
+
+.answerButton {
+  font-family: var(--font-body);
+  font-size: 1rem; /* Reduced from 1.05rem */
+  letter-spacing: 0.5px;
+  color: var(--blueprint-text);
+  background: var(--dbz-dark-gray);
+  padding: 12px 18px; /* Reduced from 14px 20px */
+  border-radius: 6px; /* Reduced from 8px */
+  border: 1px solid var(--blueprint-panel-border);
+  text-transform: none;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s, transform 0.1s ease-out;
+  text-decoration: none;
+  display: block;
+  width: 100%;
+  text-align: left;
+  box-shadow: none;
+}
+
+.answerButton:hover:not(:disabled) {
+  background: var(--dbz-dark-blue);
+  color: var(--blueprint-text);
+  transform: translateY(-1px);
+  border-color: var(--blueprint-accent);
+  /* No extra shadow from themedButton hover */
+}
+
+.answerButton:active:not(:disabled) {
+  transform: translateY(0px);
+  background-color: #1c2a38; /* Slightly darker for press */
+  /* No themedButton active shadow */
+}
+
+.selectedAnswer {
+  font-family: var(--font-body);
+  font-size: 1rem; /* Was 1.05rem */
+  letter-spacing: 0.5px;
+  padding: 12px 18px; /* Was 14px 20px */
+  border-radius: 6px; /* Was 8px */
+  text-transform: none;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s, transform 0.1s ease-out;
+  text-decoration: none;
+  display: block;
+  width: 100%;
+  text-align: left;
+  background-color: #4ade80;
+  color: white;
+  border: 2px solid #16a34a;
+  font-weight: 700;
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+}
+
+.selectedAnswer:hover:not(:disabled) {
+  background-color: #22c55e; /* Darker green on hover */
+  color: white;
+  border: 2px solid #15803d;
+  transform: translateY(0); /* No transform on selected hover */
+}
+
+.answerButton:disabled,
+.selectedAnswer:disabled {
+  background: var(--dbz-dark-gray) !important;
+  color: var(--blueprint-text) !important;
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: var(--blueprint-grid-line) !important;
+  transform: none;
+  box-shadow: none;
+}
+
+.navigationButtons {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 15px; /* Reduced from 20px */
+  width: 100%;
+  gap: 12px; /* Reduced from 15px */
+}
+
+.baseNavButton {
+  font-family: var(--font-header);
+  font-size: 1.1rem; /* Reduced from 1.2rem */
+  letter-spacing: 1.2px; /* Reduced from 1.5px */
+  padding: 9px 22px; /* Reduced from 10px 25px */
+  border-radius: 22px; /* Reduced from 25px */
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out,
+    background 0.2s ease-out, color 0.2s ease-out, border-color 0.2s ease-out;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+  border: 2px solid var(--dbz-black);
+  box-shadow: 3px 3px 0 var(--dbz-black);
+}
+
+.baseNavButton:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 5px 5px 0 var(--dbz-black), 0 0 15px var(--dbz-orange);
+}
+
+.baseNavButton:active:not(:disabled) {
+  transform: translateY(1px) scale(1);
+  box-shadow: 2px 2px 0 var(--dbz-black), inset 0 0 8px rgba(0, 0, 0, 0.3);
+}
+
+.baseNavButton:disabled {
+  background: var(--dbz-dark-gray) !important;
+  color: var(--blueprint-text) !important;
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: 1px 1px 0 var(--dbz-black) !important;
+  transform: none !important;
+  border-color: var(--dbz-dark-gray) !important;
+}
+
+.navButton {
+  font-family: var(--font-header);
+  letter-spacing: 1.5px;
+  border-radius: 25px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out,
+    background 0.2s ease-out, color 0.2s ease-out, border-color 0.2s ease-out;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+  font-size: 1rem; /* UPDATED from 1.1rem */
+  padding: 9px 20px; /* UPDATED from 10px 25px */
+  background: var(--blueprint-accent);
+  color: var(--blueprint-accent-text-dark);
+  border: 2px solid var(--dbz-black);
+  box-shadow: 3px 3px 0 var(--dbz-black);
+}
+.navButton:hover:not(:disabled) {
+  background: var(--dbz-orange);
+  color: var(--blueprint-text);
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 5px 5px 0 var(--dbz-black), 0 0 15px var(--dbz-orange);
+}
+.navButton:active:not(:disabled) {
+  transform: translateY(1px) scale(1);
+  box-shadow: 2px 2px 0 var(--dbz-black), inset 0 0 8px rgba(0, 0, 0, 0.3);
+}
+.navButton:disabled {
+  background: var(--dbz-dark-gray) !important;
+  color: var(--blueprint-text) !important;
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: 1px 1px 0 var(--dbz-black) !important;
+  transform: none !important;
+  border-color: var(--dbz-dark-gray) !important;
+}
+
+.reviewUnansweredButton {
+  font-family: var(--font-header);
+  border-radius: 25px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out,
+    background 0.2s ease-out, color 0.2s ease-out, border-color 0.2s ease-out;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+  box-shadow: 3px 3px 0 var(--dbz-black);
+  font-size: 0.9rem; /* UPDATED from 0.95rem */
+  padding: 7px 16px; /* UPDATED from 8px 18px */
+  background: var(--dbz-red);
+  color: white;
+  border: 2px solid #a02b1c;
+}
+.reviewUnansweredButton:hover:not(:disabled) {
+  background: #c0392b;
+  color: white;
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 5px 5px 0 #a02b1c, 0 0 15px #c0392b;
+}
+.reviewUnansweredButton:active:not(:disabled) {
+  transform: translateY(1px) scale(1);
+  box-shadow: 2px 2px 0 #a02b1c, inset 0 0 8px rgba(0, 0, 0, 0.3);
+}
+.reviewUnansweredButton:disabled {
+  background: var(--dbz-dark-gray) !important;
+  color: var(--blueprint-text) !important;
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: 1px 1px 0 var(--dbz-black) !important;
+  transform: none !important;
+  border-color: var(--dbz-dark-gray) !important;
+}
+
+.unansweredMessage {
+  color: var(--dbz-red);
+  font-weight: 600;
+  margin-bottom: 5px; /* Reduced from 6px */
+  font-size: 0.85rem; /* Reduced from 0.9rem */
+}
+
+.submitButton {
+  font-family: var(--font-header);
+  letter-spacing: 1.5px;
+  border-radius: 25px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out,
+    background 0.2s ease-out, color 0.2s ease-out, border-color 0.2s ease-out;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+  font-size: 1.1rem; /* UPDATED from 1.2rem */
+  padding: 10px 28px; /* UPDATED from 12px 30px */
+  background: var(--dbz-blue);
+  color: white;
+  border: 2px solid var(--dbz-dark-blue);
+  box-shadow: 3px 3px 0 var(--dbz-dark-blue);
+}
+.submitButton:hover:not(:disabled) {
+  background: #2980b9;
+  color: white;
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 5px 5px 0 var(--dbz-dark-blue), 0 0 15px #2980b9;
+}
+.submitButton:active:not(:disabled) {
+  transform: translateY(1px) scale(1);
+  box-shadow: 2px 2px 0 var(--dbz-dark-blue), inset 0 0 8px rgba(0, 0, 0, 0.3);
+}
+.submitButton:disabled {
+  background: var(--dbz-dark-gray) !important;
+  color: var(--blueprint-text) !important;
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: 1px 1px 0 var(--dbz-black) !important;
+  transform: none !important;
+  border-color: var(--dbz-dark-gray) !important;
+}
+
+.questionNavItemContainer {
+  display: flex;
+  justify-content: center;
+  gap: 6px; /* Reduced from 8px */
+  margin-bottom: 15px; /* Reduced from 20px */
+  flex-wrap: wrap;
+}
+
+.questionNavItem {
+  width: 36px; /* UPDATED from 40px */
+  height: 36px; /* UPDATED from 40px */
+  border-radius: 50%;
+  font-weight: 600;
+  font-size: 1rem; /* UPDATED from 1.1rem */
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease-in-out;
+  border: 2px solid transparent;
+}
+
+.questionNavItem:hover:not(.questionNavItemCurrent) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.questionNavItemCurrent {
+  width: 36px; /* UPDATED from 40px */
+  height: 36px; /* UPDATED from 40px */
+  border-radius: 50%;
+  font-size: 1rem; /* UPDATED from 1.1rem */
+  cursor: default;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease-in-out;
+  background-color: var(--blueprint-accent);
+  color: var(--blueprint-accent-text-dark);
+  font-weight: 800;
+  border: 2px solid var(--dbz-black);
+  box-shadow: 0 0 10px var(--blueprint-accent);
+  outline: 2px solid var(--blueprint-text);
+  pointer-events: none;
+}
+
+.questionNavItemAnswered {
+  width: 36px; /* UPDATED from 40px */
+  height: 36px; /* UPDATED from 40px */
+  border-radius: 50%;
+  font-weight: 600;
+  font-size: 1rem; /* UPDATED from 1.1rem */
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease-in-out;
+  background-color: #27ae60;
+  color: white;
+  border: 2px solid #2ecc71;
+}
+.questionNavItemAnswered:hover:not(.questionNavItemCurrent) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  background-color: #2ecc71;
+}
+
+.questionNavItemUnanswered {
+  width: 36px; /* UPDATED from 40px */
+  height: 36px; /* UPDATED from 40px */
+  border-radius: 50%;
+  font-weight: 600;
+  font-size: 1rem; /* UPDATED from 1.1rem */
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease-in-out;
+  background-color: #e74c3c;
+  color: white;
+  border: 2px solid #c0392b;
+}
+.questionNavItemUnanswered:hover:not(.questionNavItemCurrent) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  background-color: #c0392b;
+}
+
+/* --- Mobile Responsive Styles --- */
+
+/* Medium screens (tablets, larger phones) */
+@media (max-width: 768px) {
+  .questionPanel {
+    padding: 12px; /* Further reduced from 15px */
+    gap: 10px; /* Further reduced from 12px */
+    margin: 8px auto; /* Further reduced */
+  }
+
+  .questionHeader {
+    padding: 0 2px; /* Further reduced from 0 3px */
+    margin-bottom: 5px; /* Further reduced from 6px */
+  }
+  .questionNumber {
+    font-size: 0.85rem; /* Further reduced from 0.9rem */
+  }
+  .bloomLevel {
+    font-size: 0.65rem; /* Further reduced from 0.7rem */
+    padding: 1px 4px; /* Further reduced */
+  }
+
+  .questionContainer {
+    /* Container within QuestionDisplay */
+    padding: 10px; /* Further reduced from 12px */
+  }
+
+  .questionText {
+    font-size: 1.2rem; /* Further reduced from 1.3rem */
+    margin-bottom: 12px; /* Further reduced from 15px */
+    line-height: 1.3;
+  }
+
+  .answerOptions {
+    gap: 6px; /* Further reduced from 8px */
+  }
+  .answerButton,
+  .selectedAnswer {
+    padding: 8px 10px; /* Further reduced from 10px 12px */
+    font-size: 0.85rem; /* Further reduced from 0.9rem */
+  }
+
+  .navigationButtons {
+    margin-top: 10px; /* Further reduced from 12px */
+    gap: 8px; /* Further reduced from 10px */
+  }
+
+  .navButton,
+  .reviewUnansweredButton,
+  .submitButton {
+    font-size: 0.8rem; /* Further reduced from 0.9rem */
+    padding: 7px 12px; /* Further reduced from 8px 15px */
+    letter-spacing: 0.5px; /* Adjusted */
+  }
+
+  .submitButton {
+    padding: 7px 18px; /* Adjusted from 8px 20px */
+  }
+
+  .questionNavItemContainer {
+    gap: 4px; /* Further reduced from 5px */
+    margin-bottom: 10px; /* Further reduced from 12px */
+  }
+  .questionNavItem,
+  .questionNavItemCurrent,
+  .questionNavItemAnswered,
+  .questionNavItemUnanswered {
+    width: 30px; /* Further reduced from 32px */
+    height: 30px; /* Further reduced from 32px */
+    font-size: 0.85rem; /* Further reduced from 0.9rem */
+  }
+
+  /* === ADDED/ADJUSTED FOR FILTER PANEL COMPACTNESS (768px) === */
+  .filterPanel {
+    padding: 12px 15px; /* Reduced panel padding */
+  }
+  .filterPanel .panelHeader {
+    font-size: 1.3rem; /* Smaller filter title */
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    gap: 6px;
+  }
+  .filterControls {
+    gap: 8px 12px; /* Reduced gap between filter controls */
+  }
+  .filterLabel {
+    font-size: 0.75rem; /* Smaller label */
+    margin-bottom: 2px;
+  }
+  .filterSelect {
+    font-size: 0.85rem; /* Smaller select text */
+    padding: 7px 10px; /* Tighter select padding */
+    border-radius: 5px;
+  }
+  .filterButton {
+    font-size: 0.8rem; /* Smaller filter button text */
+    padding: 7px 14px; /* Tighter filter button padding */
+  }
+  /* === END OF FILTER PANEL COMPACTNESS (768px) === */
+
+  .pageTitle {
+    font-size: 3rem; /* Matched from VersusModeLobby */
+    letter-spacing: 2px; /* Matched from VersusModeLobby */
+    line-height: 1.1; /* Explicitly match VersusModeLobby base */
+    margin-bottom: 0.1rem; /* Explicitly match VersusModeLobby base */
+    text-shadow: 3px 3px 0 var(--dbz-black), -1px -1px 0 var(--blueprint-bg),
+      1px -1px 0 var(--blueprint-bg), -1px 1px 0 var(--blueprint-bg),
+      1px 1px 0 var(--blueprint-bg); /* Explicitly match VersusModeLobby base */
+    white-space: nowrap; /* Ensure single line */
+  }
+  .pageSubtitle {
+    font-size: 1.1rem; /* Matched from VersusModeLobby */
+    margin-top: 4px; /* Explicitly match VersusModeLobby base (as it's not overridden at 768px there) */
+    text-shadow: 1px 1px 2px var(--dbz-black); /* Explicitly match VersusModeLobby base */
+    /* margin-bottom: 10px; */ /* Keep existing or adjust if needed */
+    /* line-height: 1.3; */ /* Keep existing or adjust if needed */
+  }
+}
+
+/* Small screens (most phones) */
+@media (max-width: 480px) {
+  .questionPanel {
+    padding: 8px; /* Further reduced from 10px */
+    gap: 6px; /* Further reduced from 8px */
+    margin: 6px auto; /* Further reduced */
+  }
+
+  .questionNavItemContainer {
+    gap: 3px; /* Further reduced from 4px */
+    margin-bottom: 8px; /* Further reduced from 10px */
+  }
+
+  .questionNavItem,
+  .questionNavItemCurrent,
+  .questionNavItemAnswered,
+  .questionNavItemUnanswered {
+    width: 26px; /* Further reduced from 28px */
+    height: 26px; /* Further reduced from 28px */
+    font-size: 0.75rem; /* Further reduced from 0.8rem */
+  }
+
+  .questionHeader {
+    gap: 2px; /* Further reduced from 3px */
+    margin-bottom: 6px; /* Further reduced from 8px */
+  }
+  .questionNumber {
+    font-size: 0.8rem; /* Further reduced */
+  }
+  .bloomLevel {
+    font-size: 0.6rem; /* Further reduced */
+    padding: 1px 3px; /* Further reduced */
+  }
+
+  .questionContainer {
+    /* Container within QuestionDisplay */
+    padding: 8px; /* Further reduced from 10px */
+  }
+
+  .questionText {
+    font-size: 1rem; /* Further reduced from 1.1rem */
+    margin-bottom: 10px; /* Further reduced from 12px */
+    line-height: 1.25;
+  }
+
+  .answerOptions {
+    gap: 5px; /* Further reduced from 6px */
+  }
+
+  .answerButton,
+  .selectedAnswer {
+    padding: 7px 8px; /* Further reduced from 8px 10px */
+    font-size: 0.8rem; /* Further reduced from 0.85rem */
+  }
+
+  .navigationButtons {
+    gap: 6px; /* Further reduced from 8px */
+    margin-top: 8px; /* Further reduced */
+  }
+
+  .navButton,
+  .reviewUnansweredButton,
+  .submitButton {
+    font-size: 0.85rem; /* Adjusted from 0.9rem, balancing with padding */
+    padding: 8px 10px; /* Adjusted from 10px 12px */
+  }
+
+  .navigationButtons > div {
+    /* Container for review and submit buttons */
+    gap: 6px; /* Further reduced from 8px */
+  }
+
+  .unansweredMessage {
+    font-size: 0.75rem; /* Further reduced from 0.8rem */
+    margin-bottom: 3px; /* Further reduced */
+  }
+
+  /* === ADDED/ADJUSTED FOR FILTER PANEL COMPACTNESS (480px) === */
+  .filterPanel {
+    padding: 10px; /* Further reduced panel padding */
+    margin-bottom: 15px; /* Space below filter panel */
+  }
+  .filterPanel .panelHeader {
+    font-size: 1.2rem; /* Even smaller filter title */
+    margin-bottom: 8px;
+    padding-bottom: 5px;
+    gap: 5px;
+    letter-spacing: 1px;
+  }
+  .filterControls {
+    grid-template-columns: 1fr; /* Stack filter controls */
+    gap: 10px; /* Gap when stacked */
+  }
+  .filterGroup {
+    gap: 2px; /* Tighter gap in filter group */
+  }
+  .filterLabel {
+    font-size: 0.7rem; /* Even smaller label */
+    margin-bottom: 1px;
+  }
+  .filterSelect {
+    font-size: 0.8rem; /* Even smaller select text */
+    padding: 6px 8px; /* Very tight select padding */
+    border-radius: 4px;
+  }
+  .filterButton {
+    font-size: 0.8rem; /* Match select text, or adjust as needed */
+    padding: 8px 12px; /* Tighter filter button padding */
+    width: 100%; /* Make button full width */
+    margin-top: 5px; /* Space above full-width button */
+  }
+  /* === END OF FILTER PANEL COMPACTNESS (480px) === */
+
+  .pageTitle {
+    font-size: 1.8rem; /* Much smaller for mobile */
+    letter-spacing: 1px; /* Reduced letter spacing */
+    line-height: 1.1;
+    margin-bottom: 0.1rem;
+    text-shadow: 2px 2px 0 var(--dbz-black), -1px -1px 0 var(--blueprint-bg),
+      1px -1px 0 var(--blueprint-bg), -1px 1px 0 var(--blueprint-bg),
+      1px 1px 0 var(--blueprint-bg); /* Reduced shadow */
+    white-space: nowrap;
+  }
+  .pageSubtitle {
+    font-size: 0.85rem; /* Smaller subtitle for mobile */
+    margin-top: 2px;
+    text-shadow: 1px 1px 2px var(--dbz-black);
+  }
+}
+
+/* ===== TEAM WEEKLY TEST CONTAINER & LAYOUT ===== */
+
+.teamTestContainer {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  background: var(--blueprint-panel-bg);
+  border: 1.5px solid var(--blueprint-panel-border);
+  border-radius: 12px;
+  box-shadow: 0 5px 15px var(--blueprint-shadow),
+    inset 0 0 10px rgba(0, 0, 0, 0.2);
+  padding: 24px;
+  backdrop-filter: blur(3px);
+}
+
+.mainContent {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.rightSidebar {
+  width: 280px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rosterSection {
+  background: rgba(20, 30, 45, 0.8);
+  border: 1px solid var(--blueprint-grid-line);
+  border-radius: 12px;
+  padding: 16px;
+  backdrop-filter: blur(8px);
+}
+
+.rosterTitle {
+  font-family: var(--font-header);
+  font-size: 1.2rem;
+  color: var(--blueprint-accent);
+  margin: 0 0 16px 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 1px 1px 0 var(--dbz-black);
+  text-align: center;
+  border-bottom: 1px dashed var(--blueprint-grid-line);
+  padding-bottom: 8px;
+}
+
+.rosterGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rosterCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+}
+
+.rosterCard.activePlayer {
+  background: linear-gradient(
+    135deg,
+    rgba(243, 156, 18, 0.2),
+    rgba(241, 196, 15, 0.1)
+  );
+  border-color: var(--dbz-orange);
+  box-shadow: 0 0 16px rgba(243, 156, 18, 0.3);
+  animation: activePlayerGlow 2s infinite alternate;
+}
+
+.rosterCard.waitingPlayer {
+  background: rgba(52, 73, 94, 0.3);
+  border-color: rgba(52, 73, 94, 0.5);
+}
+
+@keyframes activePlayerGlow {
+  0% {
+    box-shadow: 0 0 16px rgba(243, 156, 18, 0.3);
+  }
+  100% {
+    box-shadow: 0 0 24px rgba(243, 156, 18, 0.5);
+  }
+}
+
+.playerAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    var(--dbz-dark-gray),
+    var(--dbz-dark-blue)
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-header);
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--blueprint-text);
+  border: 2px solid var(--blueprint-grid-line);
+  flex-shrink: 0;
+}
+
+.rosterCard.activePlayer .playerAvatar {
+  background: linear-gradient(
+    135deg,
+    var(--blueprint-accent),
+    var(--dbz-orange)
+  );
+  color: var(--blueprint-accent-text-dark);
+  border-color: var(--dbz-orange);
+  box-shadow: 0 0 12px rgba(243, 156, 18, 0.4);
+}
+
+.playerInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.playerName {
+  font-family: var(--font-header);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--blueprint-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rosterCard.activePlayer .playerName {
+  color: var(--blueprint-accent);
+  text-shadow: 1px 1px 0 var(--dbz-black);
+}
+
+.playerStatus {
+  font-family: var(--font-accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  opacity: 0.8;
+  color: var(--blueprint-text);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.rosterCard.activePlayer .playerStatus {
+  color: var(--dbz-orange);
+  opacity: 1;
+  animation: statusBlink 2s infinite;
+}
+
+@keyframes statusBlink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* ===== MOBILE RESPONSIVENESS FOR TEAM TEST ===== */
+
+/* Tablet and smaller desktop */
+@media (max-width: 1200px) {
+  .teamTestContainer {
+    max-width: 100%;
+    padding: 20px;
+    gap: 20px;
+  }
+
+  .rightSidebar {
+    width: 240px;
+  }
+
+  .rosterSection,
+  .sidebarTurnStatus,
+  .sidebarProgressContainer {
+    padding: 14px;
+  }
+
+  .rosterTitle {
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+  }
+
+  .rosterCard {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .playerAvatar {
+    width: 36px;
+    height: 36px;
+    font-size: 0.9rem;
+  }
+
+  .compactTurnProgress {
+    padding: 14px 18px;
+    margin-bottom: 16px;
+  }
+
+  .compactQuestionDot {
+    width: 32px;
+    height: 32px;
+  }
+
+  .compactDotNumber {
+    font-size: 0.8rem;
+  }
+}
+
+/* Large tablets */
+@media (max-width: 968px) {
+  .teamTestContainer {
+    flex-direction: column;
+    gap: 20px;
+    padding: 16px;
+  }
+
+  .mainContent {
+    width: 100%;
+    order: 1;
+  }
+
+  .rightSidebar {
+    width: 100%;
+    order: 2;
+    flex-direction: row;
+    gap: 12px;
+  }
+
+  .rosterSection {
+    flex: 1;
+  }
+
+  .rosterGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+  }
+
+  .rosterCard {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .sidebarTurnStatus {
+    flex: 0 0 200px;
+  }
+
+  .sidebarProgressContainer {
+    flex: 0 0 180px;
+  }
+
+  .compactTurnProgress {
+    padding: 12px 16px;
+    margin-bottom: 16px;
+  }
+
+  .compactProgressHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .compactQuestionDot {
+    width: 30px;
+    height: 30px;
+  }
+
+  .compactDotNumber {
+    font-size: 0.75rem;
+  }
+}
+
+/* Mobile phones and small tablets */
+@media (max-width: 768px) {
+  .teamTestContainer {
+    padding: 12px;
+    gap: 12px;
+    border-radius: 8px;
+  }
+
+  .rightSidebar {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .rosterSection,
+  .sidebarTurnStatus,
+  .sidebarProgressContainer {
+    padding: 12px;
+    border-radius: 8px;
+  }
+
+  .rosterTitle {
+    font-size: 1rem;
+    margin-bottom: 10px;
+  }
+
+  .rosterGrid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+  }
+
+  .rosterCard {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .playerAvatar {
+    width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
+  }
+
+  .playerName {
+    font-size: 0.8rem;
+  }
+
+  .playerStatus {
+    font-size: 0.65rem;
+  }
+
+  .compactTurnProgress {
+    padding: 10px 14px;
+    margin-bottom: 12px;
+  }
+
+  .compactProgressTitle {
+    font-size: 1rem;
+  }
+
+  .compactQuestionDot {
+    width: 28px;
+    height: 28px;
+  }
+
+  .compactDotNumber {
+    font-size: 0.7rem;
+  }
+
+  .compactQuestionDots {
+    gap: 6px;
+  }
+
+  .sidebarProgressTitle,
+  .turnLabel {
+    font-size: 0.9rem;
+  }
+
+  .sidebarProgressPercent,
+  .turnValue {
+    font-size: 1rem;
+  }
+}
+
+/* Very small phones */
+@media (max-width: 480px) {
+  .teamTestContainer {
+    padding: 8px;
+    gap: 10px;
+  }
+
+  .rightSidebar {
+    gap: 10px;
+  }
+
+  .rosterSection,
+  .sidebarTurnStatus,
+  .sidebarProgressContainer {
+    padding: 10px;
+  }
+
+  .rosterGrid {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .rosterCard {
+    padding: 6px;
+    gap: 6px;
+  }
+
+  .playerAvatar {
+    width: 24px;
+    height: 24px;
+    font-size: 0.7rem;
+  }
+
+  .playerName {
+    font-size: 0.75rem;
+  }
+
+  .playerStatus {
+    font-size: 0.6rem;
+  }
+
+  .compactTurnProgress {
+    padding: 8px 12px;
+    margin-bottom: 10px;
+  }
+
+  .compactProgressTitle {
+    font-size: 0.9rem;
+  }
+
+  .nextPlayerBadge {
+    padding: 3px 6px;
+    font-size: 0.7rem;
+  }
+
+  .compactQuestionDot {
+    width: 24px;
+    height: 24px;
+  }
+
+  .compactDotNumber {
+    font-size: 0.65rem;
+  }
+
+  .compactQuestionDots {
+    gap: 4px;
+  }
+
+  .compactMyIndicator {
+    font-size: 0.45rem;
+    padding: 1px 3px;
+    bottom: -6px;
+  }
+
+  .sidebarProgressTitle {
+    font-size: 0.8rem;
+  }
+
+  .sidebarProgressPercent {
+    font-size: 0.9rem;
+  }
+
+  .turnInfo {
+    gap: 12px;
+  }
+
+  .activePlayerStatus .statusText {
+    font-size: 0.8rem;
+  }
+}
+
+/* ===== COMPACT TURN PROGRESS STYLES ===== */
+
+.compactTurnProgress {
+  background: linear-gradient(
+    135deg,
+    rgba(30, 45, 60, 0.9) 0%,
+    rgba(25, 35, 50, 0.9) 100%
+  );
+  border: 1px solid var(--blueprint-grid-line-strong);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.compactProgressHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.compactProgressTitle {
+  font-family: var(--font-header);
+  font-size: 1.1rem;
+  color: var(--blueprint-accent);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-shadow: 1px 1px 0 var(--dbz-black);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.refreshIndicator {
+  color: var(--dbz-orange);
+  animation: refreshBlink 1s infinite;
+  font-size: 0.8rem;
+}
+
+@keyframes refreshBlink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0.3;
+  }
+}
+
+.nextPlayerBadge {
+  background: rgba(241, 196, 15, 0.15);
+  border: 1px solid rgba(241, 196, 15, 0.3);
+  border-radius: 12px;
+  padding: 4px 8px;
+  font-family: var(--font-accent);
+  font-size: 0.8rem;
+  color: var(--blueprint-accent);
+  font-weight: 600;
+}
+
+.compactQuestionDots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.compactQuestionDot {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.compactQuestionDot.compactUpcoming {
+  background: rgba(52, 73, 94, 0.6);
+  border-color: rgba(52, 73, 94, 0.8);
+}
+
+.compactQuestionDot.compactCompleted {
+  background: linear-gradient(135deg, #27ae60, #2ecc71);
+  border-color: #2ecc71;
+}
+
+.compactQuestionDot.compactCurrent {
+  background: linear-gradient(
+    135deg,
+    var(--blueprint-accent),
+    var(--dbz-orange)
+  );
+  border-color: var(--dbz-orange);
+  box-shadow: 0 0 12px rgba(241, 196, 15, 0.5);
+  transform: scale(1.05);
+}
+
+.compactQuestionDot.compactMyTurn {
+  border-color: var(--dbz-orange);
+  box-shadow: 0 0 8px rgba(243, 156, 18, 0.4);
+}
+
+.compactDotNumber {
+  font-family: var(--font-header);
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--blueprint-text);
+}
+
+.compactQuestionDot.compactCurrent .compactDotNumber {
+  color: var(--blueprint-accent-text-dark);
+}
+
+.compactPulse {
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1px solid var(--blueprint-accent);
+  animation: compactPulseRing 1.5s infinite;
+}
+
+@keyframes compactPulseRing {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+
+.compactMyIndicator {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--dbz-orange);
+  color: var(--dbz-black);
+  font-family: var(--font-header);
+  font-size: 0.5rem;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  animation: compactBob 1.5s infinite;
+}
+
+@keyframes compactBob {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-1px);
+  }
+}
+
+/* ===== SIDEBAR STYLES ===== */
+
+.sidebarTurnStatus {
+  background: rgba(30, 45, 60, 0.8);
+  border: 1px solid var(--blueprint-grid-line);
+  border-radius: 12px;
+  padding: 16px;
+  backdrop-filter: blur(8px);
+}
+
+.sidebarProgressContainer {
+  background: rgba(20, 30, 45, 0.8);
+  border: 1px solid var(--blueprint-grid-line);
+  border-radius: 12px;
+  padding: 16px;
+  backdrop-filter: blur(8px);
+}
+
+.sidebarProgressHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.sidebarProgressTitle {
+  font-family: var(--font-header);
+  font-size: 1rem;
+  color: var(--blueprint-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-shadow: 1px 1px 0 var(--dbz-black);
+}
+
+.sidebarProgressPercent {
+  font-family: var(--font-header);
+  font-size: 1.1rem;
+  color: var(--blueprint-accent);
+  font-weight: 800;
+  text-shadow: 1px 1px 0 var(--dbz-black);
+}
+
+.sidebarProgressBar {
+  width: 100%;
+  height: 6px;
+  background: rgba(52, 73, 94, 0.5);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.sidebarProgressFill {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--blueprint-accent),
+    var(--dbz-orange)
+  );
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.sidebarProgressStats {
+  text-align: center;
+  font-family: var(--font-accent);
+  font-size: 0.8rem;
+  color: var(--blueprint-text);
+  opacity: 0.8;
+  font-weight: 500;
+}
+
+/* ===== ORIGINAL TURN PROGRESS STYLES (UNUSED NOW) ===== */
+
+.turnProgressContainer {
+  background: linear-gradient(
+    135deg,
+    rgba(30, 45, 60, 0.95) 0%,
+    rgba(25, 35, 50, 0.95) 50%,
+    rgba(20, 30, 45, 0.95) 100%
+  );
+  border: 2px solid var(--blueprint-grid-line-strong);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+
+.turnProgressContainer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--blueprint-accent) 50%,
+    transparent 100%
+  );
+  opacity: 0.6;
+}
+
+.progressHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.progressTitle {
+  font-family: var(--font-header);
+  font-size: 1.4rem;
+  color: var(--blueprint-accent);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 2px 2px 0 var(--dbz-black);
+}
+
+.nextPlayerInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(241, 196, 15, 0.1);
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(241, 196, 15, 0.3);
+}
+
+.nextLabel {
+  font-family: var(--font-accent);
+  font-size: 0.9rem;
+  color: var(--blueprint-text);
+  opacity: 0.8;
+  font-weight: 600;
+}
+
+.nextPlayer {
+  font-family: var(--font-header);
+  font-size: 1rem;
+  color: var(--blueprint-accent);
+  font-weight: 700;
+  text-shadow: 1px 1px 0 var(--dbz-black);
+}
+
+.questionDots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0;
+  flex-wrap: wrap;
+  padding: 0 8px;
+}
+
+.questionDot {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+
+.questionDot.upcoming {
+  background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+  border-color: #4a5f7a;
+  box-shadow: 0 4px 12px rgba(52, 73, 94, 0.4);
+}
+
+.questionDot.completed {
+  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  border-color: #2ecc71;
+  box-shadow: 0 4px 12px rgba(46, 204, 113, 0.4);
+}
+
+.questionDot.current {
+  background: linear-gradient(135deg, var(--blueprint-accent) 0%, #f4d03f 100%);
+  border-color: var(--dbz-orange);
+  box-shadow: 0 0 24px rgba(241, 196, 15, 0.6),
+    0 4px 12px rgba(241, 196, 15, 0.4);
+  transform: scale(1.1);
+  z-index: 2;
+}
+
+.questionDot.myTurn {
+  border-color: var(--dbz-orange);
+  box-shadow: 0 0 16px rgba(243, 156, 18, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.questionDot:hover:not(.current) {
+  transform: translateY(-2px) scale(1.05);
+}
+
+.dotInner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.questionNumber {
+  font-family: var(--font-header);
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--blueprint-text);
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.questionDot.current .questionNumber {
+  color: var(--blueprint-accent-text-dark);
+}
+
+.playerInitial {
+  font-family: var(--font-header);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--blueprint-text);
+  opacity: 0.8;
+  line-height: 1;
+}
+
+.questionDot.current .playerInitial {
+  color: var(--blueprint-accent-text-dark);
+  opacity: 1;
+}
+
+.currentIndicator {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--blueprint-accent);
+  animation: pulseRing 2s infinite;
+}
+
+@keyframes pulseRing {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+.myTurnIndicator {
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--dbz-orange);
+  color: var(--dbz-black);
+  font-family: var(--font-header);
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid var(--dbz-black);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  animation: bobble 1.5s infinite;
+}
+
+@keyframes bobble {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-2px);
+  }
+}
+
+.progressStats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--blueprint-grid-line);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 60px;
+}
+
+.statValue {
+  font-family: var(--font-header);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--blueprint-accent);
+  line-height: 1;
+  text-shadow: 1px 1px 0 var(--dbz-black);
+}
+
+.statLabel {
+  font-family: var(--font-accent);
+  font-size: 0.8rem;
+  color: var(--blueprint-text);
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.progressLine {
+  flex: 1;
+  height: 6px;
+  background: rgba(52, 73, 94, 0.5);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+  margin: 0 20px;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--blueprint-accent) 0%,
+    var(--dbz-orange) 100%
+  );
+  border-radius: 3px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.progressFill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 20px;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 100%
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+}
+
+/* Enhanced Mobile responsive for turn progress */
+@media (max-width: 968px) {
+  .turnProgressContainer {
+    margin: 0 auto 20px auto;
+    width: 100%;
+    max-width: none;
+  }
+
+  .questionDots {
+    justify-content: center;
+    padding: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .turnProgressContainer {
+    padding: 16px;
+    margin: 0 auto 16px auto;
+    width: 100%;
+  }
+
+  .progressTitle {
+    font-size: 1.2rem;
+  }
+
+  .questionDots {
+    gap: 8px;
+  }
+
+  .questionDot {
+    width: 48px;
+    height: 48px;
+  }
+
+  .questionNumber {
+    font-size: 0.8rem;
+  }
+
+  .playerInitial {
+    font-size: 0.6rem;
+  }
+
+  .nextPlayerInfo {
+    padding: 6px 12px;
+  }
+
+  .nextLabel {
+    font-size: 0.8rem;
+  }
+
+  .nextPlayer {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .progressHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .questionDots {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .questionDot {
+    width: 42px;
+    height: 42px;
+  }
+
+  .questionNumber {
+    font-size: 0.75rem;
+  }
+
+  .playerInitial {
+    font-size: 0.55rem;
+  }
+
+  .myTurnIndicator {
+    font-size: 0.5rem;
+    padding: 1px 4px;
+    bottom: -10px;
+  }
+
+  .progressStats {
+    gap: 12px;
+  }
+
+  .statValue {
+    font-size: 1.3rem;
+  }
+
+  .progressLine {
+    margin: 0 12px;
+  }
+}
+
+/* ===== ENHANCED TURN STATUS STYLES ===== */
+
+.turnStatusContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(30, 45, 60, 0.6);
+  border: 1px solid var(--blueprint-grid-line);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin: 16px 0;
+  backdrop-filter: blur(8px);
+}
+
+.turnInfo {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.turnCounter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.turnLabel {
+  font-family: var(--font-accent);
+  font-size: 0.75rem;
+  color: var(--blueprint-text);
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.turnValue {
+  font-family: var(--font-header);
+  font-size: 1.2rem;
+  color: var(--blueprint-accent);
+  font-weight: 800;
+  text-shadow: 1px 1px 0 var(--dbz-black);
+}
+
+.bloomsContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 12px;
+  background: rgba(52, 152, 219, 0.15);
+  border: 1px solid rgba(52, 152, 219, 0.3);
+  border-radius: 8px;
+}
+
+.bloomsLabel {
+  font-family: var(--font-accent);
+  font-size: 0.7rem;
+  color: var(--dbz-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.bloomsValue {
+  font-family: var(--font-header);
+  font-size: 0.9rem;
+  color: var(--dbz-blue);
+  font-weight: 700;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+}
+
+.activePlayerStatus {
+  flex-shrink: 0;
+}
+
+.statusIndicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.statusDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.statusDot.active {
+  background: var(--dbz-orange);
+  box-shadow: 0 0 16px rgba(243, 156, 18, 0.6),
+    inset 0 0 4px rgba(255, 255, 255, 0.3);
+  animation: activePulse 2s infinite;
+}
+
+.statusDot.waiting {
+  background: #95a5a6;
+  box-shadow: 0 0 8px rgba(149, 165, 166, 0.4), inset 0 0 4px rgba(0, 0, 0, 0.3);
+  animation: waitingBlink 3s infinite;
+}
+
+@keyframes activePulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+}
+
+@keyframes waitingBlink {
+  0%,
+  90%,
+  100% {
+    opacity: 1;
+  }
+  45% {
+    opacity: 0.4;
+  }
+}
+
+.statusText {
+  font-family: var(--font-accent);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.statusIndicator .statusDot.active + .statusText {
+  color: var(--blueprint-accent);
+  text-shadow: 1px 1px 0 var(--dbz-black);
+}
+
+.statusIndicator .statusDot.waiting + .statusText {
+  color: var(--blueprint-text);
+  opacity: 0.8;
+}
+
+/* Enhanced responsive for turn status */
+@media (max-width: 968px) {
+  .turnStatusContainer {
+    width: 100%;
+    margin: 16px auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .turnStatusContainer {
+    padding: 12px 16px;
+    margin: 12px auto;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .turnInfo {
+    gap: 16px;
+  }
+
+  .turnValue {
+    font-size: 1.1rem;
+  }
+
+  .bloomsContainer {
+    padding: 6px 10px;
+  }
+
+  .bloomsValue {
+    font-size: 0.8rem;
+  }
+
+  .statusText {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .turnStatusContainer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .turnInfo {
+    justify-content: center;
+    gap: 20px;
+  }
+
+  .activePlayerStatus {
+    align-self: center;
+  }
+
+  .statusIndicator {
+    justify-content: center;
+    padding: 8px 12px;
+  }
+
+  .statusText {
+    font-size: 0.85rem;
+    text-align: center;
+  }
+}
+
+/* ===== OVERALL PROGRESS BAR STYLES ===== */
+
+.overallProgressContainer {
+  margin: 20px 0;
+  padding: 16px;
+  background: rgba(20, 30, 45, 0.6);
+  border: 1px solid var(--blueprint-grid-line);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+}
+
+.overallProgressBar {
+  width: 100%;
+  height: 8px;
+  background: rgba(52, 73, 94, 0.5);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.overallProgressFill {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--blueprint-accent) 0%,
+    var(--dbz-orange) 100%
+  );
+  border-radius: 4px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.overallProgressFill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 30px;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 100%
+  );
+  animation: progressShimmer 2.5s infinite;
+}
+
+@keyframes progressShimmer {
+  0% {
+    transform: translateX(-30px);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(30px);
+    opacity: 0;
+  }
+}
+
+.overallProgressLabel {
+  text-align: center;
+  font-family: var(--font-accent);
+  font-size: 0.9rem;
+  color: var(--blueprint-text);
+  font-weight: 600;
+  opacity: 0.9;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Mobile responsive for overall progress */
+@media (max-width: 768px) {
+  .overallProgressContainer {
+    margin: 16px 0;
+    padding: 12px;
+  }
+
+  .overallProgressLabel {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .overallProgressContainer {
+    margin: 12px 0;
+    padding: 10px;
+  }
+
+  .overallProgressBar {
+    height: 6px;
+  }
+
+  .overallProgressLabel {
+    font-size: 0.75rem;
+  }
+}
+
+/* ===== CENTERED QUESTION CARD STYLES ===== */
+
+.centeredQuestionWrapper {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  margin: 8px 0 0 0;
+}
+
+.questionCard {
+  width: 100%;
+  max-width: 760px;
+  background: linear-gradient(
+    135deg,
+    rgba(30, 45, 60, 0.95) 0%,
+    rgba(25, 35, 50, 0.95) 50%,
+    rgba(20, 30, 45, 0.95) 100%
+  );
+  border: 1px solid var(--blueprint-grid-line);
+  border-radius: 12px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  position: relative;
+  overflow: hidden;
+  animation: questionCardFadeIn 0.4s ease-out;
+}
+
+@keyframes questionCardFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.questionCard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--blueprint-accent) 50%,
+    transparent 100%
+  );
+  opacity: 0.8;
+}
+
+.questionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.questionCounter {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.questionLabel {
+  font-family: var(--font-accent);
+  font-size: 0.8rem;
+  color: var(--blueprint-text);
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.questionNumber {
+  font-family: var(--font-header);
+  font-size: 1.4rem;
+  color: var(--blueprint-accent);
+  font-weight: 800;
+  text-shadow: 1px 1px 0 var(--dbz-black);
+}
+
+.bloomsBadge {
+  background: linear-gradient(
+    135deg,
+    rgba(52, 152, 219, 0.2),
+    rgba(41, 128, 185, 0.3)
+  );
+  border: 1px solid var(--dbz-blue);
+  border-radius: 20px;
+  padding: 6px 12px;
+  backdrop-filter: blur(8px);
+}
+
+.bloomsText {
+  font-family: var(--font-header);
+  font-size: 0.8rem;
+  color: var(--dbz-blue);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.questionContent {
+  text-align: center;
+  margin: 16px 0;
+  padding: 0 12px;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.questionText {
+  font-family: var(--font-header);
+  font-size: 1.4rem;
+  color: var(--blueprint-text);
+  line-height: 1.35;
+  margin: 0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.answerSection {
+  margin: 16px 0 0 0;
+}
+
+.answerGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.answerOption {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  min-height: 44px;
+  background: rgba(52, 73, 94, 0.35);
+  border: 1px solid rgba(52, 73, 94, 0.6);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(6px);
+}
+
+.answerOption::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  transition: left 0.6s ease;
+}
+
+.answerOption:hover::before {
+  left: 100%;
+}
+
+.answerOption:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: rgba(52, 73, 94, 0.6);
+  border-color: var(--blueprint-accent);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.answerOption:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.selectedOption {
+  background: linear-gradient(135deg, #4ade80, #22c55e) !important;
+  border-color: #16a34a !important;
+  color: white !important;
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.5), 0 8px 25px rgba(0, 0, 0, 0.3) !important;
+  transform: translateY(-2px) !important;
+}
+
+.optionIndicator {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--dbz-dark-blue);
+  color: var(--blueprint-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-header);
+  font-weight: 800;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.selectedOption .optionIndicator {
+  background: white;
+  color: #16a34a;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.3);
+}
+
+.optionText {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--blueprint-text);
+  flex: 1;
+  text-align: left;
+  line-height: 1.3;
+}
+
+.selectedOption .optionText {
+  color: white;
+  font-weight: 600;
+}
+
+.actionArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px dashed var(--blueprint-grid-line);
+}
+
+.selectionStatus {
+  text-align: center;
+}
+
+.selectedText {
+  font-family: var(--font-accent);
+  font-size: 0.9rem;
+  color: var(--blueprint-accent);
+  font-weight: 600;
+  background: rgba(241, 196, 15, 0.15);
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(241, 196, 15, 0.3);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.promptText {
+  font-family: var(--font-accent);
+  font-size: 0.9rem;
+  color: var(--blueprint-text);
+  opacity: 0.7;
+  font-weight: 500;
+}
+
+.submitButton {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-header);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--blueprint-text);
+  background: linear-gradient(
+    135deg,
+    var(--dbz-dark-gray),
+    var(--dbz-dark-blue)
+  );
+  padding: 16px 32px;
+  border-radius: 25px;
+  border: 2px solid var(--blueprint-grid-line);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-transform: uppercase;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.submitButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.readyToSubmit {
+  background: linear-gradient(
+    135deg,
+    var(--dbz-orange),
+    var(--blueprint-accent)
+  ) !important;
+  border-color: var(--dbz-orange) !important;
+  color: var(--blueprint-accent-text-dark) !important;
+  box-shadow: 0 0 25px rgba(243, 156, 18, 0.5), 0 8px 25px rgba(0, 0, 0, 0.3) !important;
+  animation: readyPulse 2s infinite;
+}
+
+@keyframes readyPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 25px rgba(243, 156, 18, 0.5), 0 8px 25px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 35px rgba(243, 156, 18, 0.7), 0 12px 30px rgba(0, 0, 0, 0.4);
+  }
+}
+
+.submitButton:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.submitIcon {
+  font-size: 1.2rem;
+}
+
+.submitText {
+  font-size: 1rem;
+}
+
+/* ===== MOBILE RESPONSIVE FOR QUESTION CARD ===== */
+
+@media (max-width: 968px) {
+  .centeredQuestionWrapper {
+    margin: 12px 0 0 0;
+  }
+
+  .questionCard {
+    max-width: none;
+    padding: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .centeredQuestionWrapper {
+    margin: 8px 0 0 0;
+  }
+
+  .questionCard {
+    padding: 14px;
+    border-radius: 10px;
+  }
+
+  .questionHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .questionText {
+    font-size: 1.1rem;
+  }
+
+  .answerGrid {
+    gap: 8px;
+  }
+
+  .answerOption {
+    padding: 9px 12px;
+    gap: 10px;
+  }
+
+  .optionIndicator {
+    width: 24px;
+    height: 24px;
+    font-size: 0.8rem;
+  }
+
+  .optionText {
+    font-size: 0.85rem;
+  }
+
+  .submitButton {
+    padding: 12px 20px;
+    font-size: 0.9rem;
+  }
+
+  .actionArea {
+    margin-top: 20px;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .centeredQuestionWrapper {
+    margin: 6px 0 0 0;
+  }
+
+  .questionCard {
+    padding: 12px;
+    margin: 0 4px;
+  }
+
+  .questionContent {
+    margin: 16px 0;
+    padding: 0 4px;
+  }
+
+  .questionText {
+    font-size: 1rem;
+    line-height: 1.3;
+  }
+
+  .answerSection {
+    margin: 16px 0;
+  }
+
+  .answerOption {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .optionIndicator {
+    width: 22px;
+    height: 22px;
+    font-size: 0.7rem;
+  }
+
+  .optionText {
+    font-size: 0.8rem;
+  }
+
+  .submitButton {
+    padding: 10px 16px;
+    font-size: 0.85rem;
+    gap: 6px;
+  }
+
+  .submitIcon {
+    font-size: 0.9rem;
+  }
+
+  .selectedText,
+  .promptText {
+    font-size: 0.75rem;
+  }
+
+  .actionArea {
+    margin-top: 16px;
+    gap: 8px;
+  }
+}
+
+/* ===== BEAUTIFUL TEAM RESULTS STYLES ===== */
+
+.resultsContainer {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px;
+  animation: resultsSlideIn 0.8s ease-out forwards;
+  opacity: 1; /* Ensure visibility persists after animation */
+}
+
+@keyframes resultsSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.resultsHeader {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.resultsTitle {
+  font-family: var(--font-header);
+  font-size: 1.8rem;
+  color: var(--blueprint-text);
+  margin: 0 0 8px 0;
+  text-shadow: 1px 1px 0 var(--dbz-black);
+}
+
+@keyframes titleBounce {
+  0% {
+    transform: scale(0.8) translateY(-20px);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.05) translateY(5px);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.resultsSubtitle {
+  font-family: var(--font-accent);
+  font-size: 0.95rem;
+  color: var(--blueprint-text);
+  opacity: 0.9;
+  margin: 0;
+}
+
+/* Team Stats Grid */
+.teamStatsContainer {
+  margin-bottom: 48px;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.statCard {
+  background: rgba(20, 30, 45, 0.7);
+  border: 1px solid var(--blueprint-grid-line);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+  backdrop-filter: blur(6px);
+  box-shadow: none;
+}
+
+.statCard:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.statCard:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.statCard:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.statCard:nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+@keyframes statCardSlide {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.statCard:hover {
+  transform: translateY(-5px);
+  border-color: var(--blueprint-accent);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 20px var(--blueprint-accent);
+}
+
+.statIcon {
+  font-size: 1.2rem;
+  margin-bottom: 6px;
+}
+
+@keyframes iconBounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.statValue {
+  font-family: var(--font-header);
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--blueprint-accent);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.statLabel {
+  font-family: var(--font-accent);
+  font-size: 1rem;
+  color: var(--blueprint-text);
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+/* Questions Results */
+.questionsResultsContainer {
+  margin-bottom: 48px;
+}
+
+.questionsResultsTitle {
+  font-family: var(--font-header);
+  font-size: 1.2rem;
+  color: var(--blueprint-text);
+  text-align: center;
+  margin: 0 0 12px 0;
+}
+
+.questionResultsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.questionResultCard {
+  background: rgba(20, 30, 45, 0.7);
+  border: 1px solid var(--blueprint-grid-line);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+@keyframes questionCardFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.questionResultCard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  transition: all 0.3s ease;
+}
+
+.correctCard::before {
+  background: linear-gradient(90deg, #27ae60, #2ecc71);
+}
+
+.wrongCard::before {
+  background: linear-gradient(90deg, #e74c3c, #c0392b);
+}
+
+.skippedCard::before {
+  background: linear-gradient(90deg, #95a5a6, #7f8c8d);
+}
+
+.userQuestionCard {
+  border-color: var(--dbz-orange);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 16px rgba(243, 156, 18, 0.3);
+}
+
+.questionResultCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+.questionResultHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.questionResultNumber {
+  font-family: var(--font-header);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--blueprint-accent);
+}
+
+.questionResultStatus {
+  font-family: var(--font-header);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+}
+
+.correctStatus {
+  background: rgba(46, 204, 113, 0.2);
+  color: #2ecc71;
+  border: 1px solid #2ecc71;
+}
+
+.wrongStatus {
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+  border: 1px solid #e74c3c;
+}
+
+.skippedStatus {
+  background: rgba(149, 165, 166, 0.2);
+  color: #95a5a6;
+  border: 1px solid #95a5a6;
+}
+
+.questionResultContent {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.questionResultText {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--blueprint-text);
+  line-height: 1.3;
+}
+
+.answerDetails {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.selectedAnswer,
+.correctAnswerInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.answerLabel {
+  font-family: var(--font-accent);
+  font-size: 0.8rem;
+  color: var(--blueprint-text);
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.answerValue {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--blueprint-text);
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.correctAnswer {
+  background: rgba(46, 204, 113, 0.2);
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.wrongAnswer {
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.answererInfo {
+  padding-top: 6px;
+}
+
+.answererLabel {
+  font-family: var(--font-accent);
+  font-size: 0.8rem;
+  color: var(--blueprint-text);
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.answererDetails {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.answererAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    var(--blueprint-accent),
+    var(--dbz-orange)
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-header);
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--blueprint-accent-text-dark);
+  border: 2px solid var(--dbz-orange);
+  flex-shrink: 0;
+}
+
+.answererName {
+  font-family: var(--font-header);
+  font-size: 1rem;
+  color: var(--blueprint-text);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.youBadge {
+  background: var(--dbz-orange);
+  color: var(--dbz-black);
+  font-family: var(--font-header);
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.bloomsInfo {
+  text-align: center;
+  margin-top: 8px;
+}
+
+.bloomsLabel {
+  font-family: var(--font-header);
+  font-size: 0.8rem;
+  color: var(--dbz-blue);
+  background: rgba(52, 152, 219, 0.15);
+  border: 1px solid rgba(52, 152, 219, 0.3);
+  padding: 4px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+/* Performance Summary */
+.performanceSummary {
+  margin-top: 48px;
+}
+
+.summaryTitle {
+  font-family: var(--font-header);
+  font-size: 2rem;
+  color: var(--blueprint-accent);
+  text-align: center;
+  margin: 0 0 32px 0;
+  text-shadow: 1px 1px 0 var(--dbz-black);
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.summaryCard {
+  background: linear-gradient(
+    135deg,
+    rgba(30, 45, 60, 0.9),
+    rgba(25, 35, 50, 0.9)
+  );
+  border: 2px solid var(--blueprint-grid-line-strong);
+  border-radius: 16px;
+  padding: 24px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.summaryCard:hover {
+  transform: translateY(-3px);
+  border-color: var(--blueprint-accent);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), 0 0 16px var(--blueprint-accent);
+}
+
+.summaryCardTitle {
+  font-family: var(--font-header);
+  font-size: 1.3rem;
+  color: var(--blueprint-accent);
+  margin: 0 0 16px 0;
+  text-shadow: 1px 1px 0 var(--dbz-black);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.summaryContent {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--blueprint-text);
+  line-height: 1.6;
+  opacity: 0.9;
+}
+
+/* Mobile Responsive for Results */
+@media (max-width: 968px) {
+  .resultsContainer {
+    padding: 24px 16px;
+  }
+
+  .resultsTitle {
+    font-size: 2.5rem;
+  }
+
+  .resultsSubtitle {
+    font-size: 1.1rem;
+  }
+
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .questionResultsGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .resultsTitle {
+    font-size: 2rem;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .statCard {
+    padding: 20px;
+  }
+
+  .statValue {
+    font-size: 2.5rem;
+  }
+
+  .questionResultCard {
+    padding: 16px;
+  }
+
+  .questionResultsGrid {
+    gap: 12px;
+  }
+
+  .summaryCard {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .resultsContainer {
+    padding: 16px 12px;
+  }
+
+  .resultsTitle {
+    font-size: 1.8rem;
+  }
+
+  .resultsSubtitle {
+    font-size: 1rem;
+  }
+
+  .statCard {
+    padding: 16px;
+  }
+
+  .statIcon {
+    font-size: 2rem;
+  }
+
+  .statValue {
+    font-size: 2rem;
+  }
+
+  .questionResultCard {
+    padding: 12px;
+  }
+
+  .answererDetails {
+    gap: 8px;
+  }
+
+  .answererAvatar {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+
+  .summaryCard {
+    padding: 16px;
+  }
+}

@@ -1,0 +1,684 @@
+/* src/components/GameNavbar.module.css */
+
+/* ==========================================================================
+   Imports
+   ========================================================================== */
+@import url("https://fonts.googleapis.com/css2?family=Bangers&family=Roboto+Condensed:wght@400;700&family=Montserrat:wght@400;600;700&display=swap");
+
+/* ==========================================================================
+   Base & Variables - Synced with Blueprint Dashboard Theme
+   ========================================================================== */
+.navbar {
+  /* DBZ Accents (from Blueprint theme) */
+  --dbz-orange: #f39c12;
+  --dbz-blue: #3498db;
+  --dbz-red: #e74c3c;
+  --dbz-yellow: #f1c40f;
+  --dbz-dark-blue: #2c3e50;
+  --dbz-light-gray: #ecf0f1;
+  --dbz-dark-gray: #34495e;
+  --dbz-black: #1c1c1c;
+
+  /* Blueprint Theme Variables (adapted for Navbar context) */
+  --navbar-bg: #0d131a; /* Very dark blue, from blueprint-bg */
+  --navbar-text: #e0f2f7; /* Light cyan/off-white, from blueprint-text */
+  --navbar-accent: var(--dbz-yellow); /* Bright yellow, from blueprint-accent */
+  --navbar-accent-text-dark: var(--dbz-black);
+  --navbar-panel-bg: rgba(
+    30,
+    45,
+    60,
+    0.85
+  ); /* Panels from blueprint-panel-bg */
+  --navbar-border: rgba(
+    173,
+    216,
+    230,
+    0.6
+  ); /* Grid line strong from blueprint, for borders */
+  --navbar-secondary-border: rgba(173, 216, 230, 0.35); /* Grid line regular */
+  --navbar-shadow: rgba(0, 0, 0, 0.4);
+  --navbar-logo-bg: rgba(
+    30,
+    45,
+    60,
+    0.7
+  ); /* Slightly different for logo panel if needed */
+
+  --font-header: "Bangers", cursive;
+  --font-body: "Montserrat", sans-serif;
+  --font-accent: "Roboto Condensed", sans-serif;
+
+  background-color: var(--navbar-bg);
+  background-image: none; /* Plain background, no grid */
+  box-shadow: 0 4px 15px var(--navbar-shadow);
+  border-bottom: 2px solid var(--navbar-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 30px;
+  min-height: 65px;
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  font-family: var(--font-accent);
+  color: var(--navbar-text); /* Default text color for navbar */
+}
+
+/* ==========================================================================
+   Brand / Logo
+   ========================================================================== */
+.navbarBrand {
+  flex-shrink: 0;
+}
+.navbarLogo {
+  font-family: var(--font-header);
+  font-size: 1.8rem;
+  color: var(--navbar-accent); /* Yellow logo text */
+  text-decoration: none;
+  letter-spacing: 1.5px;
+  text-shadow: 2px 2px 0 var(--dbz-black);
+  padding: 8px 15px;
+  border-radius: 8px;
+  background-color: var(--navbar-logo-bg); /* Panel BG for logo */
+  border: 1px solid var(--navbar-accent); /* Yellow border for logo */
+  transition: color 0.2s, background-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.navbarLogo:hover {
+  color: var(--dbz-black);
+  background-color: var(--navbar-accent);
+  transform: scale(1.05);
+  box-shadow: 0 0 10px var(--dbz-orange);
+}
+
+/* ==========================================================================
+   Desktop Navigation Links Container
+   ========================================================================== */
+.desktopNavLinks {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+/* ==========================================================================
+   Generic Link / Button Styling
+   ========================================================================== */
+.navbarLink {
+  font-family: var(--font-accent);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--navbar-text); /* Light text for links */
+  text-decoration: none;
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  background-color: transparent;
+  cursor: pointer;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s,
+    transform 0.2s, box-shadow 0.2s;
+}
+.navbarLink:hover {
+  background-color: var(--navbar-accent); /* Yellow hover */
+  color: var(--navbar-accent-text-dark); /* Dark text on yellow */
+  border-color: var(--dbz-orange);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+.activeLink {
+  background-color: var(--navbar-accent) !important; /* Yellow for active */
+  color: var(--navbar-accent-text-dark) !important; /* Dark text on yellow */
+  border-color: var(--dbz-orange) !important;
+  box-shadow: 0 0 10px var(--navbar-accent);
+}
+
+/* ==========================================================================
+   Dropdown Menu Styling
+   ========================================================================== */
+.dropdown {
+  position: relative;
+}
+
+.dropdownToggle {
+  composes: navbarLink;
+  position: relative;
+  overflow: hidden;
+}
+
+.dropdownToggle.activeLink, /* If a child is active */
+.dropdown.open .dropdownToggle {
+  background: linear-gradient(135deg, var(--dbz-blue) 0%, #4a90e2 100%);
+  color: var(--navbar-text);
+  border-color: var(--navbar-border);
+  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+.dropdownToggle::after {
+  content: "▾";
+  font-size: 0.9em;
+  margin-left: 8px;
+  opacity: 0.9;
+  display: inline-block;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
+
+.dropdown.open .dropdownToggle::after {
+  transform: rotate(180deg);
+}
+
+.dropdownToggle:hover::after {
+  transform: scale(1.1);
+}
+
+.dropdown.open .dropdownToggle:hover::after {
+  transform: rotate(180deg) scale(1.1);
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 220px;
+  background: linear-gradient(
+    145deg,
+    rgba(30, 45, 60, 0.95) 0%,
+    rgba(20, 35, 50, 0.95) 100%
+  );
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--navbar-border);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 4px 15px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  padding: 8px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform-origin: top center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateY(-15px) translateX(-50%) scale(0.95);
+}
+
+.dropdownMenu::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid var(--navbar-border);
+  z-index: -1;
+}
+
+.dropdownMenu::after {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 7px solid rgba(30, 45, 60, 0.95);
+  z-index: 1;
+}
+
+.dropdown.open .dropdownMenu {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0) translateX(-50%) scale(1);
+}
+
+.dropdownItem {
+  font-family: var(--font-accent);
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--navbar-text);
+  text-decoration: none;
+  padding: 12px 16px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 8px;
+  margin: 2px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.dropdownItem::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.dropdownItem:hover::before {
+  left: 100%;
+}
+
+.dropdownItem:hover {
+  background: linear-gradient(135deg, var(--navbar-accent) 0%, #f7ca18 100%);
+  color: var(--navbar-accent-text-dark);
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(241, 196, 15, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.dropdownItem.activeLink {
+  background: linear-gradient(
+    135deg,
+    var(--navbar-accent) 0%,
+    #f7ca18 100%
+  ) !important;
+  color: var(--navbar-accent-text-dark) !important;
+  box-shadow: 0 4px 12px rgba(241, 196, 15, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateX(2px);
+}
+
+.dropdownItem:first-child {
+  margin-top: 4px;
+}
+
+.dropdownItem:last-child {
+  margin-bottom: 4px;
+}
+
+/* ==========================================================================
+   Mobile Navigation Styles
+   ========================================================================== */
+.mobileMenuButton {
+  display: none;
+  background-color: var(--navbar-accent); /* Yellow base for mobile button */
+  border: 1px solid var(--dbz-orange);
+  color: var(--navbar-accent-text-dark);
+  font-size: 1.8rem;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 6px;
+  box-shadow: 0 2px 5px var(--navbar-shadow);
+  z-index: 1020;
+  margin-left: 15px;
+  transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s, color 0.2s;
+}
+.mobileMenuButton:hover {
+  background-color: var(--dbz-orange);
+  color: var(--navbar-text);
+  transform: scale(1.1);
+  box-shadow: 0 0 8px var(--dbz-yellow);
+}
+
+.mobileNavLinks {
+  display: none;
+  flex-direction: column;
+  position: fixed;
+  top: 65px; /* Adjusted to navbar height */
+  left: 50%;
+  width: 90vw;
+  max-width: 360px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  background-color: rgba(30, 45, 60, 0.9); /* Slightly more opaque */
+  backdrop-filter: blur(8px); /* Added blur effect */
+  border: 1px solid var(--navbar-border);
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 10px 25px var(--navbar-shadow);
+  z-index: 1010;
+  padding: 15px 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease-out, visibility 0.25s ease-out,
+    transform 0.25s ease-out;
+  transform: translateX(-50%) translateY(-15px);
+}
+
+.mobileNavLinks.open {
+  display: flex;
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Styling links within the mobile menu */
+.mobileNavLinks .navbarLink,
+.mobileNavLinks .dropdownToggle {
+  font-size: 1.1rem;
+  padding: 12px 20px;
+  margin: 8px 15px;
+  background-color: transparent;
+  color: var(--navbar-text);
+  border: 1px solid var(--navbar-secondary-border); /* Lighter border for links inside panel */
+  border-radius: 6px;
+}
+
+.mobileNavLinks .navbarLink:hover,
+.mobileNavLinks .dropdownToggle:hover {
+  background-color: var(--navbar-accent); /* Yellow hover */
+  color: var(--navbar-accent-text-dark);
+  border-color: var(--dbz-orange);
+}
+
+.mobileNavLinks .activeLink {
+  background-color: var(--navbar-accent) !important; /* Yellow active */
+  color: var(--navbar-accent-text-dark) !important;
+  border-color: var(--dbz-orange) !important;
+}
+
+.mobileNavLinks .dropdownMenu {
+  position: static;
+  width: auto;
+  background: linear-gradient(
+    145deg,
+    rgba(30, 45, 60, 0.95) 0%,
+    rgba(20, 35, 50, 0.95) 100%
+  );
+  border: 1px solid var(--navbar-secondary-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  padding: 8px 0 8px 20px;
+  margin: 8px 15px;
+  transform: none !important;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.mobileNavLinks .dropdownItem {
+  padding: 10px 15px;
+  color: var(--navbar-text);
+  border-radius: 6px;
+  margin: 3px 0;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mobileNavLinks .dropdownItem::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.mobileNavLinks .dropdownItem:hover::before {
+  left: 100%;
+}
+
+.mobileNavLinks .dropdownItem:hover {
+  background: linear-gradient(135deg, var(--navbar-accent) 0%, #f7ca18 100%);
+  color: var(--navbar-accent-text-dark);
+  transform: translateX(3px);
+  box-shadow: 0 3px 10px rgba(241, 196, 15, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.mobileNavLinks .dropdownItem.activeLink {
+  background: linear-gradient(
+    135deg,
+    var(--navbar-accent) 0%,
+    #f7ca18 100%
+  ) !important;
+  color: var(--navbar-accent-text-dark) !important;
+  box-shadow: 0 3px 10px rgba(241, 196, 15, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateX(2px);
+}
+
+/* ==========================================================================
+   Icon Styling (shared by desktop and mobile)
+   ========================================================================== */
+.panelIcon {
+  font-size: 1.2em;
+  margin-right: 5px;
+  opacity: 0.9;
+  vertical-align: middle;
+  /* Color will be inherited or can be set if specific icons need different colors */
+}
+
+.navbarLink > .panelIcon:first-child,
+.dropdownToggle > .panelIcon:first-child,
+.dropdownItem > .panelIcon:first-child {
+  margin-right: 8px;
+}
+
+/* ==========================================================================
+   Media Queries (breakpoints from original, can be adjusted)
+   ========================================================================== */
+@media (max-width: 1200px) {
+  .desktopNavLinks {
+    display: none;
+  }
+  .mobileMenuButton {
+    display: block;
+  }
+}
+
+@media (max-width: 992px) {
+  .navbar {
+    padding: 10px 20px;
+    min-height: 60px;
+  }
+  .navbarLogo {
+    font-size: 1.6rem;
+    padding: 6px 12px;
+  }
+}
+
+@media (max-width: 600px) {
+  .navbar {
+    padding: 10px 15px;
+  }
+  .navbarLogo {
+    font-size: 1.4rem;
+    letter-spacing: 1px;
+  }
+  .mobileMenuButton {
+    font-size: 1.6rem;
+    padding: 6px 10px;
+  }
+  .volumeControls {
+    padding-left: 10px;
+  }
+  .volumeBox {
+    width: 80px;
+  }
+}
+
+/* ==========================================================================
+   Animations 
+   ========================================================================== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes chargeEnergy {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ==========================================================================
+   Volume Controls - Themed for Blueprint Navbar
+   ========================================================================== */
+.volumeControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  padding-left: 20px;
+}
+
+.muteButton {
+  background: transparent;
+  border: 1px solid var(--navbar-border);
+  color: var(--navbar-text); /* Light text for icon */
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  transition: background-color 0.2s, color 0.2s, box-shadow 0.2s,
+    border-color 0.2s;
+}
+
+.muteButton:hover {
+  background-color: var(--navbar-accent);
+  color: var(--navbar-accent-text-dark);
+  box-shadow: 0 0 8px var(--navbar-accent);
+  border-color: var(--dbz-orange);
+}
+
+.volumeBox {
+  width: 100px;
+  height: 12px;
+  background-color: var(--dbz-dark-gray);
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--dbz-black);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.volumeFill {
+  height: 100%;
+  background: var(--navbar-accent); /* Solid Yellow Fill */
+  border-radius: 6px 0 0 6px;
+  transition: width 0.1s linear;
+  position: relative;
+}
+.volumeFill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    -75deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.35) 50%,
+    /* Adjusted shine for solid yellow */ transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: chargeEnergy 2s linear infinite;
+}
+
+.volumePercentage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--navbar-accent-text-dark);
+  text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.3); /* Lighter shadow for dark text on yellow */
+  pointer-events: none;
+}
+
+.panelIcon svg {
+  vertical-align: middle;
+}
+
+/* Remove redundant html, body, .navbar > * styles if they were placeholders */
+/* The following were at the end of the original file, might be project-wide defaults */
+/* Consider if they are still needed or should be in a global stylesheet */
+/* html, body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: var(--font-body); 
+} */
+
+/* .navbar > * {
+  margin: 0 10px;
+} */
+
+/* Ensure icons align well with text if react-icons are used */
+.panelIcon svg {
+  vertical-align: middle;
+}
+
+/* Fallback styles for mobileNavLinks if inline styles from JSX are removed/problematic */
+/* This provides a CSS-first approach for the mobile dropdown panel */
+.mobileNavLinks {
+  display: none; /* Initially hidden */
+  flex-direction: column;
+  position: fixed;
+  top: 60px; /* Example: below navbar */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90vw;
+  max-width: 360px;
+  max-height: calc(100vh - 80px); /* Example: leave some space */
+  overflow-y: auto;
+  background-color: var(--capsule-corp-panel-bg);
+  border: 1px solid var(--capsule-corp-border);
+  border-top: none; /* Assuming navbar has top border */
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 10px 25px var(--capsule-corp-shadow);
+  z-index: 1010; /* Below menu button if it needs to overlay */
+  padding: 15px 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease-out, visibility 0.25s ease-out,
+    transform 0.25s ease-out;
+  transform: translateX(-50%) translateY(-15px); /* Start slightly up for entry animation */
+}
+
+.mobileNavLinks.open {
+  display: flex;
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* The general .mobileNavLinks .navbarLink styling from above will apply to items inside */

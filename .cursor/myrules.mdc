@@ -1,0 +1,239 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# GLEAS Project Context & Development Rules
+
+## 🎯 Project Overview
+
+**GLEAS (Gamified Learning Educational Application System)** is a full-stack educational platform that gamifies learning for Senior High School students. The project combines competitive gaming mechanics with educational content to enhance student engagement and learning outcomes.
+
+### Tech Stack
+- **Backend:** Node.js + Express.js + MongoDB (Mongoose)
+- **Frontend:** React.js + Vite + TailwindCSS
+- **Authentication:** JWT tokens
+- **Real-time:** Socket.IO for live games/chat
+- **Email:** Nodemailer for notifications
+
+## 🏗️ Current Architecture (Post-Reorganization)
+
+### Backend Structure (`gleas_backend/`)
+
+```
+gleas_backend/
+├── modules/ (NEW MODULAR ARCHITECTURE)
+│   ├── auth/
+│   │   ├── controllers/authController.js (Complete auth logic)
+│   │   ├── middleware/authMiddleware.js (JWT verification)
+│   │   └── routes/authRoutes.js
+│   ├── admin/
+│   │   ├── models/Admin.js
+│   │   ├── controllers/dashboard.js
+│   │   └── routes/adminRoutes.js
+│   ├── student/
+│   │   ├── models/Student.js (Main student model)
+│   │   ├── models/PendingStudent.js (Email confirmation)
+│   │   ├── controllers/studentController.js (CRUD operations)
+│   │   └── routes/studentRoutes.js
+│   └── index.js (Central route orchestration)
+├── config/ (Configuration files)
+├── database/seeders/ (Data seeding scripts)
+├── services/ (Socket.IO, match queue)
+├── socket/ (Game server logic)
+├── uploads/ (File storage)
+└── server.js (Main entry point - UPDATED for modular routing)
+```
+
+### Frontend Structure (`gleas_frontend/`)
+
+```
+gleas_frontend/src/
+├── shared/ (NEW SHARED ARCHITECTURE)
+│   ├── components/
+│   │   ├── ProtectedRoute.jsx (Auth guard)
+│   │   └── effects/FloatingStars/ (Reusable UI)
+│   ├── contexts/AuthContext.jsx (Enhanced auth state)
+│   ├── hooks/useSocket.js (Socket management)
+│   └── services/api.js (Centralized API layer)
+├── users/
+│   ├── admin/ (Admin-specific features)
+│   └── students/ (Student-specific features)
+├── components/ (Global components)
+├── layout/ (Layout components)
+└── App.jsx
+```
+
+## 🔧 Development Patterns & Standards
+
+### API Communication
+- **New Modular Routes:** `/api/modules/{module}/{action}`
+  - Auth: `/api/modules/auth/student/login`
+  - Students: `/api/modules/student/` (CRUD)
+  - Admin: `/api/modules/admin/dashboard`
+- **Legacy Routes:** Still supported for backward compatibility
+- **Centralized API Service:** Use `shared/services/api.js` for all requests
+
+### Authentication System
+- **Dual Login:** Separate admin and student authentication
+- **JWT Storage:** localStorage with automatic header injection
+- **Route Protection:** ProtectedRoute component with role-based access
+- **Password Requirements:** Strong validation for student registration
+
+### Database Models
+- **Student Model:** Complete profile with gamification (points, ranks)
+- **Admin Model:** Basic administrative access
+- **PendingStudent:** Email confirmation workflow
+- **Modular Approach:** Each module owns its models
+
+### Code Organization Principles
+1. **Feature-Based Modules:** Each module contains its own models, controllers, routes
+2. **Shared Components:** Reusable UI/logic in `shared/` directory
+3. **Separation of Concerns:** Business logic in controllers, UI logic in components
+4. **Centralized Configuration:** All config in dedicated files
+
+## 🎮 Gaming Features Implementation
+
+### Current Game Mechanics
+- **Point System:** Students earn points for correct answers
+- **Ranking System:** Bronze → Silver → Gold → Platinum → Diamond
+- **Competitive Modes:** 1v1 duels, weekly tests, leaderboards
+- **Real-time Matches:** Socket.IO for live gameplay
+
+### UI/UX Theme
+- **Dark Gaming Theme:** Blueprint-inspired color scheme
+- **Floating Effects:** Animated stars and particles
+- **Responsive Design:** Mobile-first approach
+- **Modern Components:** CSS modules with TailwindCSS
+
+## 📋 Development Guidelines
+
+### When Adding New Features
+1. **Backend:** Create in appropriate `modules/{feature}/` directory
+2. **Frontend:** Use `shared/` for reusable, `users/{role}/` for specific
+3. **API Integration:** Update centralized API service
+4. **Authentication:** Always verify permissions for sensitive operations
+
+### Code Quality Standards
+- **Error Handling:** Comprehensive try-catch with meaningful messages
+- **Logging:** Console logs for debugging (development) with proper levels
+- **Validation:** Input validation on both frontend and backend
+- **Security:** JWT verification, password hashing, CORS configuration
+
+### File Naming Conventions
+- **Models:** PascalCase (e.g., `Student.js`, `PendingStudent.js`)
+- **Controllers:** camelCase with suffix (e.g., `studentController.js`)
+- **Routes:** camelCase with suffix (e.g., `studentRoutes.js`)
+- **Components:** PascalCase (e.g., `ProtectedRoute.jsx`)
+- **Services:** camelCase (e.g., `api.js`)
+
+## 🚀 Current Implementation Status
+
+### ✅ Completed Features
+- Complete authentication system (admin + student)
+- Student management (CRUD operations)
+- Email confirmation workflow
+- Modular backend architecture
+- Centralized API communication
+- Shared frontend components
+- Game server infrastructure
+- Real-time socket communication
+
+### 🔄 In Progress
+- Question management system
+- Weekly test functionality
+- Leaderboard implementation
+- Chat system enhancements
+- Mobile responsiveness improvements
+
+### 📈 Future Roadmap
+- Advanced analytics dashboard
+- AI-powered study recommendations
+- Mobile app development
+- Advanced game modes
+- Social features expansion
+
+## 🔐 Environment & Configuration
+
+### Required Environment Variables
+```env
+# Database
+MONGODB_URI=mongodb://localhost:27017/gleas
+DB_NAME=gleas
+
+# JWT
+JWT_SECRET=your-secret-key
+
+# Email
+EMAIL_USER=your-gmail@gmail.com
+EMAIL_PASS=your-app-password
+
+# URLs
+FRONTEND_URL=http://localhost:5173
+BACKEND_URL=http://localhost:5000
+```
+
+### Port Configuration
+- **Backend:** Port 5000
+- **Frontend:** Port 5173 (Vite default)
+- **Database:** MongoDB default port 27017
+
+## 🎯 User Roles & Permissions
+
+### Student Users
+- Register with email confirmation
+- Login with studentId + password
+- Access learning materials and games
+- Participate in competitive matches
+- View personal progress and rankings
+
+### Admin Users  
+- Login with username + password
+- Manage student accounts
+- Create and manage questions/subjects
+- View analytics and reports
+- Configure system settings
+
+## 💡 Key Implementation Notes
+
+### Socket.IO Integration
+- Game server handles real-time matches
+- Chat system for student communication
+- Live leaderboard updates
+- Match queue management
+
+### Email System
+- Welcome emails with styled HTML templates
+- Password reset functionality
+- Registration confirmation workflow
+- Professional Blueprint-themed design
+
+### Database Relationships
+- Students have embedded profile data
+- Questions linked to subjects
+- Test results track student performance
+- Leaderboard calculated from points
+
+## 🔧 Development Workflow
+
+### Adding New Modules
+1. Create directory in `modules/{moduleName}/`
+2. Add models, controllers, routes as needed
+3. Update `modules/index.js` to include routes
+4. Update frontend API service if needed
+5. Test functionality thoroughly
+
+### Frontend Component Development
+1. Check if functionality belongs in `shared/` (reusable) or `users/{role}/` (specific)
+2. Use existing contexts and hooks where possible
+3. Follow gaming theme and responsive design patterns
+4. Update API service for new endpoints
+
+### Database Changes
+1. Update model schemas
+2. Create migration scripts if needed
+3. Update seeders for development data
+4. Test with both new and existing data
+
+This document serves as the complete context for GLEAS project development and will be referenced for all future development decisions and implementations.
+

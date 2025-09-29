@@ -1,0 +1,222 @@
+/* Search Bar Component Styles */
+
+.searchContainer {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+}
+
+.searchInputContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: rgba(30, 45, 60, 0.9);
+  border: 2px solid #34495e;
+  border-radius: 25px;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.searchInputContainer.focused {
+  border-color: #f1c40f;
+  box-shadow: 0 0 15px rgba(241, 196, 15, 0.3);
+  background: rgba(30, 45, 60, 0.95);
+}
+
+.searchIcon {
+  position: absolute;
+  left: 15px;
+  color: #bbb;
+  font-size: 1.1rem;
+  transition: color 0.3s ease;
+  z-index: 2;
+}
+
+.searchInputContainer.focused .searchIcon {
+  color: #f1c40f;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 12px 50px 12px 45px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 1rem;
+  font-family: "Roboto Condensed", sans-serif;
+  placeholder-color: #bbb;
+}
+
+.searchInput::placeholder {
+  color: #bbb;
+  opacity: 0.8;
+}
+
+.clearButton {
+  position: absolute;
+  right: 12px;
+  background: rgba(231, 76, 60, 0.8);
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 2;
+}
+
+.clearButton:hover {
+  background: #e74c3c;
+  transform: scale(1.1);
+}
+
+.suggestionsContainer {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: rgba(30, 45, 60, 0.98);
+  border: 2px solid #f1c40f;
+  border-top: none;
+  border-radius: 0 0 15px 15px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.suggestionItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.suggestionItem:last-child {
+  border-bottom: none;
+}
+
+.suggestionItem:hover,
+.suggestionItem.selected {
+  background: rgba(241, 196, 15, 0.1);
+  color: #f1c40f;
+}
+
+.suggestionIcon {
+  color: #bbb;
+  font-size: 0.9rem;
+  min-width: 16px;
+  transition: color 0.2s ease;
+}
+
+.suggestionItem:hover .suggestionIcon,
+.suggestionItem.selected .suggestionIcon {
+  color: #f1c40f;
+}
+
+.suggestionText {
+  flex: 1;
+  font-size: 0.95rem;
+  color: #fff;
+  transition: color 0.2s ease;
+}
+
+.suggestionItem:hover .suggestionText,
+.suggestionItem.selected .suggestionText {
+  color: #f1c40f;
+}
+
+.suggestionType {
+  font-size: 0.8rem;
+  color: #bbb;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+
+.suggestionItem:hover .suggestionType,
+.suggestionItem.selected .suggestionType {
+  background: rgba(241, 196, 15, 0.2);
+  color: #f1c40f;
+}
+
+/* Scrollbar styling for suggestions */
+.suggestionsContainer::-webkit-scrollbar {
+  width: 6px;
+}
+
+.suggestionsContainer::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.suggestionsContainer::-webkit-scrollbar-thumb {
+  background: rgba(241, 196, 15, 0.6);
+  border-radius: 3px;
+}
+
+.suggestionsContainer::-webkit-scrollbar-thumb:hover {
+  background: rgba(241, 196, 15, 0.8);
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .searchInputContainer {
+    border-radius: 20px;
+  }
+
+  .searchInput {
+    padding: 10px 45px 10px 40px;
+    font-size: 0.95rem;
+  }
+
+  .searchIcon {
+    left: 12px;
+    font-size: 1rem;
+  }
+
+  .clearButton {
+    right: 10px;
+    width: 22px;
+    height: 22px;
+  }
+
+  .suggestionItem {
+    padding: 10px 12px;
+  }
+
+  .suggestionText {
+    font-size: 0.9rem;
+  }
+
+  .suggestionsContainer {
+    max-height: 250px;
+  }
+}
+
+@media (max-width: 480px) {
+  .searchInput {
+    padding: 9px 40px 9px 35px;
+    font-size: 0.9rem;
+  }
+
+  .searchIcon {
+    left: 10px;
+    font-size: 0.95rem;
+  }
+
+  .clearButton {
+    right: 8px;
+    width: 20px;
+    height: 20px;
+  }
+}

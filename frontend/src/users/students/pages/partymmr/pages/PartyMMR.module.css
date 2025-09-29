@@ -1,0 +1,448 @@
+/* src/components/PartyMMR.module.css */
+
+/* Import Fonts - Blueprint Theme Aligned */
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Roboto+Condensed:wght@700&family=Montserrat:wght@400;600;700&display=swap');
+
+/* --- Blueprint Capsule Corp Theme Variables --- */
+:root {
+  --blueprint-bg: #0D131A;
+  --blueprint-grid-line: rgba(173, 216, 230, 0.35);
+  --blueprint-grid-line-strong: rgba(173, 216, 230, 0.6);
+  --blueprint-text: #E0F2F7;
+  --blueprint-text-muted: #A7C0C9;
+  --blueprint-text-rgb: 224, 242, 247;
+  --blueprint-accent: #82DFFF; /* Light Blue accent */
+  --blueprint-accent-rgb: 130, 223, 255;
+  --blueprint-accent-secondary: #FFDE59; /* Yellow accent */
+  --blueprint-panel-bg: rgba(20, 30, 40, 0.85);
+  --blueprint-panel-bg-opaque: rgb(20, 30, 40);
+  --blueprint-panel-header-bg: rgba(25, 37, 50, 0.9);
+  --blueprint-panel-border: rgba(130, 223, 255, 0.5);
+  --blueprint-panel-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  --blueprint-button-bg: var(--blueprint-accent-secondary); /* Yellow buttons */
+  --blueprint-button-text: var(--blueprint-bg); /* Dark text on yellow buttons */
+  --blueprint-button-hover-bg: #FFC700; /* Darker yellow for hover */
+  --blueprint-button-secondary-bg: var(--blueprint-accent); /* Blue for secondary actions */
+  --blueprint-button-secondary-text: var(--blueprint-bg);
+  --blueprint-button-secondary-hover-bg: #A2E9FF;
+  --blueprint-input-bg: rgba(13, 20, 26, 0.8);
+  --blueprint-input-border: rgba(130, 223, 255, 0.4);
+  --blueprint-input-text: var(--blueprint-text);
+  --blueprint-input-focus-border: var(--blueprint-accent-secondary); /* Yellow focus border for inputs */
+  --blueprint-danger: #FF6B6B;
+  --blueprint-warning: #FFD700;
+  --blueprint-success: #6BFFB8;
+
+  /* Fonts */
+  --font-primary: 'Montserrat', sans-serif;
+  --font-header: 'Roboto Condensed', sans-serif; /* For panel headers, labels */
+  --font-display: 'Bangers', cursive; /* For main page titles */
+}
+
+/* --- Standard Blueprint Keyframes --- */
+@keyframes powerUpBg {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes titleSmash {
+  0% { opacity: 0; transform: scale(1.5) translateY(-20px); }
+  60% { opacity: 1; transform: scale(0.9) translateY(10px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes panelFlyIn {
+  from { opacity: 0; transform: translateY(30px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes fadeInSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+
+.partyContainer {
+  min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; padding: 40px 20px 60px 20px;
+  font-family: var(--font-primary); /* THEMED */
+  background-color: var(--blueprint-bg); /* THEMED */
+  color: var(--blueprint-text); /* THEMED */
+  line-height: 1.6; /* Added for better readability */
+  animation: powerUpBg 0.7s ease-out forwards; /* THEMED */
+}
+
+.pageHeader {
+    width: 100%;
+    max-width: 1200px; 
+    margin-bottom: 30px;
+    text-align: center; /* THEMED - Center titles */
+}
+.pageTitle {
+    font-family: var(--font-display); /* THEMED */
+    font-size: 3rem; /* THEMED */
+    color: var(--blueprint-accent-secondary); /* THEMED - Yellow title */
+    margin-bottom: 8px;
+    letter-spacing: 2px; /* THEMED */
+    text-shadow: 3px 3px 0 var(--blueprint-panel-bg-opaque), 0 0 8px var(--blueprint-accent-secondary); /* THEMED */
+    opacity: 0; /* Animation */
+    animation: titleSmash 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.3s forwards; /* THEMED */
+}
+.pageSubtitle {
+    font-family: var(--font-header); /* THEMED */
+    font-size: 1.2rem; /* THEMED */
+    color: var(--blueprint-text-muted); /* THEMED */
+    opacity: 0; /* Animation */
+    animation: fadeInSlideUp 0.5s ease-out 0.6s forwards; /* THEMED */
+}
+
+.actionsGrid { /* Changed from panelsGrid */
+    width: 100%;
+    max-width: 1200px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); /* Adjust minmax for desired panel width */
+    gap: 30px;
+    margin-top: 10px;
+}
+
+.panel {
+  background-color: var(--blueprint-panel-bg); /* THEMED */
+  border: 1px solid var(--blueprint-panel-border); /* THEMED */
+  box-shadow: var(--blueprint-panel-shadow); /* THEMED */
+  padding: 25px 30px; 
+  border-radius: 12px; /* THEMED */
+  opacity: 0; /* Animation */
+  animation: panelFlyIn 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; /* THEMED */
+  display: flex; flex-direction: column;
+  /* min-height: 300px; Removed, let content dictate height or set specific panel heights */
+}
+/* Apply animation delay in JSX if panels need to appear sequentially */
+.myPartyPanel { animation-delay: 0.5s; }
+.publicPartiesPanel { animation-delay: 0.7s; }
+
+
+.panelHeader {
+  display: flex; align-items: center; gap: 12px;
+  color: var(--blueprint-text); /* THEMED - Brighter header text */
+  font-family: var(--font-header); /* THEMED */
+  font-size: 1.5rem; /* THEMED */
+  margin-bottom: 20px; padding-bottom: 15px;
+  border-bottom: 1px solid var(--blueprint-grid-line); /* THEMED - Softer divider */
+}
+.panelIcon {
+   font-size: 1.4rem; /* THEMED */
+   color: var(--blueprint-accent-secondary); /* THEMED - Yellow icon */
+}
+
+.createPartyPrompt { 
+    flex-grow: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; gap: 15px;
+}
+.createPartyText {
+    font-family: var(--font-primary); /* THEMED */
+    font-size: 1.1rem;
+    color: var(--blueprint-text-muted); line-height: 1.6;
+}
+.createPartyButtons {
+    display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;
+}
+
+.gameButton {
+  font-family: var(--font-header); /* THEMED - Roboto Condensed for buttons */
+  padding: 10px 22px; /* Adjusted padding */
+  border: none; /* THEMED - Remove pixel border */
+  color: var(--blueprint-button-text); /* THEMED */
+  background-color: var(--blueprint-button-bg); /* THEMED */
+  text-transform: uppercase;
+  letter-spacing: 1px; /* THEMED */
+  font-size: 0.95rem; /* THEMED */
+  font-weight: 700; /* THEMED */
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease; /* THEMED */
+  box-shadow: 0 3px 5px rgba(0,0,0,0.2); /* THEMED - Softer shadow */
+  border-radius: 8px; /* THEMED - Rounded buttons */
+  user-select: none;
+  white-space: nowrap;
+  text-align: center;
+  display: inline-flex; /* For icon alignment if needed later */
+  align-items: center;
+  justify-content: center;
+}
+.gameButton:hover:not(:disabled) {
+  background-color: var(--blueprint-button-hover-bg); /* THEMED */
+  color: var(--blueprint-button-text); /* Keep text color or adjust if needed */
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3); /* THEMED */
+  transform: translateY(-2px); /* THEMED */
+}
+.gameButton:active:not(:disabled) {
+  transform: translateY(0px); /* THEMED */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2); /* THEMED */
+  background-color: var(--blueprint-button-hover-bg); /* Keep hover color or slightly darker */
+}
+.gameButton:disabled {
+  opacity: 0.6; cursor: not-allowed; filter: grayscale(40%); /* THEMED */
+  background-color: var(--blueprint-input-border) !important; /* Muted bg */
+  color: var(--blueprint-text-muted) !important; /* Muted text */
+  box-shadow: none !important; /* No shadow when disabled */
+  transform: none !important;
+}
+
+.partySizeButton {
+    composes: gameButton;
+}
+
+.partyContent { 
+    display: flex; flex-direction: column; gap: 20px; flex-grow: 1;
+}
+.memberList {
+    list-style: none; padding: 0; margin: 0;
+    display: flex; flex-direction: column; gap: 10px;
+    max-height: 190px; /* Adjusted height */
+    overflow-y: auto;
+    background-color: var(--blueprint-input-bg); /* THEMED - Darker bg for list */
+    border: 1px solid var(--blueprint-input-border); /* THEMED */
+    padding: 10px 15px; /* Adjusted padding */
+    border-radius: 6px; /* THEMED */
+    scrollbar-width: thin; 
+    scrollbar-color: var(--blueprint-accent) var(--blueprint-input-bg); 
+}
+.memberList::-webkit-scrollbar { width: 8px; }
+.memberList::-webkit-scrollbar-track { background: var(--blueprint-input-bg); border-radius: 6px; }
+.memberList::-webkit-scrollbar-thumb { background-color: var(--blueprint-accent); border-radius: 6px; border: 2px solid var(--blueprint-input-bg); }
+
+.memberItem {
+    display: flex; align-items: center; gap: 12px; /* Adjusted gap */
+    background-color: transparent; /* Item itself transparent, list has bg */
+    padding: 8px 0px; /* Vertical padding, no horizontal as list has it */
+    border: none; /* No border on item, list has border */
+    box-shadow: none; /* No shadow on item */
+    border-bottom: 1px solid var(--blueprint-grid-line); /* Divider for items */
+}
+.memberItem:last-child {
+    border-bottom: none; /* No divider for last item */
+}
+
+.memberAvatar {
+    width: 36px; height: 36px; flex-shrink: 0; /* Slightly larger */
+    background-color: var(--blueprint-accent); /* THEMED */
+    border: none; /* THEMED */
+    color: var(--blueprint-button-text); /* THEMED */
+    display: flex;
+    align-items: center; justify-content: center;
+    font-size: 1rem; font-family: var(--font-header); /* THEMED */
+    text-transform: uppercase;
+    border-radius: 50%; /* THEMED - Circular avatar */
+    font-weight: 700;
+}
+.memberAvatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%;}
+.memberUsername {
+    font-size: 1rem; /* THEMED */
+    color: var(--blueprint-text); /* THEMED */
+    font-family: var(--font-primary); /* THEMED */
+    flex-grow: 1;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.kickButton { 
+    font-size: 1.1rem; /* THEMED */
+    color: var(--blueprint-danger); /* THEMED */
+    cursor: pointer;
+    background: none; border: none; padding: 0 5px;
+    opacity: 0.7; transition: opacity 0.2s ease, transform 0.15s ease;
+}
+.kickButton:hover { opacity: 1; transform: scale(1.1); }
+
+
+.inviteSection { margin-top: auto; }
+.inviteForm { display: flex; gap: 10px; align-items: center; }
+.inviteInput {
+    flex-grow: 1; font-size: 1rem; padding: 10px 15px; /* THEMED */
+    background-color: var(--blueprint-input-bg); /* THEMED */
+    border: 1px solid var(--blueprint-input-border); /* THEMED */
+    color: var(--blueprint-input-text); /* THEMED */
+    border-radius: 6px; /* THEMED */
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.2); /* THEMED */
+    font-family: var(--font-primary); /* THEMED */
+}
+.inviteInput::placeholder { color: var(--blueprint-text-muted); opacity: 0.7; }
+.inviteInput:focus {
+   outline: none; border-color: var(--blueprint-input-focus-border); /* THEMED */
+   box-shadow: inset 0 1px 3px rgba(0,0,0,0.2), 0 0 0 3px rgba(var(--blueprint-accent-secondary-rgb, 255, 222, 89), 0.3); /* THEMED */
+}
+.inviteButton {
+    composes: gameButton; 
+    padding: 10px 18px; /* Match general button padding */
+    font-size: 0.9rem; /* Slightly smaller if needed */
+    flex-shrink: 0; 
+}
+
+.partyActions {
+    margin-top: 15px; padding-top: 15px;
+    border-top: 1px solid var(--blueprint-grid-line); /* THEMED - Softer divider */
+    display: flex; justify-content: space-between; align-items: center; gap: 15px;
+}
+.startQueueButton {
+    composes: gameButton; 
+    flex-grow: 1; 
+    font-size: 1rem; /* Larger for primary action */
+    /* background-color: var(--blueprint-accent); Default gameButton is already accent */
+    /* color: var(--blueprint-button-text); */
+}
+.cancelQueueButton { /* Style for cancel queue */
+    composes: gameButton;
+    flex-grow: 1;
+    font-size: 1rem;
+    background-color: var(--blueprint-danger) !important; /* Danger color for cancel */
+    color: var(--blueprint-text) !important;
+}
+.cancelQueueButton:hover:not(:disabled) {
+    background-color: #D63031 !important; /* Darker danger */
+}
+.leavePartyButton {
+    composes: gameButton;
+    background-color: var(--blueprint-button-secondary-bg); /* THEMED - Use secondary blue */
+    color: var(--blueprint-button-secondary-text); /* THEMED */
+}
+.leavePartyButton:hover:not(:disabled) {
+    background-color: var(--blueprint-button-secondary-hover-bg); /* THEMED */
+}
+
+/* --- Public Parties Panel --- */
+.publicPartiesPanel { /* Specific styles if needed */ }
+.lobbyBrowserHeader { 
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap; /* Allow wrapping */
+    gap: 15px;
+    margin-bottom: 15px; /* Space before list */
+}
+.lobbyBrowserHeader .panelHeader { margin-bottom: 0; padding-bottom: 0; border-bottom: none; font-size: 1.5rem;}
+.lobbySearchContainer { 
+    position: relative; 
+    min-width: 280px; /* Ensure it has some width */
+    display: flex;
+    align-items: center;
+    flex-grow: 1; /* Allow to grow if space available */
+    max-width: 350px; /* Limit max width */
+}
+.lobbySearchInput { 
+    composes: inviteInput; /* Inherit base input style */
+    padding-left: 40px; /* Space for icon */
+    width: 100%; /* Take full width of container */
+}
+.lobbySearchIcon { 
+   position: absolute;
+   left: 12px;
+   font-size: 1.1rem;
+   color: var(--blueprint-text-muted);
+   pointer-events: none; /* So it doesn't interfere with input click */
+}
+.lobbyListContainer { 
+    flex-grow: 1; /* Take remaining space in panel */
+    overflow-y: auto;
+    max-height: 400px; /* Example max height */
+    padding-right: 5px; /* Space for scrollbar */
+    margin-top: 10px;
+    scrollbar-width: thin; 
+    scrollbar-color: var(--blueprint-accent) var(--blueprint-input-bg);
+}
+.lobbyListContainer::-webkit-scrollbar { width: 8px; }
+.lobbyListContainer::-webkit-scrollbar-track { background: var(--blueprint-input-bg); border-radius: 6px; }
+.lobbyListContainer::-webkit-scrollbar-thumb { background-color: var(--blueprint-accent); border-radius: 6px; border: 2px solid var(--blueprint-input-bg); }
+
+.lobbyList { 
+    list-style: none; padding: 0; margin: 0;
+    display: flex; flex-direction: column; gap: 10px;
+}
+.partyItem { 
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 15px;
+    padding: 12px 15px;
+    background-color: var(--blueprint-input-bg); /* THEMED */
+    border: 1px solid var(--blueprint-input-border); /* THEMED */
+    border-radius: 8px; /* THEMED */
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+.partyItem:hover {
+    border-color: var(--blueprint-accent-secondary); /* THEMED - Yellow border on hover */
+    background-color: rgba(var(--blueprint-accent-secondary-rgb, 255, 222, 89), 0.05); /* THEMED - Faint yellow bg */
+}
+/* .partyDetails { Renamed div with classes .flex-grow .overflow-hidden .mr-4 in JSX } */
+
+.partyName {
+    font-family: var(--font-header); /* THEMED */
+    font-size: 1.1rem; /* THEMED */
+    color: var(--blueprint-text); /* THEMED */
+    font-weight: 700; /* THEMED */
+    display: block; /* For ellipsis to work */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 3px;
+}
+.partyMembersInfo { 
+    font-size: 0.85rem; /* THEMED */
+    color: var(--blueprint-text-muted); /* THEMED */
+    font-family: var(--font-primary); /* THEMED */
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.partyInfo { 
+    display: flex; align-items: center; gap: 15px; flex-shrink: 0;
+}
+.partySize { 
+    font-family: var(--font-header); /* THEMED */
+    font-size: 0.9rem; /* THEMED */
+    color: var(--blueprint-accent); /* THEMED */
+    background-color: rgba(var(--blueprint-accent-rgb), 0.1); /* THEMED - Light blue bg for size */
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 700;
+}
+.joinPartyButton {
+    composes: gameButton;
+    padding: 8px 15px; /* Smaller for list items */
+    font-size: 0.85rem;
+}
+.noPartiesMessage { 
+    font-family: var(--font-primary); /* THEMED */
+    font-size: 1.1rem; /* THEMED */
+    color: var(--blueprint-text-muted); /* THEMED */
+    text-align: center; padding: 30px 10px;
+    flex-grow: 1; display: flex; align-items: center; justify-content: center;
+}
+
+/* Remove old fadeIn keyframe if not used */
+
+@media (max-width: 992px) { 
+    .actionsGrid { grid-template-columns: 1fr; } 
+}
+@media (max-width: 480px) {
+    .panel { padding: 20px; }
+    .pageTitle { font-size: 2.2rem; } /* THEMED */
+    .pageSubtitle { font-size: 1rem; } /* THEMED */
+    .panelHeader { font-size: 1.3rem; } /* THEMED */
+    .createPartyButtons { flex-direction: column; gap: 10px; width: 100%; }
+    .partySizeButton { width: 90%; align-self: center; } 
+    .inviteInput { font-size: 0.95rem; } /* THEMED */
+    .memberList { max-height: 160px; } /* Adjusted */
+    .partyActions { flex-direction: column; align-items: stretch; }
+    .partyItem { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .partyInfo { align-self: flex-end; margin-top: 8px; }
+    .lobbyBrowserHeader { flex-direction: column; align-items: stretch; gap: 10px; }
+    .lobbyBrowserHeader .panelHeader { text-align: center; }
+    .lobbySearchContainer { min-width: unset; max-width: 100%; }
+}
+
+/* Make sure sr-only is defined if used for accessibility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

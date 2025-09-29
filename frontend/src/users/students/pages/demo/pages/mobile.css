@@ -1,0 +1,702 @@
+/* ========================================
+   MOBILE-ONLY CSS - PORTRAIT OPTIMIZED
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* Mobile variables - narrower cards for 3x3 grid */
+  :root {
+    --app-navbar-height: 60px;
+    --mobile-padding: 6px;
+    --mobile-gap: 4px;
+    --status-height: 35px;
+    --battle-height: 70px;
+    --enemy-card-width: 65px; /* Much smaller enemy cards for 6 cards */
+    --enemy-card-height: 90px; /* Smaller height too */
+    --my-card-width: 115px; /* Narrower for 3x3 grid */
+    --my-card-height: 190px; /* Keep height */
+  }
+
+  /* Hide desktop header */
+  .gameHeader {
+    display: none !important;
+  }
+
+  /* Status bar - below navbar */
+  .gameStatusBar {
+    position: fixed !important;
+    top: var(--app-navbar-height) !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: var(--status-height) !important;
+    z-index: 1000 !important;
+    background: rgba(10, 15, 28, 0.95) !important;
+    backdrop-filter: blur(10px) !important;
+    padding: 6px 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    border-bottom: 1px solid rgba(45, 74, 107, 0.3) !important;
+  }
+
+  /* Main game container - manual positioning */
+  .duelField {
+    position: fixed !important;
+    top: calc(var(--app-navbar-height) + var(--status-height)) !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: var(--mobile-padding) !important;
+    gap: var(--mobile-gap) !important;
+    background: var(--duel-field-bg) !important;
+    overflow: hidden !important;
+    justify-content: flex-start !important; /* Start from top, manual positioning */
+  }
+
+  /* Opponent zone - much bigger for 6 cards in 3x2 layout with side margins */
+  .playerZone.topPlayer {
+    height: 220px !important;
+    max-height: 220px !important;
+    min-height: 200px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background: rgba(20, 35, 50, 0.8) !important;
+    border-radius: 6px !important;
+    padding: 3px !important;
+    border: 1px solid rgba(45, 74, 107, 0.5) !important;
+    backdrop-filter: blur(5px) !important;
+    flex-shrink: 0 !important;
+    margin: 0 15px !important; /* Side margins for cooler look */
+  }
+
+  /* Battle field - positioned manually */
+  .battleField {
+    height: 120px !important;
+    min-height: 100px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    background: rgba(30, 50, 70, 0.8) !important;
+    border-radius: 6px !important;
+    padding: 6px !important;
+    border: 1px solid rgba(45, 74, 107, 0.7) !important;
+    backdrop-filter: blur(5px) !important;
+    flex-shrink: 0 !important;
+    text-align: center !important;
+    margin-top: 45px !important; /* Perfect center between HP bars */
+    margin-bottom: 3px !important; /* Very close to player zone */
+  }
+
+  /* Remove extra spacing - keep everything compact */
+  .duelField > * {
+    margin: 0 !important;
+  }
+
+  /* Your zone - positioned higher manually with side margins */
+  .playerZone.bottomPlayer {
+    position: absolute !important; /* Absolute positioning for control */
+    bottom: 100px !important; /* Even higher up - plenty of space */
+    left: calc(var(--mobile-padding) + 15px) !important; /* Add side margin */
+    right: calc(var(--mobile-padding) + 15px) !important; /* Add side margin */
+    height: 420px !important; /* Profile (~30px) + Card hand (380px) + padding */
+    display: flex !important;
+    flex-direction: column !important;
+    background: rgba(20, 35, 50, 0.8) !important;
+    border-radius: 6px !important;
+    padding: 3px 3px 15px 3px !important; /* Extra bottom padding for safe area */
+    border: 1px solid rgba(45, 74, 107, 0.5) !important;
+    backdrop-filter: blur(5px) !important;
+    justify-content: flex-end !important; /* Push content to bottom */
+  }
+
+  /* Player info - positioned above zones, wider layout */
+  .playerInfo {
+    position: absolute !important;
+    background: rgba(0, 0, 0, 0.9) !important;
+    border-radius: 6px !important;
+    padding: 4px 8px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 280px !important; /* Much wider */
+    max-width: calc(100vw - 20px) !important;
+    text-align: center !important;
+    border: 1px solid rgba(45, 74, 107, 0.4) !important;
+    backdrop-filter: blur(10px) !important;
+    z-index: 100 !important;
+  }
+
+  /* Top player info - at bottom of enemy zone (on top of their deck) */
+  .playerZone.topPlayer .playerInfo {
+    top: auto !important;
+    bottom: -45px !important; /* Below the enemy zone, on top of their deck */
+  }
+
+  /* Bottom player info - above your zone */
+  .playerZone.bottomPlayer .playerInfo {
+    top: -45px !important; /* Above your zone */
+  }
+
+  /* Ultra compact single line layout - force everything inline */
+  .playerInfo {
+    height: auto !important; /* Allow height for HP bar */
+    display: block !important; /* Use block to allow inline children */
+    text-align: center !important;
+    white-space: nowrap !important;
+    padding: 2px 0 !important;
+  }
+
+  .playerInfo .playerName {
+    font-size: 0.7rem !important;
+    margin: 0 8px 0 0 !important;
+    font-weight: 600 !important;
+    color: var(--legendary-gold) !important;
+    display: inline !important; /* Force inline */
+    vertical-align: middle !important;
+  }
+
+  .playerInfo .playerRole {
+    display: none !important; /* Hide role to save space */
+  }
+
+  .playerInfo .playerStats {
+    display: inline !important; /* Force inline */
+    vertical-align: middle !important;
+    margin: 0 !important;
+  }
+
+  .playerInfo .playerStats .statItem {
+    display: inline !important; /* Force inline */
+    margin: 0 !important;
+    vertical-align: middle !important;
+    font-size: 0.5rem !important; /* Much smaller text */
+    padding: 1px 2px !important; /* Smaller padding */
+    background: rgba(255, 255, 255, 0.1) !important; /* Less prominent background */
+  }
+
+  /* Show HP bar again but make it compact */
+  .playerInfo .hpBar {
+    display: block !important;
+    margin-top: 2px !important;
+  }
+
+  .statItem {
+    font-size: 0.45rem !important; /* Much smaller font */
+    padding: 1px 3px !important; /* Compact padding */
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-radius: 3px !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Compact horizontal HP bars */
+  .hpBarBackground {
+    height: 4px !important;
+    border-radius: 2px !important;
+    background: rgba(0, 0, 0, 0.6) !important;
+    margin: 2px auto !important;
+    width: 120px !important; /* Fixed width for consistency */
+  }
+
+  .hpBar {
+    height: 100% !important;
+    border-radius: 2px !important;
+    transition: width 0.3s ease !important;
+  }
+
+  .hpText {
+    font-size: 0.5rem !important;
+    text-align: left !important;
+    margin: 1px 0 !important;
+    font-weight: 600 !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 5px !important; /* Position on left side */
+    transform: translateY(-50%) !important; /* Only center vertically */
+    color: white !important;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8) !important;
+  }
+
+  /* Card hands - flexbox layout */
+  .cardHand {
+    flex: 1 !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    padding: 4px !important;
+    overflow-y: auto !important;
+    min-height: 0 !important;
+  }
+
+  /* Opponent cards - 3x2 grid layout for 6 cards */
+  .playerZone.topPlayer .cardHand {
+    flex: 1 !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    grid-gap: 4px !important;
+    justify-items: center !important;
+    align-content: start !important;
+    overflow: visible !important; /* No scroll bars */
+    padding: 4px !important;
+    margin-top: 2px !important;
+    max-width: 100% !important;
+  }
+
+  /* Your cards - sized for 6 cards (2x3) */
+  .playerZone.bottomPlayer .cardHand {
+    flex: 0 0 auto !important; /* Don't grow, fixed size */
+    height: 380px !important; /* Just enough for 2 rows of 180px cards + gaps */
+    align-content: center !important; /* Center cards in the space */
+    justify-content: center !important; /* Center cards horizontally */
+    align-items: center !important; /* Center individual cards */
+    overflow: visible !important;
+    padding: 4px !important;
+    margin-top: auto !important; /* Push to bottom */
+  }
+
+  /* Enemy cards - small for count display */
+  .playerZone.topPlayer .gameCard {
+    width: var(--enemy-card-width) !important;
+    height: var(--enemy-card-height) !important;
+    flex-shrink: 0 !important;
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    border-radius: 4px !important;
+    background: var(--card-back) !important;
+    border: 1px solid var(--card-border) !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    overflow: hidden !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+  }
+
+  /* Your cards - centered and sized for interaction */
+  .playerZone.bottomPlayer .gameCard {
+    width: var(--my-card-width) !important;
+    height: var(--my-card-height) !important;
+    flex-shrink: 0 !important;
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    border-radius: 6px !important;
+    background: var(--card-back) !important;
+    border: 1px solid var(--card-border) !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    overflow: hidden !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+    margin: 2px !important; /* Small margin for spacing */
+  }
+
+  /* Enemy card content - minimal */
+  .playerZone.topPlayer .cardHeader {
+    padding: 2px 3px !important;
+    flex-shrink: 0 !important;
+    background: rgba(0, 0, 0, 0.4) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .playerZone.topPlayer .cardContent {
+    flex: 1 !important;
+    padding: 2px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 0 !important;
+  }
+
+  .playerZone.topPlayer .cardQuestion {
+    font-size: 0.5rem !important;
+    line-height: 1.1 !important;
+    text-align: center !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    color: var(--text-primary) !important;
+    font-weight: 500 !important;
+  }
+
+  .playerZone.topPlayer .cardFooter {
+    padding: 2px 3px !important;
+    flex-shrink: 0 !important;
+    background: rgba(0, 0, 0, 0.4) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+
+  .playerZone.topPlayer .bloomLevelText {
+    font-size: 0.4rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+  }
+
+  .playerZone.topPlayer .damageNumber {
+    font-size: 0.6rem !important;
+    font-weight: 700 !important;
+    color: var(--legendary-gold) !important;
+  }
+
+  /* Your card content - larger and readable */
+  .playerZone.bottomPlayer .cardHeader {
+    padding: 3px 4px !important; /* More compact padding */
+    flex-shrink: 0 !important;
+    background: rgba(0, 0, 0, 0.4) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .playerZone.bottomPlayer .cardContent {
+    flex: 1 !important;
+    padding: 2px !important; /* Much more compact padding */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 0 !important;
+  }
+
+  .playerZone.bottomPlayer .cardQuestion {
+    font-size: 0.65rem !important; /* Smaller, more compact font */
+    line-height: 1.1 !important; /* Tighter line spacing */
+    text-align: center !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 5 !important; /* More lines in bigger card */
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    color: var(--text-primary) !important;
+    font-weight: 500 !important;
+  }
+
+  .playerZone.bottomPlayer .cardFooter {
+    padding: 3px 4px !important; /* More compact padding */
+    flex-shrink: 0 !important;
+    background: rgba(0, 0, 0, 0.4) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+
+  .playerZone.bottomPlayer .bloomLevelText {
+    font-size: 0.5rem !important; /* Smaller, more compact */
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+  }
+
+  .playerZone.bottomPlayer .damageNumber {
+    font-size: 0.7rem !important; /* Smaller, more compact */
+    font-weight: 700 !important;
+    color: var(--legendary-gold) !important;
+  }
+
+  /* Enemy card back text - smaller font */
+  .playerZone.topPlayer .card-back-text {
+    font-size: 0.4rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+  }
+
+  .playerZone.topPlayer .card-back-subtitle {
+    font-size: 0.3rem !important;
+    opacity: 0.8 !important;
+  }
+
+  /* Enhanced touch interactions */
+  .gameCard:active {
+    transform: scale(0.95) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  .gameCard.selected {
+    transform: scale(1.05) !important;
+    z-index: 10 !important;
+    box-shadow: 0 4px 16px rgba(74, 144, 226, 0.4) !important;
+    border-color: var(--field-glow) !important;
+  }
+
+  .gameCard:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --mobile-padding: 4px;
+    --mobile-gap: 3px;
+    --status-height: 30px;
+    --battle-height: 60px;
+    --enemy-card-width: 60px; /* Smaller enemy cards for 3x2 grid */
+    --enemy-card-height: 80px; /* Smaller height */
+    --my-card-width: 105px; /* Narrower for 3x3 grid */
+    --my-card-height: 170px; /* Keep height */
+  }
+
+  .gameStatusBar {
+    padding: 4px 8px !important;
+  }
+
+  .playerZone.topPlayer {
+    height: 200px !important;
+    max-height: 200px !important;
+    min-height: 180px !important;
+    padding: 3px !important;
+    margin: 0 12px !important; /* Side margins for smaller screens */
+  }
+
+  .battleField {
+    height: 100px !important;
+    min-height: 80px !important;
+    margin-top: 35px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .playerZone.bottomPlayer {
+    min-height: 280px !important;
+  }
+
+  .playerInfo {
+    width: 260px !important;
+    padding: 3px 6px !important;
+  }
+
+  .playerZone.topPlayer .playerInfo {
+    top: auto !important;
+    bottom: -40px !important;
+  }
+
+  .playerZone.bottomPlayer .playerInfo {
+    top: -40px !important;
+  }
+
+  .playerName {
+    font-size: 0.65rem !important;
+  }
+
+  .playerRole {
+    font-size: 0.5rem !important;
+  }
+
+  .statItem {
+    font-size: 0.5rem !important;
+    padding: 1px !important;
+  }
+
+  .hpText {
+    font-size: 0.5rem !important;
+  }
+
+  .hpBarBackground {
+    height: 2px !important;
+  }
+
+  .cardHand {
+    gap: 3px !important;
+    padding: 3px !important;
+  }
+
+  .playerZone.topPlayer .cardHand {
+    flex: 1 !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    grid-gap: 3px !important;
+    justify-items: center !important;
+    align-content: start !important;
+    overflow: visible !important;
+    margin-top: 2px !important;
+    padding: 3px !important;
+  }
+
+  .playerZone.bottomPlayer {
+    flex: 0 0 auto !important;
+    height: 380px !important; /* Profile (~30px) + Card hand (340px) + padding */
+    justify-content: flex-end !important;
+    padding: 3px 3px 12px 3px !important; /* Extra bottom padding */
+    margin-top: -5px !important; /* Very close to battle field */
+    margin-bottom: 5px !important; /* Minimal space from screen bottom */
+  }
+
+  .playerZone.bottomPlayer .cardHand {
+    flex: 0 0 auto !important;
+    height: 340px !important; /* Just enough for 2 rows of 160px cards + gaps */
+    align-content: center !important;
+    justify-content: center !important;
+    align-items: center !important;
+    margin-top: auto !important;
+    padding: 4px !important;
+  }
+}
+
+/* Very small screens - ultra compact */
+@media (max-width: 360px) {
+  :root {
+    --mobile-padding: 3px;
+    --mobile-gap: 2px;
+    --status-height: 28px;
+    --battle-height: 50px;
+    --enemy-card-width: 60px; /* Narrower enemy cards */
+    --enemy-card-height: 80px; /* Keep height */
+    --my-card-width: 95px; /* Narrower for 3x3 grid */
+    --my-card-height: 155px; /* Keep height */
+  }
+
+  .gameStatusBar {
+    padding: 3px 6px !important;
+  }
+
+  .playerZone.topPlayer {
+    height: 180px !important;
+    max-height: 180px !important;
+    min-height: 160px !important;
+    padding: 2px !important;
+    margin: 0 10px !important; /* Side margins for very small screens */
+  }
+
+  .battleField {
+    height: 90px !important;
+    min-height: 70px !important;
+    margin-top: 25px !important;
+    margin-bottom: 1px !important;
+  }
+
+  .playerZone.bottomPlayer {
+    min-height: 250px !important;
+  }
+
+  .playerInfo {
+    width: 240px !important;
+    padding: 2px 5px !important;
+  }
+
+  .playerZone.topPlayer .playerInfo {
+    top: auto !important;
+    bottom: -35px !important;
+  }
+
+  .playerZone.bottomPlayer .playerInfo {
+    top: -35px !important;
+  }
+
+  .playerName {
+    font-size: 0.6rem !important;
+  }
+
+  .playerRole {
+    font-size: 0.45rem !important;
+  }
+
+  .statItem {
+    font-size: 0.45rem !important;
+    padding: 0px 1px !important;
+  }
+
+  .hpText {
+    font-size: 0.45rem !important;
+  }
+
+  .hpBarBackground {
+    height: 2px !important;
+  }
+
+  .playerZone.topPlayer .cardHand {
+    flex: 1 !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    grid-gap: 2px !important;
+    justify-items: center !important;
+    align-content: start !important;
+    overflow: visible !important;
+    margin-top: 2px !important;
+    padding: 2px !important;
+  }
+
+  .playerZone.bottomPlayer {
+    flex: 0 0 auto !important;
+    height: 350px !important; /* Profile (~30px) + Card hand (310px) + padding */
+    justify-content: flex-end !important;
+    padding: 2px 2px 10px 2px !important; /* Extra bottom padding */
+    margin-top: -3px !important; /* Very close to battle field */
+    margin-bottom: 5px !important; /* Minimal space from screen bottom */
+  }
+
+  .playerZone.bottomPlayer .cardHand {
+    flex: 0 0 auto !important;
+    height: 310px !important; /* Just enough for 2 rows of 145px cards + gaps */
+    align-content: center !important;
+    justify-content: center !important;
+    align-items: center !important;
+    margin-top: auto !important;
+    padding: 4px !important;
+  }
+
+  /* Battle arena content positioning */
+  .battleField .battleMessage,
+  .battleField .cardSelection {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 100 !important;
+  }
+
+  /* Make score displays much smaller */
+  .playerInfo .scoreDisplay,
+  .playerInfo .correctCount,
+  .playerInfo .score {
+    font-size: 0.5rem !important;
+    padding: 1px 3px !important;
+    margin: 1px !important;
+  }
+
+  /* Compact the "CORRECT: 0" display */
+  .statItem.correctStat {
+    font-size: 0.45rem !important;
+    padding: 1px 2px !important;
+    background: rgba(241, 196, 15, 0.2) !important;
+    border-radius: 2px !important;
+  }
+
+  /* Battle field text styling */
+  .battleField .turnIndicator,
+  .battleField .gameMessage,
+  .battleField .battleText {
+    font-size: 0.8rem !important;
+    line-height: 1.2 !important;
+    margin: 2px 0 !important;
+    color: var(--text-primary) !important;
+    font-weight: 600 !important;
+  }
+
+  .battleField .cardSelectionMessage {
+    font-size: 0.7rem !important;
+    line-height: 1.1 !important;
+    margin: 1px 0 !important;
+    opacity: 0.9 !important;
+  }
+
+  /* Hide target cursor on mobile - not needed for touch */
+  .targetCursor,
+  .target-cursor,
+  .cursor-wrapper,
+  .targetCursorWrapper {
+    display: none !important;
+  }
+
+  /* Hide any cursor-related elements */
+  [class*="cursor"],
+  [class*="target"] {
+    pointer-events: none !important;
+    opacity: 0 !important;
+  }
+
+  /* Ensure touch interactions work properly */
+  .gameCard {
+    touch-action: manipulation !important;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1) !important;
+  }
+}

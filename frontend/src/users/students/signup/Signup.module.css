@@ -1,0 +1,452 @@
+/* gleas_frontend/src/users/students/signup/Signup.module.css */
+
+/* Import Fonts - Blueprint Theme Aligned */
+@import url("https://fonts.googleapis.com/css2?family=Bangers&family=Roboto+Condensed:wght@700&family=Montserrat:wght@400;600;700&display=swap");
+
+/* --- Blueprint Capsule Corp Theme Variables --- */
+:root {
+  --blueprint-bg: #0d131a;
+  --blueprint-text: #e0f2f7;
+  --blueprint-text-muted: #a7c0c9;
+  --blueprint-text-rgb: 224, 242, 247;
+  --blueprint-accent: #82dfff;
+  --blueprint-accent-rgb: 130, 223, 255;
+  --blueprint-accent-secondary: #ffde59;
+  --blueprint-panel-bg: rgba(20, 30, 40, 0.9);
+  --blueprint-panel-bg-opaque: rgb(20, 30, 40);
+  --blueprint-panel-header-bg: rgba(25, 37, 50, 0.95);
+  --blueprint-panel-border: rgba(130, 223, 255, 0.5);
+  --blueprint-panel-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  --blueprint-button-bg: var(--blueprint-accent);
+  --blueprint-button-text: var(--blueprint-bg);
+  --blueprint-button-hover-bg: #a2e9ff;
+  --blueprint-input-bg: rgba(13, 20, 26, 0.8);
+  --blueprint-input-border: rgba(130, 223, 255, 0.4);
+  --blueprint-input-text: var(--blueprint-text);
+  --blueprint-input-focus-border: var(--blueprint-accent);
+  --blueprint-danger: #ff6b6b;
+  --blueprint-danger-rgb: 255, 107, 107;
+  --blueprint-warning: #ffd700;
+  --blueprint-success: #6bffb8;
+  --blueprint-success-rgb: 107, 255, 184;
+  --blueprint-input-bg-rgb: 13, 20, 26;
+
+  /* Fonts */
+  --font-primary: "Montserrat", sans-serif;
+  --font-header: "Roboto Condensed", sans-serif;
+  --font-display: "Bangers", cursive;
+}
+
+/* --- Signup Page Specific Styles --- */
+.signupPageWrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--blueprint-bg);
+  background-image: radial-gradient(
+      circle at 10% 10%,
+      rgba(var(--blueprint-accent-rgb), 0.08) 0%,
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 90% 80%,
+      rgba(255, 222, 89, 0.07) 0%,
+      transparent 30%
+    ); /* Direct RGB for accent-secondary */
+  color: var(--blueprint-text);
+  font-family: var(--font-primary);
+  padding: 15px;
+  overflow-y: auto;
+}
+
+.signupPanel {
+  width: 100%;
+  max-width: 700px;
+  background-color: var(--blueprint-panel-bg);
+  border: 1px solid var(--blueprint-panel-border);
+  border-radius: 12px;
+  padding: 25px 30px;
+  box-shadow: var(--blueprint-panel-shadow);
+  animation: panelFadeIn 0.6s ease-out forwards;
+  margin: 10px 0;
+}
+
+@keyframes panelFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.pageTitle {
+  font-family: var(--font-display);
+  color: var(--blueprint-accent);
+  font-size: 2.5rem;
+  letter-spacing: 1.5px;
+  margin-bottom: 20px;
+  text-align: center;
+  text-shadow: 0 0 5px rgba(var(--blueprint-accent-rgb), 0.5),
+    0 0 10px rgba(var(--blueprint-accent-rgb), 0.3);
+}
+
+.signupFormGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.inputGroup.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.inputGroup label {
+  font-family: var(--font-header);
+  font-size: 0.85rem;
+  color: var(--blueprint-text-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.inputField,
+.selectField {
+  width: 100%;
+  font-family: var(--font-primary);
+  font-size: 0.95rem;
+  padding: 10px 12px;
+  background-color: var(--blueprint-input-bg);
+  border: 1px solid var(--blueprint-input-border);
+  color: var(--blueprint-input-text);
+  border-radius: 6px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.selectField {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23A7C0C9'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 20px;
+  padding-right: 35px;
+}
+
+.inputField::placeholder,
+.selectField option[value=""] {
+  color: var(--blueprint-text-muted);
+  opacity: 0.6;
+}
+
+.inputField:focus,
+.selectField:focus {
+  outline: none;
+  border-color: var(--blueprint-input-focus-border);
+  box-shadow: 0 0 0 3px rgba(var(--blueprint-accent-rgb), 0.3);
+}
+
+.inputField:disabled,
+.selectField:disabled {
+  background-color: rgba(var(--blueprint-input-bg-rgb), 0.5);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Password Requirements */
+.passwordRequirements {
+  font-size: 0.8rem;
+  color: var(--blueprint-text-muted);
+  margin-top: 8px;
+  padding-left: 12px;
+  border-left: 2px solid var(--blueprint-input-border);
+}
+
+.passwordRequirements p {
+  margin: 0 0 4px 0;
+  font-weight: 600;
+}
+
+.passwordRequirements ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.passwordRequirements li {
+  margin-bottom: 3px;
+  transition: color 0.3s ease;
+}
+
+.requirementMet {
+  color: var(--blueprint-success);
+}
+
+.requirementMet::before {
+  content: "✓ ";
+  font-weight: bold;
+}
+
+.requirementNotMet::before {
+  content: "✗ ";
+  font-weight: bold;
+  color: var(--blueprint-danger);
+}
+
+/* Error & Success Messages */
+.messageBox {
+  /* Generic class for inline messages like errors */
+  padding: 12px 18px;
+  border-radius: 6px;
+  margin: 20px 0;
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+.errorMessage {
+  /* Extends messageBox */
+  background-color: rgba(var(--blueprint-danger-rgb), 0.1);
+  border: 1px solid rgba(var(--blueprint-danger-rgb), 0.5);
+  color: var(--blueprint-danger);
+}
+
+.successMessagePanel {
+  background-color: rgba(var(--blueprint-success-rgb), 0.1);
+  border: 1px solid rgba(var(--blueprint-success-rgb), 0.5);
+  color: var(--blueprint-success);
+  padding: 20px;
+  border-radius: 8px;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.successIcon {
+  font-size: 2.5rem;
+  color: var(--blueprint-success);
+}
+
+.successTitle {
+  font-family: var(--font-header);
+  color: var(--blueprint-text);
+  font-size: 1.4rem;
+  margin-bottom: 6px;
+}
+
+.successText {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--blueprint-text-muted);
+}
+
+.successText b {
+  color: var(--blueprint-text);
+}
+
+.successText span {
+  color: var(--blueprint-accent-secondary);
+  font-weight: bold;
+}
+
+/* Signup Button */
+.signupButton {
+  width: 100%;
+  background-color: var(--blueprint-button-bg);
+  color: var(--blueprint-button-text);
+  border: none;
+  border-radius: 6px;
+  padding: 12px 18px;
+  font-family: var(--font-header);
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out, transform 0.1s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-top: 15px;
+}
+
+.signupButton:hover:not(:disabled) {
+  background-color: var(--blueprint-button-hover-bg);
+  transform: translateY(-1px);
+}
+
+.signupButton:disabled {
+  background-color: var(--blueprint-text-muted);
+  color: var(--blueprint-bg);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.backToLoginButton {
+  display: inline-block;
+  font-family: var(--font-primary);
+  font-size: 0.9rem;
+  color: var(--blueprint-text-muted);
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  margin-top: 20px;
+  text-align: center;
+  width: 100%;
+}
+
+.backToLoginButton:hover:not(:disabled) {
+  color: var(--blueprint-accent);
+  text-decoration: underline;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .signupPageWrapper {
+    padding: 12px;
+  }
+  .signupPanel {
+    padding: 20px 25px;
+    max-width: 500px;
+  }
+  .pageTitle {
+    font-size: 2.2rem;
+    margin-bottom: 18px;
+  }
+  .signupFormGrid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .inputGroup label {
+    font-size: 0.8rem;
+    margin-bottom: 5px;
+  }
+  .inputField,
+  .selectField {
+    font-size: 0.9rem;
+    padding: 9px 11px;
+  }
+  .passwordRequirements {
+    font-size: 0.75rem;
+    margin-top: 6px;
+    padding-left: 10px;
+  }
+  .successMessagePanel {
+    padding: 18px;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .signupPageWrapper {
+    padding: 10px;
+  }
+  .signupPanel {
+    padding: 18px 20px;
+    margin: 5px 0;
+  }
+  .pageTitle {
+    font-size: 2rem;
+    margin-bottom: 15px;
+  }
+  .signupFormGrid {
+    gap: 10px;
+  }
+  .inputField,
+  .selectField {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+  .signupButton {
+    padding: 10px 15px;
+    font-size: 0.95rem;
+    margin-top: 12px;
+  }
+  .successMessagePanel {
+    flex-direction: column;
+    text-align: center;
+    padding: 15px;
+  }
+  .successIcon {
+    font-size: 2rem;
+    margin-bottom: 8px;
+  }
+  .successTitle {
+    font-size: 1.2rem;
+    margin-bottom: 5px;
+  }
+  .successText {
+    font-size: 0.85rem;
+    line-height: 1.4;
+  }
+  .passwordRequirements {
+    font-size: 0.7rem;
+    margin-top: 5px;
+    padding-left: 8px;
+  }
+  .passwordRequirements li {
+    margin-bottom: 2px;
+  }
+}
+
+@media (max-width: 360px) {
+  .signupPanel {
+    padding: 15px 18px;
+  }
+  .pageTitle {
+    font-size: 1.8rem;
+  }
+  .inputField,
+  .selectField {
+    padding: 7px 9px;
+    font-size: 0.85rem;
+  }
+  .signupButton {
+    padding: 9px 12px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Utility class for centering text content within a panel */
+.centeredTextContent {
+  text-align: center;
+}
+
+.centeredTextContent .successIcon {
+  margin-bottom: 1rem; /* Add some space below the icon when centered */
+}
+
+.centeredTextContent .successTitle {
+  margin-bottom: 1rem; /* Add some space below title */
+}
+
+.centeredTextContent .successText {
+  margin-bottom: 1.5rem; /* Add some space below text */
+}
+
+.centeredTextContent .signupButton {
+  margin-left: auto; /* Center button if it's not full width */
+  margin-right: auto;
+  max-width: 200px; /* Give the button a max width when centered */
+}
+
+/* Basic spin animation for loading icons */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}

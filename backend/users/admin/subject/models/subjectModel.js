@@ -1,0 +1,17 @@
+// models/subjectModel.js
+const mongoose = require("mongoose");
+
+const subjectSchema = new mongoose.Schema(
+  {
+    // *** CHANGE: Renamed 'name' to 'subject' to be consistent ***
+    subject: {
+      type: String,
+      required: [true, "Subject name is required"], // Added validation message
+      trim: true, // Good practice to trim whitespace
+      unique: true, // Usually subjects should be unique
+    },
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("Subject", subjectSchema);

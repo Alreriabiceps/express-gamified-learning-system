@@ -1,0 +1,994 @@
+/* gleas_frontend/src/users/students/pages/dashboard/pages/Dashboard.module.css */
+
+@import url("https://fonts.googleapis.com/css2?family=Bangers&family=Roboto+Condensed:wght@700&family=Montserrat:wght@400;600;700&display=swap");
+
+.dashboardContainer {
+  --dbz-orange: #f39c12;
+  --dbz-blue: #3498db;
+  --dbz-red: #e74c3c;
+  --dbz-yellow: #f1c40f;
+  --dbz-dark-blue: #2c3e50;
+  --dbz-light-gray: #ecf0f1;
+  --dbz-dark-gray: #34495e;
+  --dbz-black: #1c1c1c;
+
+  /* Blueprint Capsule Corp Theme - Plain Dark Background */
+  --blueprint-bg: #0d131a; /* Very dark blue, near black */
+  --blueprint-grid-line: rgba(
+    173,
+    216,
+    230,
+    0.35
+  ); /* Kept for panel borders if needed */
+  --blueprint-grid-line-strong: rgba(
+    173,
+    216,
+    230,
+    0.6
+  ); /* Kept for panel borders */
+  --blueprint-text: #e0f2f7;
+  --blueprint-panel-bg: rgba(
+    30,
+    45,
+    60,
+    0.85
+  ); /* Panels slightly more opaque for readability */
+  --blueprint-panel-border: var(--blueprint-grid-line-strong);
+  --blueprint-accent: var(--dbz-yellow);
+  --blueprint-accent-text-dark: var(--dbz-black);
+  --blueprint-shadow: rgba(0, 0, 0, 0.4);
+
+  --font-header: "Bangers", cursive;
+  --font-body: "Montserrat", sans-serif;
+  --font-accent: "Roboto Condensed", sans-serif;
+
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 15px 40px 15px;
+  font-family: var(--font-body);
+  background-color: var(--blueprint-bg);
+  background-image: none; /* Plain background */
+  color: var(--blueprint-text);
+  position: relative;
+  overflow-x: hidden;
+  animation: powerUpBg 0.7s ease-out forwards;
+  animation: fadeInPage 0.7s ease-out forwards;
+}
+
+@keyframes powerUpBg {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeInPage {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes titleSmash {
+  0% {
+    opacity: 0;
+    transform: scale(1.5) translateY(-20px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(0.9) translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes fadeInSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes panelFlyInDashboard {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.floatingShapes {
+  display: none;
+}
+
+/* Page Header */
+.pageHeader {
+  width: 100%;
+  max-width: 1000px;
+  margin-bottom: 20px;
+  text-align: center;
+  z-index: 1;
+  position: relative;
+}
+.pageTitle {
+  font-family: var(--font-header);
+  font-size: 3.5rem;
+  color: var(--blueprint-accent);
+  letter-spacing: 2.5px;
+  text-shadow: 3px 3px 0 var(--dbz-black), -1px -1px 0 var(--blueprint-bg),
+    /* Use BG color for inner part of shadow */ 1px -1px 0 var(--blueprint-bg),
+    -1px 1px 0 var(--blueprint-bg), 1px 1px 0 var(--blueprint-bg);
+  margin-bottom: 0.1rem;
+  line-height: 1.1;
+  opacity: 0; /* Start hidden */
+  animation: titleSmash 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.3s forwards; /* Stagger after page load, ensure visible */
+}
+
+.pageTitleUsername {
+  color: var(--blueprint-text); /* Light text for username */
+  display: inline-block;
+  transition: transform 0.2s ease-out, color 0.2s ease-out;
+}
+.pageTitleUsername:hover {
+  transform: scale(1.1) rotate(-3deg);
+  color: var(--dbz-orange);
+}
+.pageSubtitle {
+  font-family: var(--font-accent);
+  font-size: 1.2rem;
+  color: var(--blueprint-text);
+  opacity: 0.85;
+  text-shadow: 1px 1px 2px var(--dbz-black); /* Softer shadow for light text on dark BG */
+  margin-top: 5px;
+  opacity: 0; /* Start hidden */
+  animation: fadeInSlideUp 0.5s ease-out 0.6s forwards; /* Stagger after title */
+}
+
+/* Stats Cards Row */
+.statsGrid {
+  width: 100%;
+  max-width: 1000px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 15px;
+  margin-bottom: 25px;
+  z-index: 1;
+  position: relative;
+  opacity: 0;
+  animation: fadeInSlideUp 0.5s ease-out forwards;
+  animation-delay: 0.5s;
+}
+.statCard {
+  background: var(--blueprint-panel-bg);
+  border-radius: 10px;
+  border: 1.5px solid var(--blueprint-panel-border);
+  box-shadow: 0 4px 12px var(--blueprint-shadow),
+    inset 0 0 8px rgba(0, 0, 0, 0.2);
+  padding: 1rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out,
+    background-color 0.2s ease-out;
+  cursor: pointer;
+  animation: cardPopIn 0.4s ease-out backwards;
+  opacity: 0;
+  animation: fadeInSlideUp 0.4s ease-out forwards;
+}
+.statCard:nth-child(1) {
+  animation-delay: 0.3s;
+}
+.statCard:nth-child(2) {
+  animation-delay: 0.4s;
+}
+.statCard:nth-child(3) {
+  animation-delay: 0.5s;
+}
+.statCard:nth-child(4) {
+  animation-delay: 0.6s;
+}
+
+.statCard:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 8px 20px var(--blueprint-shadow),
+    0 0 12px var(--blueprint-accent);
+  background-color: rgba(
+    var(--dbz-yellow-rgb, 241, 196, 15),
+    0.1
+  ); /* Subtle yellow tint on hover */
+  border-color: var(--blueprint-accent);
+}
+.statIcon {
+  font-size: 2.2rem;
+  color: var(--blueprint-accent); /* Yellow icons */
+  margin-bottom: 6px;
+  text-shadow: 0 0 8px var(--blueprint-accent);
+  transition: transform 0.2s ease-out;
+}
+.statCard:hover .statIcon {
+  transform: scale(1.2) rotate(5deg);
+  filter: drop-shadow(0 0 5px var(--dbz-orange));
+}
+.statValue {
+  font-family: var(--font-header);
+  font-size: 2.2rem;
+  color: var(--blueprint-text); /* Light text for values */
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+  text-shadow: 1px 1px 0 var(--dbz-black);
+}
+.statLabel {
+  font-family: var(--font-accent);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--blueprint-text);
+  opacity: 0.8;
+}
+
+/* Main Content Layout Grid */
+.dashboardLayoutGrid {
+  width: 100%;
+  max-width: 1000px;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+  margin-bottom: 25px;
+  z-index: 1;
+  position: relative;
+}
+.mainContentArea,
+.sidebarArea {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Reusable Panel Style */
+.panel {
+  background: var(--blueprint-panel-bg);
+  border: 1.5px solid var(--blueprint-panel-border);
+  border-radius: 12px;
+  box-shadow: 0 5px 15px var(--blueprint-shadow),
+    inset 0 0 10px rgba(0, 0, 0, 0.2);
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(3px); /* Subtle blur for panel */
+  animation: panelFlyInDashboard 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)
+    forwards;
+  transition: box-shadow 0.2s ease-out, border-color 0.2s ease-out;
+  opacity: 0;
+}
+.panel:hover {
+  border-color: var(--blueprint-accent);
+  box-shadow: 0 8px 25px var(--blueprint-shadow),
+    0 0 15px var(--blueprint-accent);
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--blueprint-accent); /* Yellow panel headers */
+  font-family: var(--font-header);
+  font-size: 1.6rem;
+  margin-bottom: 15px;
+  letter-spacing: 1.5px;
+  text-shadow: 1px 1px 0 var(--dbz-black);
+  border-bottom: 2px dashed var(--blueprint-grid-line-strong);
+  padding-bottom: 8px;
+}
+.panelIcon {
+  font-size: 1.6rem;
+  filter: drop-shadow(0 0 5px var(--blueprint-accent));
+  transition: transform 0.2s ease-out;
+  color: var(--blueprint-accent); /* Ensure icon matches header */
+}
+.panel:hover .panelIcon {
+  transform: scale(1.2) rotate(-10deg);
+}
+
+/* MMR Progress Panel */
+.mmrProgress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mmrInfo {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--font-accent);
+  font-weight: 700;
+  color: var(--blueprint-text); /* Light text */
+}
+.currentRankMmr .rankName {
+  font-family: var(--font-header);
+  letter-spacing: 1px;
+  margin-left: 5px;
+  /* Rank color will be applied by its own class */
+}
+.nextRank {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.progressBarContainer {
+  width: 100%;
+  height: 20px;
+  background-color: var(--dbz-dark-gray); /* Darker track for contrast */
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--blueprint-panel-border);
+}
+.progressBarFill {
+  height: 100%;
+  border-radius: 9px 0 0 9px;
+  transition: width 0.5s ease-out;
+  position: relative;
+  overflow: hidden;
+}
+.progressBarFillMmr {
+  background: var(--blueprint-accent); /* Solid Yellow Fill */
+}
+
+.progressBarFill::after {
+  /* Keep shine, adjust for yellow BG */
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    -75deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.35) 50%,
+    /* Slightly less opaque shine on solid yellow */ transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: chargeEnergy 2s linear infinite;
+}
+
+.progressText {
+  font-size: 0.8rem;
+  color: var(--blueprint-text-muted);
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-accent);
+  font-size: 0.9rem;
+  opacity: 0.9;
+  padding: 0 5px;
+}
+
+/* Tier Info Grid */
+.tierInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.tierBox {
+  background-color: rgba(0, 0, 0, 0.2); /* Darker, transparent boxes */
+  border: 1px solid var(--blueprint-panel-border);
+  border-radius: 6px;
+  padding: 8px;
+  text-align: center;
+  transition: transform 0.2s, background-color 0.2s, border-color 0.2s;
+}
+.tierBox:hover {
+  transform: scale(1.05);
+  background-color: rgba(
+    var(--dbz-yellow-rgb, 241, 196, 15),
+    0.15
+  ); /* Subtle yellow tint */
+  border-color: var(--blueprint-accent);
+}
+.tierName {
+  font-family: var(--font-header);
+  font-size: 0.85rem;
+  color: var(--blueprint-accent); /* Yellow tier names */
+  display: block;
+  margin-bottom: 3px;
+  letter-spacing: 1px;
+}
+.tierMmr {
+  font-family: var(--font-accent);
+  font-size: 0.8rem;
+  color: var(--blueprint-text);
+  opacity: 0.8;
+}
+
+/* Weekly Challenges Panel */
+.weeklyChallengesContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+.noTestsMessage {
+  font-size: 0.95rem;
+  color: var(--blueprint-text-muted);
+  font-family: var(--font-accent);
+  text-align: center;
+}
+
+/* Active Tests List */
+.activeTestsList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 15px 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.activeTestItem {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--blueprint-panel-border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  transition: all 0.2s ease-out;
+  border-left: 4px solid var(--blueprint-accent);
+}
+
+.activeTestItem:hover {
+  background: rgba(var(--dbz-yellow-rgb, 241, 196, 15), 0.1);
+  border-color: var(--blueprint-accent);
+  transform: translateX(3px);
+  box-shadow: 0 2px 8px var(--blueprint-shadow);
+}
+
+.activeTestLink {
+  font-family: var(--font-accent);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--blueprint-text);
+  text-decoration: none;
+  display: block;
+  letter-spacing: 0.5px;
+  transition: color 0.2s ease-out;
+}
+
+.activeTestLink:hover {
+  color: var(--blueprint-accent);
+  text-shadow: 0 0 5px var(--blueprint-accent);
+}
+
+.browseButton,
+.gameButton,
+.sendRequestButton {
+  font-family: var(--font-header);
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+  color: var(--blueprint-accent-text-dark); /* Dark text for yellow button */
+  background: var(--blueprint-accent); /* Yellow button */
+  padding: 10px 22px;
+  border-radius: 8px;
+  border: 2px solid var(--dbz-black); /* Black border for pop */
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out,
+    background 0.2s ease-out;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+  box-shadow: 3px 3px 0 var(--dbz-black);
+  transition: transform 0.15s ease-out, background-color 0.2s ease,
+    box-shadow 0.2s ease, color 0.2s ease;
+}
+
+.browseButton:hover,
+.gameButton:hover,
+.sendRequestButton:hover {
+  background: var(--dbz-orange); /* Orange hover */
+  color: var(--blueprint-text);
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 5px 5px 0 var(--dbz-black), 0 0 15px var(--dbz-orange);
+}
+
+.browseButton:active,
+.gameButton:active,
+.sendRequestButton:active {
+  transform: scale(1.02);
+  transition-duration: 0.08s;
+}
+
+/* Daily Streak Panel */
+.dailyStreakPanel {
+}
+.dailyStreakContent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.streakHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.streakDays {
+  font-family: var(--font-header);
+  font-size: 1.4rem;
+  color: var(--blueprint-accent); /* Yellow streak days */
+  letter-spacing: 1px;
+  text-shadow: 1px 1px 0 var(--dbz-black);
+}
+.streakStatus {
+  font-family: var(--font-accent);
+  font-size: 0.9rem;
+  font-weight: bold;
+  padding: 3px 8px;
+  border-radius: 5px;
+}
+.statusIncomplete {
+  background-color: var(--dbz-red); /* Keep red for incomplete alert */
+  color: var(--blueprint-text);
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
+}
+.statusComplete {
+  background-color: var(--blueprint-accent); /* Yellow for complete */
+  color: var(--blueprint-accent-text-dark);
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
+}
+.streakProgressBarContainer {
+  height: 8px;
+}
+.streakProgressBarFill {
+  background: var(--blueprint-accent); /* Yellow fill */
+}
+
+.streakNextReward {
+  font-family: var(--font-accent);
+  font-size: 0.85rem;
+  color: var(--blueprint-text-muted);
+  text-align: center;
+}
+.streakRewardList {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.streakRewardItem {
+  background-color: rgba(var(--blueprint-text-rgb), 0.03);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border-left: 3px solid var(--blueprint-accent);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 0.2s, transform 0.2s, border-color 0.2s;
+}
+.streakRewardItem:hover {
+  background-color: rgba(var(--dbz-yellow-rgb, 241, 196, 15), 0.1);
+  transform: translateX(5px);
+  border-color: var(--blueprint-accent);
+}
+.rewardDays {
+  font-family: var(--font-header);
+  font-size: 0.9rem;
+  color: var(--blueprint-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rewardDaysIcon {
+  font-size: 1rem;
+  color: var(--blueprint-accent);
+}
+.rewardText {
+  font-family: var(--font-accent);
+  font-size: 0.85rem;
+  color: var(--blueprint-text);
+  opacity: 0.85;
+}
+
+/* Leaderboards Section */
+.leaderboardSection {
+  width: 100%;
+  max-width: 1000px;
+  display: grid;
+  gap: 20px;
+  z-index: 1;
+  position: relative;
+  opacity: 0;
+  animation: fadeInSlideUp 0.5s ease-out forwards;
+  animation-delay: 1.2s;
+}
+@media (min-width: 769px) {
+  .leaderboardSection {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.leaderboardPanel {
+  animation-delay: 0.8s;
+}
+.leaderboardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.leaderboardTitle {
+  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0; /* Panel header style is applied */
+}
+.viewAllLink {
+  font-family: var(--font-accent);
+  color: var(--blueprint-text-muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 700;
+  transition: color 0.2s, text-shadow 0.2s;
+  display: inline-block;
+}
+.viewAllLink:hover {
+  color: var(--dbz-orange);
+  text-shadow: 0 0 8px var(--dbz-orange);
+}
+
+.leaderboardTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 6px;
+}
+.leaderboardTable th,
+.leaderboardTable td {
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: middle;
+  font-family: var(--font-accent);
+  color: var(--blueprint-text); /* Light text for table content */
+}
+.leaderboardTable th {
+  font-family: var(--font-accent);
+  font-weight: 700;
+  color: var(--blueprint-text-muted);
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  border-bottom: 1px solid var(--blueprint-panel-border);
+}
+
+.leaderboardTable tr:not(:first-child) {
+  background-color: rgba(0, 0, 0, 0.1); /* Darker transparent rows */
+  transition: background-color 0.2s, transform 0.2s;
+}
+.leaderboardTable tr:not(:first-child):hover {
+  background-color: rgba(
+    var(--dbz-yellow-rgb, 241, 196, 15),
+    0.15
+  ); /* Yellow tint on hover */
+  transform: scale(1.02);
+  box-shadow: 0 0 10px var(--blueprint-accent);
+  cursor: default;
+}
+
+.leaderboardTable td:first-child {
+  border-radius: 8px 0 0 8px;
+}
+.leaderboardTable td:last-child {
+  border-radius: 0 8px 8px 0;
+}
+
+.leaderboardRankNumber {
+  font-family: var(--font-header);
+  font-size: 1rem;
+  color: var(--blueprint-accent); /* Yellow rank number */
+  text-align: center;
+  width: 50px;
+}
+.leaderboardRankIcon {
+  margin-right: 5px;
+  color: var(--blueprint-accent);
+}
+
+.leaderboardStudentCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.leaderboardAvatar {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background-color: var(--blueprint-accent); /* Yellow avatar BG */
+  color: var(--blueprint-accent-text-dark); /* Dark text */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-header);
+  font-size: 0.9rem;
+  font-weight: 700;
+  border: 2px solid var(--dbz-black);
+  text-transform: uppercase;
+}
+.leaderboardStudentInfo {
+  display: flex;
+  flex-direction: column;
+}
+.leaderboardUsername {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--blueprint-text);
+}
+
+.leaderboardMmrValue {
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-align: center;
+  color: var(--blueprint-text);
+}
+.leaderboardRankTierValue {
+  /* Rank color class will handle this */
+  text-align: center;
+  font-weight: 700;
+}
+
+/* Rank Colors - Adjust text shadow for dark BG */
+.rankBronze {
+  color: #cd7f32 !important;
+  text-shadow: 0 0 5px #cd7f32, 1px 1px 1px var(--dbz-black);
+}
+.rankSilver {
+  color: #c0c0c0 !important;
+  text-shadow: 0 0 5px #c0c0c0, 1px 1px 1px var(--dbz-black);
+}
+.rankGold {
+  color: var(--dbz-yellow) !important;
+  text-shadow: 0 0 7px var(--dbz-yellow), 1px 1px 1px var(--dbz-black);
+}
+.rankPlatinum {
+  color: #7cc3d8 !important;
+  text-shadow: 0 0 5px #7cc3d8, 1px 1px 1px var(--dbz-black);
+}
+.rankDiamond {
+  color: #b9f2ff !important;
+  text-shadow: 0 0 7px #b9f2ff, 1px 1px 1px var(--dbz-black);
+}
+.rankMaster {
+  color: #cf8dff !important;
+  text-shadow: 0 0 7px #cf8dff, 1px 1px 1px var(--dbz-black);
+}
+.rankGrandmaster {
+  color: var(--dbz-red) !important;
+  text-shadow: 0 0 7px var(--dbz-red), 1px 1px 1px var(--dbz-black);
+}
+
+/* Responsive Adjustments - No fundamental changes, just ensuring readability if needed */
+@media (max-width: 992px) {
+  .dashboardLayoutGrid {
+    grid-template-columns: 1fr;
+  }
+  .pageTitle {
+    font-size: 3rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboardContainer {
+    padding: 15px 10px 30px 10px;
+  }
+  .pageTitle {
+    font-size: 2.5rem;
+    letter-spacing: 1.5px;
+  }
+  .pageSubtitle {
+    font-size: 1.05rem;
+  }
+  .statsGrid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  .statCard {
+    padding: 0.8rem 0.7rem;
+  }
+  .statIcon {
+    font-size: 1.8rem;
+  }
+  .statValue {
+    font-size: 1.8rem;
+  }
+  .panel {
+    padding: 12px 18px;
+  }
+  .panelHeader {
+    font-size: 1.4rem;
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+  }
+  .leaderboardTable th,
+  .leaderboardTable td {
+    padding: 7px 4px;
+    font-size: 0.85rem;
+  }
+  .leaderboardAvatar {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+  .browseButton,
+  .gameButton,
+  .sendRequestButton {
+    font-size: 0.95rem;
+    padding: 8px 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .pageTitle {
+    font-size: 2rem;
+  }
+  .pageSubtitle {
+    font-size: 0.95rem;
+  }
+  .statsGrid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .statValue {
+    font-size: 1.6rem;
+  }
+  .statLabel {
+    font-size: 0.8rem;
+  }
+  .panelHeader {
+    font-size: 1.2rem;
+  }
+  .tierBox {
+    padding: 5px;
+  }
+  .tierName {
+    font-size: 0.8rem;
+  }
+  .tierMmr {
+    font-size: 0.75rem;
+  }
+  .leaderboardTable th,
+  .leaderboardTable td {
+    font-size: 0.75rem;
+  }
+  .browseButton,
+  .gameButton,
+  .sendRequestButton {
+    font-size: 0.9rem;
+    padding: 7px 15px;
+  }
+}
+
+/* Staggering the appearance of major sections/panels */
+/* Assuming .mainContentArea and .sidebarArea are primary layout blocks */
+
+/* First panel in main content (MMR Progress) */
+.mainContentArea .panel:nth-of-type(1) {
+  /* MMR Progress Panel */
+  animation-delay: 0.8s; /* After stats grid */
+}
+
+/* Second panel in main content (Weekly Challenges) */
+.mainContentArea .panel:nth-of-type(2) {
+  /* Weekly Challenges Panel */
+  animation-delay: 1s;
+}
+
+/* Sidebar panel (Daily Streak) */
+.sidebarArea .panel {
+  /* Daily Streak Panel */
+  animation-delay: 0.9s; /* Can appear concurrently or slightly after first main panel */
+}
+
+/* Leaderboard Section and Panels */
+.leaderboardSection .leaderboardPanel:nth-of-type(1) {
+  animation-delay: 1.3s; /* Delay relative to .leaderboardSection, or absolute if .leaderboardSection is not animated as a block */
+}
+.leaderboardSection .leaderboardPanel:nth-of-type(2) {
+  animation-delay: 1.5s;
+}
+
+/* Styles for Weekly Progress Ranks (New Compact View) */
+.weeklyProgressRanksContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem; /* Space between rank items */
+  padding: 1rem 0; /* Add some padding */
+  border-top: 1px solid var(--color-border-light); /* Match existing panel style */
+  margin-top: 1rem; /* Match existing panel style */
+}
+
+.weeklyRankItem {
+  display: flex;
+  align-items: center;
+  background-color: var(
+    --color-background-secondary
+  ); /* Slightly different background */
+  padding: 0.75rem 1rem;
+  border-radius: var(--border-radius-medium);
+  border-left: 5px solid var(--color-accent-light); /* Default border color */
+  transition: all 0.3s ease;
+}
+
+.weeklyRankItem.rankAchieved {
+  border-left-color: var(
+    --color-accent
+  ); /* Highlight color for achieved ranks */
+  /* background-color: #2a3a4a; Darker shade for achieved, if desired */
+}
+
+.weeklyRankIcon {
+  font-size: 1.8rem; /* Larger icon */
+  margin-right: 1rem;
+  color: var(--color-text-secondary); /* Icon color */
+  min-width: 30px; /* Ensure icons align nicely */
+  text-align: center;
+}
+
+.weeklyRankItem.rankAchieved .weeklyRankIcon {
+  color: var(--color-accent); /* Icon color for achieved ranks */
+}
+
+.weeklyRankDetails {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.weeklyRankName {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--color-text-primary);
+}
+
+.weeklyRankDescription {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin-top: 0.2rem;
+}
+
+.weeklyRankPoints {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  padding: 0.3rem 0.6rem;
+  background-color: var(--color-background-tertiary);
+  border-radius: var(--border-radius-small);
+  white-space: nowrap;
+}
+
+.weeklyStandingsFooter {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--color-border-light);
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+/* Ensure overall tier info grid is not displayed in weekly view by mistake if logic changes */
+.weeklyProgressRanksContainer + .tierInfoGrid {
+  display: none;
+}
