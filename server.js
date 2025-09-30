@@ -80,7 +80,7 @@ app.use(cors(corsConfig));
 app.use(express.json());
 
 // Quick response to preflight requests globally
-app.options("*", cors(corsConfig));
+// Note: cors() will handle OPTIONS automatically based on corsConfig
 
 // Initialize socket server
 const gameServer = new GameServer(server);
