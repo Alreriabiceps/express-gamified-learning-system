@@ -487,30 +487,18 @@ const studentRegister = async (req, res) => {
         .json({ error: "All required fields must be filled." });
     }
 
-    // Check if studentId or email already exists in Student or PendingStudent
+    // Check if studentId or email already exists in Student ONLY
     const existingStudent = await Student.findOne({
       $or: [{ studentId }, { email }],
     });
-    const existingPending = await PendingStudent.findOne({
-      $or: [{ studentId }, { email }],
-    });
-    if (existingStudent || existingPending) {
+    if (existingStudent) {
       return res
         .status(409)
         .json({ error: "Student ID or email already exists." });
     }
 
-    // Generate confirmation token
-    const confirmationToken = crypto.randomBytes(32).toString("hex");
-    const confirmationExpires = new Date(Date.now() + 1000 * 60 * 60 * 24); // 24 hours
-
-    console.log("=== REGISTRATION DEBUG ===");
-    console.log("Generated token:", confirmationToken);
-    console.log("Token length:", confirmationToken.length);
-    console.log("Token expires:", confirmationExpires);
-
-    // Save to PendingStudent
-    const pendingStudent = new PendingStudent({
+    // Create student directly (no email verification, no admin approval)
+    const student = new Student({
       firstName,
       middleName,
       lastName,
@@ -520,32 +508,15 @@ const studentRegister = async (req, res) => {
       track,
       section,
       yearLevel,
-      confirmationToken,
-      confirmationExpires,
-    });
-    await pendingStudent.save();
-
-    // Send confirmation email
-    console.log("Sending confirmation email to:", email);
-    console.log(
-      "Confirmation URL will be:",
-      `${
-        process.env.BACKEND_URL || "http://localhost:5000"
-      }/api/auth/confirm-email?token=${confirmationToken}`
-    );
-    await sendConfirmationEmail(email, confirmationToken, {
-      firstName,
-      lastName,
-      studentId,
-      track,
-      section,
-      yearLevel,
+      isEmailConfirmed: true,
+      isApproved: true,
     });
 
-    res.status(201).json({
+    await student.save();
+
+    return res.status(201).json({
       success: true,
-      message:
-        "Registration started! Please check your email to confirm your account.",
+      message: "Registration successful! You can now log in.",
     });
   } catch (error) {
     console.error("Student registration error:", error);

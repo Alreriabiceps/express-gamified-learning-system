@@ -2,6 +2,10 @@ const config = require("./config");
 
 module.exports = {
   origin: function (origin, callback) {
+    // Emergency override: allow all origins when enabled via environment
+    if (process.env.ALLOW_ALL_CORS === "true") {
+      return callback(null, true);
+    }
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
