@@ -511,16 +511,23 @@ const studentRegister = async (req, res) => {
 
     let emailWarning;
     try {
-      await sendConfirmationEmail(email, confirmationToken, {
+      // Fire-and-forget email send to avoid blocking registration on slow SMTP
+      sendConfirmationEmail(email, confirmationToken, {
         firstName,
         lastName,
         studentId,
         track,
         section,
         yearLevel,
-      });
+      })
+        .then(() => {
+          console.log("Confirmation email queued/sent successfully");
+        })
+        .catch((e) => {
+          console.warn("Confirmation email failed (async):", e?.message || e);
+        });
     } catch (e) {
-      console.warn("Confirmation email failed:", e?.message || e);
+      console.warn("Confirmation email scheduling error:", e?.message || e);
       emailWarning =
         "We could not send the confirmation email right now. Please contact your teacher to approve your account or try again later.";
     }
@@ -640,12 +647,10 @@ const requestPasswordReset = async (req, res) => {
     });
   } catch (error) {
     console.error("Request password reset error:", error);
-    res
-      .status(500)
-      .json({
-        error: "Error requesting password reset",
-        details: error.message,
-      });
+    res.status(500).json({
+      error: "Error requesting password reset",
+      details: error.message,
+    });
   }
 };
 
