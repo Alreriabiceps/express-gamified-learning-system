@@ -37,6 +37,27 @@ exports.startTeamTest = async (req, res) => {
 
     await ensureEligibility(weekId, roster);
 
+    // Extra safety: also disallow if a TestResult already exists for any user in roster
+    // so solo completions also lock team mode
+    try {
+      const TestResult = require("../../weeklytest/models/testResultModel");
+      const hasSolo = await TestResult.find({
+        weekScheduleId: weekId,
+        studentId: { $in: roster },
+      }).limit(1);
+      if (hasSolo && hasSolo.length > 0) {
+        const error = new Error(
+          "Some users already completed this weekly test (solo)"
+        );
+        error.code = "INELIGIBLE";
+        error.blocked = roster; // Frontend can filter with actual ids if needed
+        throw error;
+      }
+    } catch (e) {
+      if (e.code === "INELIGIBLE") throw e;
+      // if query fails, continue with normal flow
+    }
+
     const attempt = await TeamWeeklyAttempt.create({
       weekId,
       subjectId: week.subjectId,
@@ -134,11 +155,93 @@ exports.answer = async (req, res) => {
         (acc, item) => acc + (item.isCorrect ? 1 : 0),
         0
       );
-      // award score to all
+      // award score to all and upsert solo lock mirror TestResult
       await UserWeeklyAttempt.updateMany(
         { attemptId: attempt._id },
         { $set: { score, completedAt: new Date() } }
       );
+      try {
+        const TestResult = require("../../weeklytest/models/testResultModel");
+        const Leaderboard = require("../../leaderboard/models/leaderboardModel");
+        const totalQuestions = attempt.questions.length;
+        const calcPoints = (s) => {
+          const pct = (s / Math.max(1, totalQuestions)) * 100;
+          if (pct >= 90) return 30;
+          if (pct >= 70) return 20;
+          if (pct >= 50) return 10;
+          return -10;
+        };
+        const newPoints = calcPoints(score);
+        const updates = attempt.roster.map(async (uid) => {
+          const existing = await TestResult.findOne({
+            studentId: uid,
+            weekScheduleId: attempt.weekId,
+          });
+          const prevPoints = existing?.pointsEarned || 0;
+          const delta = existing ? newPoints - prevPoints : newPoints;
+          if (existing) {
+            existing.score = score;
+            existing.totalQuestions = totalQuestions;
+            existing.pointsEarned = newPoints;
+            existing.completedAt = new Date();
+            await existing.save();
+          } else {
+            await TestResult.create({
+              studentId: uid,
+              weekScheduleId: attempt.weekId,
+              subjectId: attempt.subjectId,
+              weekNumber: undefined,
+              year: undefined,
+              score,
+              totalQuestions,
+              answers: [],
+              pointsEarned: newPoints,
+              completedAt: new Date(),
+            });
+          }
+          try {
+            let lb = await Leaderboard.findOne({
+              student: uid,
+              subject: attempt.subjectId,
+            });
+            if (!lb) {
+              lb = new Leaderboard({
+                student: uid,
+                subject: attempt.subjectId,
+                totalPoints: delta,
+                weeklyPoints: delta,
+                monthlyPoints: delta,
+              });
+            } else if (delta !== 0) {
+              lb.totalPoints += delta;
+              lb.weeklyPoints += delta;
+              lb.monthlyPoints += delta;
+            }
+            await lb.save();
+          } catch (e) {
+            console.warn("Leaderboard update (team) warning:", e?.message || e);
+          }
+        });
+        await Promise.all(updates);
+
+        // Recompute simple ranks for this subject
+        try {
+          const entries = await Leaderboard.find({
+            subject: attempt.subjectId,
+          }).sort({ totalPoints: -1 });
+          for (let i = 0; i < entries.length; i++) {
+            entries[i].rank = i + 1;
+            await entries[i].save();
+          }
+        } catch (e) {
+          console.warn("Rank recompute (team) warning:", e?.message || e);
+        }
+      } catch (e) {
+        console.warn(
+          "Mirror TestResult/Leaderboard upsert (team) warning:",
+          e?.message || e
+        );
+      }
     }
     await attempt.save();
     try {

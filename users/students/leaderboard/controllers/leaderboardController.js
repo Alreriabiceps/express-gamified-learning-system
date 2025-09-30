@@ -219,54 +219,53 @@ exports.getGlobalWeeklyLeaderboard = async (req, res) => {
   }
 };
 
-// Get PvP leaderboard (placeholder for now - can be implemented when PvP system is ready)
+// Get PvP leaderboard (real data from Student.pvpStars)
 exports.getPvpLeaderboard = async (req, res) => {
   try {
-    // For now, return mock PvP data based on students
-    // In the future, this would come from actual PvP match results
+    const { limit = 100, offset = 0 } = req.query;
+
+    // Pull active students sorted by PvP stars (desc)
     const students = await Student.find({ isActive: true })
-      .select("firstName lastName email")
-      .limit(50);
+      .select("firstName lastName username pvpStars")
+      .sort({ pvpStars: -1, lastName: 1 })
+      .skip(Math.max(0, Number(offset) || 0))
+      .limit(Math.max(1, Math.min(200, Number(limit) || 100)));
 
-    const mockPvpLeaderboard = students
-      .map((student, index) => {
-        // Mock PvP stars between 0-500
-        const stars = Math.floor(Math.random() * 500);
-        const fullName = `${student.firstName} ${student.lastName}`;
+    // Build rows with rank names based on star thresholds
+    const getRankName = (stars) => {
+      if (stars >= 480) return "Supreme";
+      if (stars >= 400) return "Titan";
+      if (stars >= 320) return "Legend";
+      if (stars >= 240) return "Elite";
+      if (stars >= 160) return "Gladiator";
+      if (stars >= 80) return "Knight";
+      return "Grasshopper";
+    };
 
-        // PvP rank based on stars
-        let pvpRankName = "Grasshopper";
-        if (stars >= 480) pvpRankName = "Supreme";
-        else if (stars >= 400) pvpRankName = "Titan";
-        else if (stars >= 320) pvpRankName = "Legend";
-        else if (stars >= 240) pvpRankName = "Elite";
-        else if (stars >= 160) pvpRankName = "Gladiator";
-        else if (stars >= 80) pvpRankName = "Knight";
-
-        return {
-          id: student._id,
-          username: fullName,
-          handle: `@${student.firstName.toLowerCase()}${student.lastName.toLowerCase()}`,
-          stars: stars,
-          rankName: pvpRankName,
-          avatarInitial: `${student.firstName.charAt(
+    const leaderboard = students.map((s, index) => {
+      const stars = typeof s.pvpStars === "number" ? s.pvpStars : 0;
+      const fullName =
+        `${s.firstName || ""} ${s.lastName || ""}`.trim() ||
+        s.username ||
+        "Student";
+      return {
+        id: s._id,
+        username: fullName,
+        handle: s.username ? `@${s.username}` : undefined,
+        stars,
+        rankName: getRankName(stars),
+        avatarInitial:
+          `${(s.firstName || "").charAt(0)}${(s.lastName || "").charAt(
             0
-          )}${student.lastName.charAt(0)}`.toUpperCase(),
-          position: index + 1,
-        };
-      })
-      .sort((a, b) => b.stars - a.stars);
-
-    res.json({
-      success: true,
-      leaderboard: mockPvpLeaderboard,
+          )}`.toUpperCase() || (fullName[0] || "?").toUpperCase(),
+        position: (Number(offset) || 0) + index + 1,
+      };
     });
+
+    res.json({ success: true, leaderboard });
   } catch (error) {
     console.error("Error fetching PvP leaderboard:", error);
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 

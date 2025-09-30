@@ -1,6 +1,45 @@
 console.log("server.js loaded");
 // Load environment variables from .env file
-require("dotenv").config();
+const path = require("path");
+const dotenv = require("dotenv");
+
+// Try to load .env from multiple possible locations
+const envPaths = [
+  path.join(__dirname, ".env"), // backend/.env
+  path.join(__dirname, "..", ".env"), // project root .env
+];
+
+let envLoaded = false;
+for (const envPath of envPaths) {
+  const result = dotenv.config({ path: envPath });
+  if (!result.error) {
+    console.log(`✅ .env file loaded from: ${envPath}`);
+    console.log("MONGO_URI loaded:", process.env.MONGO_URI ? "Yes" : "No");
+    console.log("MONGO_URI value:", process.env.MONGO_URI);
+    console.log(
+      "All env vars:",
+      Object.keys(process.env).filter((key) => key.startsWith("MONGO"))
+    );
+    envLoaded = true;
+    break;
+  } else {
+    console.log(`❌ Failed to load .env from: ${envPath}`);
+    console.log("Error:", result.error.message);
+  }
+}
+
+if (!envLoaded) {
+  console.error("❌ Could not load .env file from any location");
+  console.log("Tried paths:", envPaths);
+}
+
+// Temporary fix: manually set MONGO_URI if not loaded
+if (!process.env.MONGO_URI) {
+  console.log("🔧 Manually setting MONGO_URI...");
+  process.env.MONGO_URI =
+    "mongodb+srv://raslforstudying:BFhzqmMqvpgXHNxS@gleas.k5xwusc.mongodb.net/?retryWrites=true&w=majority&appName=gleas";
+  console.log("✅ MONGO_URI manually set");
+}
 
 // Import necessary packages
 const express = require("express");
