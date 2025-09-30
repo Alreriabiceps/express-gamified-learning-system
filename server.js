@@ -75,6 +75,13 @@ const { startMessageCleanup } = require("./services/messageCleanup");
 const app = express();
 const server = http.createServer(app);
 
+// Apply middleware to handle CORS and JSON requests EARLY
+app.use(cors(corsConfig));
+app.use(express.json());
+
+// Quick response to preflight requests globally
+app.options("*", cors(corsConfig));
+
 // Initialize socket server
 const gameServer = new GameServer(server);
 
@@ -96,10 +103,6 @@ const PORT = config.server.port;
 
 // Connect to MongoDB using Mongoose
 connectDB();
-
-// Apply middleware to handle CORS and JSON requests
-app.use(cors(corsConfig));
-app.use(express.json());
 
 // Add detailed request logging middleware
 app.use((req, res, next) => {
