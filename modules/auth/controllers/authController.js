@@ -253,42 +253,13 @@ const refreshToken = async (req, res) => {
 
 // Email sending utility
 const sendConfirmationEmail = async (to, token, studentDetails = {}) => {
-  if (process.env.EMAIL_DISABLED === "true") {
-    console.warn("Email sending is disabled via EMAIL_DISABLED env. Skipping.");
-    return { skipped: true };
-  }
-
-  const smtpHost = process.env.SMTP_HOST;
-  const smtpPort = Number(process.env.SMTP_PORT || 587);
-  const smtpUser = process.env.SMTP_USER || process.env.EMAIL_USER;
-  const smtpPass = process.env.SMTP_PASS || process.env.EMAIL_PASS;
-
-  if (!smtpUser || !smtpPass) {
-    console.warn(
-      "Missing SMTP credentials (SMTP_USER/SMTP_PASS or EMAIL_USER/EMAIL_PASS). Skipping email send."
-    );
-    return { skipped: true };
-  }
-
-  const transporter = nodemailer.createTransport(
-    smtpHost
-      ? {
-          host: smtpHost,
-          port: smtpPort,
-          secure: smtpPort === 465,
-          auth: { user: smtpUser, pass: smtpPass },
-          connectionTimeout: 8000,
-          greetingTimeout: 8000,
-          socketTimeout: 10000,
-        }
-      : {
-          service: "gmail",
-          auth: { user: smtpUser, pass: smtpPass },
-          connectionTimeout: 8000,
-          greetingTimeout: 8000,
-          socketTimeout: 10000,
-        }
-  );
+  const transporter = nodemailer.createTransporter({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
 
   // Use BACKEND_URL from environment, fallback to localhost for local dev
   const baseUrl = process.env.BACKEND_URL || "http://localhost:5000";
@@ -297,8 +268,8 @@ const sendConfirmationEmail = async (to, token, studentDetails = {}) => {
   const { firstName, lastName, studentId, track, section, yearLevel } =
     studentDetails;
 
-  const mail = {
-    from: smtpUser,
+  await transporter.sendMail({
+    from: process.env.EMAIL_USER,
     to,
     subject: "Confirm your email for GLEAS Registration",
     html: `
@@ -320,14 +291,17 @@ const sendConfirmationEmail = async (to, token, studentDetails = {}) => {
           <tr>
             <td align="center">
               <table border="0" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px; margin: 0 auto;">
+                <!-- Header / Logo -->
                 <tr>
                   <td align="center" style="padding: 20px 0;">
                     <h1 style="font-family: 'Bangers', 'Arial Black', sans-serif; color: #82DFFF; font-size: 40px; margin: 0; letter-spacing: 1.5px;">GLEAS</h1>
                   </td>
                 </tr>
+                <!-- Main Content Panel -->
                 <tr>
                   <td align="center" style="background-color: rgb(20, 30, 40); border-radius: 12px; border: 1px solid rgba(130, 223, 255, 0.5); padding: 30px;">
                     <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                      <!-- Welcome Title -->
                       <tr>
                         <td align="center" style="font-family: 'Roboto Condensed', Arial, sans-serif; font-size: 26px; color: #FFDE59; padding-bottom: 15px;">
                           Welcome to GLEAS, ${
@@ -335,11 +309,13 @@ const sendConfirmationEmail = async (to, token, studentDetails = {}) => {
                           }!
                         </td>
                       </tr>
+                      <!-- Intro Text -->
                       <tr>
                         <td style="font-family: 'Montserrat', Arial, sans-serif; font-size: 16px; color: #E0F2F7; line-height: 1.6; padding-bottom: 20px; text-align: center;">
-                          Thank you for registering! Please confirm your email address to activate your account.
+                          Thank you for registering! We're excited to have you join our learning community. Please confirm your email address to activate your account.
                         </td>
                       </tr>
+                      <!-- Registration Details Panel -->
                       ${
                         studentDetails && Object.keys(studentDetails).length > 0
                           ? `
@@ -383,6 +359,7 @@ const sendConfirmationEmail = async (to, token, studentDetails = {}) => {
                       `
                           : ""
                       }
+                      <!-- Confirmation Button -->
                       <tr>
                         <td align="center" style="padding-top: 10px; padding-bottom: 25px;">
                           <table border="0" cellspacing="0" cellpadding="0">
@@ -394,6 +371,7 @@ const sendConfirmationEmail = async (to, token, studentDetails = {}) => {
                           </table>
                         </td>
                       </tr>
+                      <!-- What's Next Section -->
                       <tr>
                         <td style="padding-top: 15px; padding-bottom: 15px; border-top: 1px solid rgba(130, 223, 255, 0.2);">
                             <h4 style="font-family: 'Roboto Condensed', Arial, sans-serif; font-size: 18px; color: #FFDE59; margin: 0 0 10px 0; text-align: center;">What's Next?</h4>
@@ -404,14 +382,18 @@ const sendConfirmationEmail = async (to, token, studentDetails = {}) => {
                             </ol>
                         </td>
                       </tr>
+                      <!-- Footer Info -->
                       <tr>
                         <td style="font-family: 'Montserrat', Arial, sans-serif; font-size: 13px; color: #A7C0C9; line-height: 1.6; text-align: center; padding-top: 20px; border-top: 1px solid rgba(130, 223, 255, 0.2);">
-                          If you didn't register for GLEAS, please disregard this email. This link will expire in 24 hours.
+                          If you didn't register for GLEAS, please disregard this email. If you have questions, feel free to contact our support team.
+                          <br><br>
+                          This link will expire in 24 hours.
                         </td>
                       </tr>
                     </table>
                   </td>
                 </tr>
+                <!-- Footer Copyright -->
                 <tr>
                   <td align="center" style="padding: 25px 0 15px 0; font-family: 'Montserrat', Arial, sans-serif; font-size: 12px; color: #A7C0C9;">
                     &copy; ${new Date().getFullYear()} GLEAS. All rights reserved.<br>
@@ -425,24 +407,7 @@ const sendConfirmationEmail = async (to, token, studentDetails = {}) => {
       </body>
       </html>
     `,
-  };
-
-  // Enforce send timeout
-  const sendWithTimeout = new Promise((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error("Email send timeout")), 12000);
-    transporter
-      .sendMail(mail)
-      .then((r) => {
-        clearTimeout(t);
-        resolve(r);
-      })
-      .catch((e) => {
-        clearTimeout(t);
-        reject(e);
-      });
   });
-
-  return sendWithTimeout;
 };
 
 // Student registration logic
@@ -476,25 +441,18 @@ const studentRegister = async (req, res) => {
         .json({ error: "All required fields must be filled." });
     }
 
-    // Check if studentId or email already exists in Student or PendingStudent
+    // Check if studentId or email already exists in Student
     const existingStudent = await Student.findOne({
       $or: [{ studentId }, { email }],
     });
-    const existingPending = await PendingStudent.findOne({
-      $or: [{ studentId }, { email }],
-    });
-    if (existingStudent || existingPending) {
+    if (existingStudent) {
       return res
         .status(409)
         .json({ error: "Student ID or email already exists." });
     }
 
-    // Generate confirmation token
-    const confirmationToken = crypto.randomBytes(32).toString("hex");
-    const confirmationExpires = Date.now() + 1000 * 60 * 60 * 24; // 24 hours
-
-    // Save to PendingStudent
-    const pendingStudent = new PendingStudent({
+    // Create student directly (no email verification, no admin approval)
+    const student = new Student({
       firstName,
       middleName,
       lastName,
@@ -504,39 +462,15 @@ const studentRegister = async (req, res) => {
       track,
       section,
       yearLevel,
-      confirmationToken,
-      confirmationExpires,
+      isEmailConfirmed: true, // Skip email verification
+      isApproved: true, // Skip admin approval
     });
-    await pendingStudent.save();
 
-    let emailWarning;
-    try {
-      // Fire-and-forget email send to avoid blocking registration on slow SMTP
-      sendConfirmationEmail(email, confirmationToken, {
-        firstName,
-        lastName,
-        studentId,
-        track,
-        section,
-        yearLevel,
-      })
-        .then(() => {
-          console.log("Confirmation email queued/sent successfully");
-        })
-        .catch((e) => {
-          console.warn("Confirmation email failed (async):", e?.message || e);
-        });
-    } catch (e) {
-      console.warn("Confirmation email scheduling error:", e?.message || e);
-      emailWarning =
-        "We could not send the confirmation email right now. Please contact your teacher to approve your account or try again later.";
-    }
+    await student.save();
 
     return res.status(201).json({
       success: true,
-      message:
-        "Registration started! Please check your email to confirm your account.",
-      warning: emailWarning,
+      message: "Registration successful! You can now log in.",
     });
   } catch (error) {
     console.error("Student registration error:", error);
@@ -656,7 +590,7 @@ const requestPasswordReset = async (req, res) => {
 
 // Send password reset email
 const sendPasswordResetEmail = async (to, resetUrl, firstName) => {
-  const transporter = nodemailer.createTransport({
+  const transporter = nodemailer.createTransporter({
     service: "gmail",
     auth: {
       user: process.env.EMAIL_USER,
