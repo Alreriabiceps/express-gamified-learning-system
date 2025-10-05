@@ -54,6 +54,7 @@ const corsConfig = require("./config/cors");
 const jwtConfig = require("./config/jwt");
 const connectDB = require("./config/db");
 const socketService = require("./services/socketService");
+const { createIndexes } = require("./config/dbIndexes");
 
 // Import main routes
 const mainRoutes = require("./core/routes");
@@ -102,63 +103,33 @@ app.set("gameServer", gameServer);
 const PORT = config.server.port;
 
 // Connect to MongoDB using Mongoose
-connectDB();
-
-// Add detailed request logging middleware
-app.use((req, res, next) => {
-  console.log("\n=== New Request ===");
-  console.log("Time:", new Date().toISOString());
-  console.log("Method:", req.method);
-  console.log("URL:", req.url);
-  console.log("Headers:", req.headers);
-  console.log("Body:", req.body);
-  console.log("Query:", req.query);
-  console.log("Params:", req.params);
-  console.log("==================\n");
-  next();
+connectDB().then(() => {
+  // Create database indexes after connection
+  createIndexes();
 });
 
-// Define API routes with logging
-app.use(
-  config.api.prefix,
-  (req, res, next) => {
-    console.log(`API Route accessed: ${req.method} ${req.url}`);
+// Add request logging middleware (only for development)
+if (process.env.NODE_ENV === "development") {
+  app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
     next();
-  },
-  mainRoutes
-);
+  });
+}
+
+// Define API routes
+app.use(config.api.prefix, mainRoutes);
 
 // Add modular routes under /api/modules (for new structure)
-app.use(
-  `${config.api.prefix}/modules`,
-  (req, res, next) => {
-    console.log(`Module Route accessed: ${req.method} ${req.url}`);
-    next();
-  },
-  moduleRoutes
-);
+app.use(`${config.api.prefix}/modules`, moduleRoutes);
 
 // Add dashboard routes under /api/dashboard
-app.use(
-  `${config.api.prefix}/dashboard`,
-  (req, res, next) => {
-    console.log(`Dashboard Route accessed: ${req.method} ${req.url}`);
-    next();
-  },
-  dashboardRoutes
-);
+app.use(`${config.api.prefix}/dashboard`, dashboardRoutes);
 
 // Admin Routes
 app.use(
   "/api/admin/reviewers",
   require("./users/admin/reviewer/routes/reviewerRoutes")
 );
-
-// Add route logging middleware after routes are defined
-app.use((req, res, next) => {
-  console.log("Route not found:", req.method, req.url);
-  next();
-});
 
 // Root route for testing if the server is running
 app.get("/", (req, res) => {
@@ -167,7 +138,6 @@ app.get("/", (req, res) => {
 
 // Catch-all route handler for undefined routes (404 error)
 app.use((req, res) => {
-  console.log("404 - Route not found:", req.method, req.url);
   res.status(404).json({ error: "Route not found" });
 });
 

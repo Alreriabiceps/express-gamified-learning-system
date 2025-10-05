@@ -6,54 +6,55 @@ const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const PendingStudent = require("../../student/models/PendingStudent");
 const bcrypt = require("bcryptjs");
+const { resetLoginAttempts } = require("../middleware/rateLimiter");
 
 // Admin login logic
 const adminLogin = async (req, res) => {
   try {
-    console.log("Admin login request received");
-    console.log("Request body:", req.body);
-
     const { username, password } = req.body;
 
+    // Validate input
     if (!username || !password) {
-      console.log("Missing credentials:", {
-        username: !!username,
-        password: !!password,
-      });
       return res
         .status(400)
         .json({ error: "Username and password are required" });
     }
 
-    console.log("Login attempt for username:", username);
+    // Trim and validate username format
+    const trimmedUsername = username.trim();
+    if (trimmedUsername.length < 3) {
+      return res.status(400).json({ error: "Invalid username format" });
+    }
 
-    // Check if admin exists
-    const admin = await Admin.findOne({ username });
-    console.log("Found admin:", admin ? "Yes" : "No");
+    // Check if admin exists and select necessary fields
+    const admin = await Admin.findOne({ username: trimmedUsername }).select(
+      "+password"
+    );
 
     if (!admin) {
-      console.log("Admin not found for username:", username);
-      return res.status(404).json({ error: "Admin not found" });
+      return res.status(401).json({ error: "Invalid username or password" });
     }
 
     // Check if admin is active
     if (!admin.isActive) {
-      console.log("Admin account is deactivated:", username);
       return res.status(403).json({ error: "Account is deactivated" });
     }
 
     // Check if password matches
     const isMatch = await admin.comparePassword(password);
-    console.log("Password match:", isMatch ? "Yes" : "No");
 
     if (!isMatch) {
-      console.log("Incorrect password for admin:", username);
-      return res.status(401).json({ error: "Incorrect password" });
+      return res.status(401).json({ error: "Invalid username or password" });
     }
 
-    // Update last login
+    // Reset login attempts on successful login
+    resetLoginAttempts(req);
+
+    // Update last login asynchronously (don't wait for it)
     admin.lastLogin = new Date();
-    await admin.save();
+    admin
+      .save()
+      .catch((err) => console.error("Error updating admin lastLogin:", err));
 
     // Generate JWT token
     const token = jwt.sign(
@@ -63,7 +64,7 @@ const adminLogin = async (req, res) => {
         role: "admin",
       },
       process.env.JWT_SECRET || "your-secret-key",
-      { expiresIn: "24h" }
+      { expiresIn: "15m" }
     );
 
     // Prepare admin data for response
@@ -76,8 +77,6 @@ const adminLogin = async (req, res) => {
       lastLogin: admin.lastLogin,
     };
 
-    console.log("Login successful for admin:", username);
-
     // Send response
     return res.status(200).json({
       message: "Admin login successful",
@@ -87,7 +86,7 @@ const adminLogin = async (req, res) => {
   } catch (err) {
     console.error("Admin login error:", err);
     return res.status(500).json({
-      error: "Internal server error",
+      error: "An error occurred during login. Please try again.",
       details: process.env.NODE_ENV === "development" ? err.message : undefined,
     });
   }
@@ -98,20 +97,26 @@ const studentLogin = async (req, res) => {
   try {
     const { studentId, password } = req.body;
 
+    // Validate input
+    if (!studentId || !password) {
+      return res
+        .status(400)
+        .json({ error: "Student ID and password are required" });
+    }
+
     // Convert studentId to number and validate
     const numericStudentId = Number(studentId);
-    if (isNaN(numericStudentId)) {
+    if (isNaN(numericStudentId) || numericStudentId <= 0) {
       return res.status(400).json({ error: "Invalid student ID format" });
     }
 
-    console.log("Login attempt for studentId:", numericStudentId);
-
-    // Check if student exists
-    const student = await Student.findOne({ studentId: numericStudentId });
-    console.log("Found student:", student ? "Yes" : "No");
+    // Check if student exists and select necessary fields
+    const student = await Student.findOne({
+      studentId: numericStudentId,
+    }).select("+password");
 
     if (!student) {
-      return res.status(404).json({ error: "Student not found" });
+      return res.status(401).json({ error: "Invalid student ID or password" });
     }
 
     // Check if student is active
@@ -119,17 +124,26 @@ const studentLogin = async (req, res) => {
       return res.status(403).json({ error: "Account is deactivated" });
     }
 
-    // Check if password matches
-    const isMatch = await student.comparePassword(password);
-    console.log("Password match:", isMatch ? "Yes" : "No");
-
-    if (!isMatch) {
-      return res.status(401).json({ error: "Incorrect password" });
+    // Check if student is approved
+    if (!student.isApproved) {
+      return res.status(403).json({ error: "Account is pending approval" });
     }
 
-    // Update last login
+    // Check if password matches
+    const isMatch = await student.comparePassword(password);
+
+    if (!isMatch) {
+      return res.status(401).json({ error: "Invalid student ID or password" });
+    }
+
+    // Reset login attempts on successful login
+    resetLoginAttempts(req);
+
+    // Update last login asynchronously (don't wait for it)
     student.lastLogin = new Date();
-    await student.save();
+    student
+      .save()
+      .catch((err) => console.error("Error updating student lastLogin:", err));
 
     // Generate JWT token
     const token = jwt.sign(
@@ -139,19 +153,22 @@ const studentLogin = async (req, res) => {
         role: "student",
       },
       process.env.JWT_SECRET || "your-secret-key",
-      { expiresIn: "24h" }
+      { expiresIn: "15m" }
     );
 
     // Send response with student data (excluding sensitive info)
-    return res.json({
+    return res.status(200).json({
       message: "Student login successful",
       token,
       role: "student",
       student: student.getPublicProfile(),
     });
   } catch (err) {
-    console.error("Login error details:", err);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("Student login error:", err);
+    return res.status(500).json({
+      error: "An error occurred during login. Please try again.",
+      details: process.env.NODE_ENV === "development" ? err.message : undefined,
+    });
   }
 };
 
@@ -242,7 +259,7 @@ const refreshToken = async (req, res) => {
     const newToken = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "24h" }
+      { expiresIn: "15m" }
     );
     res.status(200).json({ token: newToken });
   } catch (error) {
