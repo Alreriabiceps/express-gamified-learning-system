@@ -1157,6 +1157,11 @@ class GameEngine {
       console.log(
         `⭐ Points: ${match.player1PointsChange} vs ${match.player2PointsChange}`
       );
+
+      // Delete the lobby now that the game has ended
+      if (gameState.lobbyId) {
+        await this.deleteLobbyAfterGame(gameState.lobbyId);
+      }
     } catch (error) {
       console.error("❌ Error processing game end rewards:", error);
       // Don't throw error to avoid breaking the game flow
@@ -1209,25 +1214,26 @@ class GameEngine {
     }
   }
 
-  // Clean up lobby when game starts
+  // Update lobby status when game starts (don't delete until game ends)
   async cleanupLobby(lobbyId) {
     try {
       const Lobby = require("../users/students/lobby/models/lobbyModel");
       const socketService = require("../services/socketService");
 
-      console.log("🧹 Cleaning up lobby:", lobbyId);
+      console.log("🧹 Updating lobby status to in-progress:", lobbyId);
 
-      // Delete the lobby from database
-      const deletedLobby = await Lobby.findByIdAndDelete(lobbyId);
+      // Update lobby status to in-progress instead of deleting
+      const updatedLobby = await Lobby.findByIdAndUpdate(
+        lobbyId,
+        { status: "in-progress" },
+        { new: true }
+      );
 
-      if (deletedLobby) {
-        console.log("✅ Lobby deleted successfully:", lobbyId);
+      if (updatedLobby) {
+        console.log("✅ Lobby status updated to in-progress:", lobbyId);
 
-        // Emit lobby deletion event to notify all clients
-        socketService.emitEvent("lobby:deleted", {
-          lobbyId: lobbyId,
-          reason: "game_started",
-        });
+        // Emit lobby update event to notify all clients
+        socketService.emitEvent("lobby:updated", updatedLobby);
 
         // Also emit to specific lobby room if it exists
         // Note: Socket emission will be handled by the socketService
@@ -1237,6 +1243,34 @@ class GameEngine {
     } catch (error) {
       console.error("❌ Error cleaning up lobby:", error);
       // Don't throw error - game should continue even if lobby cleanup fails
+    }
+  }
+
+  // Delete lobby after game ends
+  async deleteLobbyAfterGame(lobbyId) {
+    try {
+      const Lobby = require("../users/students/lobby/models/lobbyModel");
+      const socketService = require("../services/socketService");
+
+      console.log("🗑️ Deleting lobby after game completion:", lobbyId);
+
+      // Delete the lobby from database
+      const deletedLobby = await Lobby.findByIdAndDelete(lobbyId);
+
+      if (deletedLobby) {
+        console.log("✅ Lobby deleted after game completion:", lobbyId);
+
+        // Emit lobby deletion event to notify all clients
+        socketService.emitEvent("lobby:deleted", {
+          lobbyId: lobbyId,
+          reason: "game_completed",
+        });
+      } else {
+        console.log("⚠️ Lobby not found for deletion:", lobbyId);
+      }
+    } catch (error) {
+      console.error("❌ Error deleting lobby after game:", error);
+      // Don't throw error - game completion should not be affected
     }
   }
 

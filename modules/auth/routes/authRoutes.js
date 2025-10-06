@@ -1,7 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const authController = require("../controllers/authController");
-const { verifyToken } = require("../middleware/authMiddleware");
+const {
+  verifyToken,
+  verifyTokenIgnoreExp,
+} = require("../middleware/authMiddleware");
 const { loginRateLimiter } = require("../middleware/rateLimiter");
 
 // Student login route with rate limiting
@@ -15,8 +18,8 @@ router.get("/verify", verifyToken, (req, res) => {
   res.status(200).json({ success: true });
 });
 
-// Refresh token
-router.post("/refresh", verifyToken, authController.refreshToken);
+// Refresh token (allow expired tokens)
+router.post("/refresh", verifyTokenIgnoreExp, authController.refreshToken);
 
 // Get current user profile (protected route)
 router.get("/profile", verifyToken, authController.getProfile);

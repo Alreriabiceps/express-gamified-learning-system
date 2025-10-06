@@ -64,7 +64,7 @@ const adminLogin = async (req, res) => {
         role: "admin",
       },
       process.env.JWT_SECRET || "your-secret-key",
-      { expiresIn: "15m" }
+      { expiresIn: "2h" } // Extended from 15m to 2h
     );
 
     // Prepare admin data for response
@@ -153,7 +153,7 @@ const studentLogin = async (req, res) => {
         role: "student",
       },
       process.env.JWT_SECRET || "your-secret-key",
-      { expiresIn: "15m" }
+      { expiresIn: "2h" } // Extended from 15m to 2h
     );
 
     // Send response with student data (excluding sensitive info)
@@ -259,7 +259,7 @@ const refreshToken = async (req, res) => {
     const newToken = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "15m" }
+      { expiresIn: "2h" } // Extended from 15m to 2h
     );
     res.status(200).json({ token: newToken });
   } catch (error) {

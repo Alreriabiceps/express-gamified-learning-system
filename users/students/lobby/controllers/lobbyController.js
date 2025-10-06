@@ -49,6 +49,21 @@ exports.createLobby = async (req, res) => {
     await lobby.populate("hostId", "firstName lastName");
     await lobby.populate("players", "firstName lastName");
     socketService.emitEvent("lobby:created", lobby);
+
+    // Join the lobby room for reliable game:start events
+    const io = req.app.get("io");
+    if (io) {
+      const userSocket = Array.from(io.sockets.sockets.values()).find(
+        (socket) => socket.userId === userId
+      );
+      if (userSocket) {
+        userSocket.join(`lobby_${lobby._id}`);
+        console.log(
+          `🏠 Lobby creator ${userId} joined lobby room: lobby_${lobby._id}`
+        );
+      }
+    }
+
     return res.status(201).json({
       success: true,
       data: lobby,
@@ -66,10 +81,15 @@ exports.getLobbies = async (req, res) => {
   try {
     const lobbies = await Lobby.find({
       status: "waiting",
-      $or: [{ isPrivate: true }, { expiresAt: { $gt: new Date() } }],
+      $or: [
+        { isPrivate: true, expiresAt: { $gt: new Date() } }, // Private lobbies with future expiration
+        { isPrivate: false, expiresAt: { $gt: new Date() } }, // Public lobbies with future expiration
+      ],
     })
       .populate("hostId", "firstName lastName")
       .populate("players", "firstName lastName");
+
+    console.log(`📋 Found ${lobbies.length} available lobbies`);
     res.status(200).json({
       success: true,
       data: lobbies,
@@ -159,6 +179,20 @@ exports.joinLobby = async (req, res) => {
     await lobby.save();
     await lobby.populate("players", "firstName lastName");
     socketService.emitEvent("lobby:updated", lobby);
+
+    // Join the lobby room for reliable game:start events
+    const io = req.app.get("io");
+    if (io) {
+      const userSocket = Array.from(io.sockets.sockets.values()).find(
+        (socket) => socket.userId === userId
+      );
+      if (userSocket) {
+        userSocket.join(`lobby_${lobby._id}`);
+        console.log(
+          `🏠 Player ${userId} joined lobby room: lobby_${lobby._id}`
+        );
+      }
+    }
     if (lobby.status === "in-progress") {
       const io = req.app.get("io");
       if (io) {
@@ -213,11 +247,26 @@ exports.joinLobby = async (req, res) => {
               ? player._id.toString()
               : player.toString();
             console.log(`🎮 Emitting game:start to player ${playerId}`);
+
+            // Emit to both personal room and lobby room for reliability
             io.to(playerId).emit("game:start", {
               lobbyId: lobby._id,
               players: formattedPlayers,
             });
+
+            // Also emit to lobby room as backup
+            io.to(`lobby_${lobby._id}`).emit("game:start", {
+              lobbyId: lobby._id,
+              players: formattedPlayers,
+            });
           });
+
+          // Additional broadcast to ensure all players receive the event
+          io.emit("game:start", {
+            lobbyId: lobby._id,
+            players: formattedPlayers,
+          });
+
           console.log(
             "[LobbyController] Emitted game:start for lobby:",
             lobby._id.toString()
